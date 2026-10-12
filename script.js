@@ -18,14 +18,13 @@ let systemUsers = ["Manager 1", "Estate Supervisor", "Data Entry Officer"];
 
 async function saveToCloud() {
     const estate = document.getElementById('ladangSelect').value;
-    const monthYear = document.getElementById('bulanTahun').value; // e.g. "2026-09"
+    const monthYear = document.getElementById('bulanTahun').value;
     
     if (!monthYear) {
         alert("Please select a Month and Year first.");
         return;
     }
 
-    // Get the exact number of days for the selected month (e.g., 30 for Sept, 31 for Oct)
     const [year, month] = monthYear.split('-').map(Number);
     const daysInMonth = new Date(year, month, 0).getDate();
 
@@ -78,20 +77,32 @@ async function saveToCloud() {
         .from('daily_records')
         .upsert(updates, { onConflict: 'estate_name,record_date' });
 
-    if (error) alert("Error saving data: " + error.message);
-    else alert("Data successfully saved to Cloud!");
+    if (error) {
+        alert("Error saving data: " + error.message);
+    } else {
+        alert("Data saved successfully!");
+    }
 }
 
 async function loadFromCloud() {
+    clearForm();
+
     const estate = document.getElementById('ladangSelect').value;
     const monthYear = document.getElementById('bulanTahun').value;
+
+    if (!monthYear || !estate) return;
+
+    // Calculate exact last day of selected month dynamically
+    const [year, month] = monthYear.split('-').map(Number);
+    const lastDay = new Date(year, month, 0).getDate();
+    const lastDayStr = String(lastDay).padStart(2, '0');
 
     const { data, error } = await supabaseClient
         .from('daily_records')
         .select('*')
         .eq('estate_name', estate)
         .gte('record_date', `${monthYear}-01`)
-        .lte('record_date', `${monthYear}-31`);
+        .lte('record_date', `${monthYear}-${lastDayStr}`);
 
     if (error || !data) return;
 
@@ -125,7 +136,32 @@ async function loadFromCloud() {
 
     calcS1();
     calcS2();
-    syncRainfallToSummary();
+}
+
+function clearForm() {
+    for (let d = 1; d <= 31; d++) {
+        if (document.getElementById(`s1_rf_${d}`)) document.getElementById(`s1_rf_${d}`).value = '';
+        if (document.getElementById(`s1_ffb1_${d}`)) document.getElementById(`s1_ffb1_${d}`).value = '';
+        if (document.getElementById(`s1_ffb2_${d}`)) document.getElementById(`s1_ffb2_${d}`).value = '';
+        if (document.getElementById(`s1_ffb3_${d}`)) document.getElementById(`s1_ffb3_${d}`).value = '';
+        if (document.getElementById(`s1_ffb4_${d}`)) document.getElementById(`s1_ffb4_${d}`).value = '';
+
+        if (document.getElementById(`s2_p1_t_${d}`)) document.getElementById(`s2_p1_t_${d}`).value = '';
+        if (document.getElementById(`s2_p2_t_${d}`)) document.getElementById(`s2_p2_t_${d}`).value = '';
+        if (document.getElementById(`s2_p3_t_${d}`)) document.getElementById(`s2_p3_t_${d}`).value = '';
+        if (document.getElementById(`s2_p4_t_${d}`)) document.getElementById(`s2_p4_t_${d}`).value = '';
+
+        if (document.getElementById(`s3_m1_${d}`)) document.getElementById(`s3_m1_${d}`).value = '';
+        if (document.getElementById(`s3_m2_${d}`)) document.getElementById(`s3_m2_${d}`).value = '';
+        if (document.getElementById(`s3_m3_${d}`)) document.getElementById(`s3_m3_${d}`).value = '';
+        if (document.getElementById(`s3_m4_${d}`)) document.getElementById(`s3_m4_${d}`).value = '';
+        if (document.getElementById(`s3_m5_${d}`)) document.getElementById(`s3_m5_${d}`).value = '';
+        if (document.getElementById(`s3_m6_${d}`)) document.getElementById(`s3_m6_${d}`).value = '';
+
+        for (let p = 1; p <= 12; p++) {
+            if (document.getElementById(`s4_p${p}_${d}`)) document.getElementById(`s4_p${p}_${d}`).value = '';
+        }
+    }
 }
 
 function renderEstateDropdown() {
@@ -195,7 +231,6 @@ function removeUser(idx) {
 
 function onEstateOrMonthChange() {
     updateSummaryHeader();
-    syncRainfallToSummary();
     loadFromCloud();
 }
 
@@ -204,7 +239,7 @@ function initKeyInTables() {
     for (let d = 1; d <= 31; d++) {
         s1 += `<tr>
             <td><b>${d}</b></td>
-            <td><input type="number" step="any" id="s1_rf_${d}" oninput="calcS1(); syncRainfallToSummary();"></td>
+            <td><input type="number" step="any" id="s1_rf_${d}" oninput="calcS1();"></td>
             <td class="readonly-cell" id="s1_rf_todate_${d}"></td>
             <td><input type="number" step="any" id="s1_rf_pm_${d}"></td>
             <td><input type="number" step="any" id="s1_ffb1_${d}" oninput="calcS1()"></td>
@@ -223,7 +258,7 @@ function initKeyInTables() {
         s2 += `<tr>
             <td><b>${d}</b></td>
             ${[1,2,3,4].map(p => `
-                <td><input type="number" step="any" id="s2_p${p}_t_${d}" oninput="calcS2(); syncRainfallToSummary();"></td>
+                <td><input type="number" step="any" id="s2_p${p}_t_${d}" oninput="calcS2();"></td>
                 <td class="readonly-cell" id="s2_p${p}_td_${d}"></td>
                 <td><input type="number" step="any" id="s2_p${p}_pm_${d}"></td>
             `).join('')}
@@ -298,7 +333,7 @@ function buildSummaryBody() {
         html += `<tr><td><b>${d}</b></td>`;
         estateList.forEach((_, idx) => {
             html += `
-                <td><input type="number" step="any" id="es_${idx}_d_${d}" oninput="calcSummary()"></td>
+                <td><input type="number" step="any" id="es_${idx}_d_${d}"></td>
                 <td class="readonly-cell" id="es_${idx}_td_${d}"></td>
             `;
         });
@@ -310,19 +345,25 @@ function buildSummaryBody() {
 function calcS1() {
     let cumRf = 0, cumFfb = 0;
     for (let d = 1; d <= 31; d++) {
-        let rfVal = parseFloat(document.getElementById(`s1_rf_${d}`).value) || 0;
+        let rfVal = parseFloat(document.getElementById(`s1_rf_${d}`)?.value) || 0;
         cumRf += rfVal;
-        document.getElementById(`s1_rf_todate_${d}`).innerText = cumRf > 0 ? cumRf.toFixed(2) : '';
+        if (document.getElementById(`s1_rf_todate_${d}`)) {
+            document.getElementById(`s1_rf_todate_${d}`).innerText = cumRf > 0 ? cumRf.toFixed(2) : '';
+        }
 
-        let f1 = parseFloat(document.getElementById(`s1_ffb1_${d}`).value) || 0;
-        let f2 = parseFloat(document.getElementById(`s1_ffb2_${d}`).value) || 0;
-        let f3 = parseFloat(document.getElementById(`s1_ffb3_${d}`).value) || 0;
-        let f4 = parseFloat(document.getElementById(`s1_ffb4_${d}`).value) || 0;
+        let f1 = parseFloat(document.getElementById(`s1_ffb1_${d}`)?.value) || 0;
+        let f2 = parseFloat(document.getElementById(`s1_ffb2_${d}`)?.value) || 0;
+        let f3 = parseFloat(document.getElementById(`s1_ffb3_${d}`)?.value) || 0;
+        let f4 = parseFloat(document.getElementById(`s1_ffb4_${d}`)?.value) || 0;
         let sumToday = f1 + f2 + f3 + f4;
         cumFfb += sumToday;
 
-        document.getElementById(`s1_gt_today_${d}`).innerText = sumToday > 0 ? sumToday.toFixed(2) : '';
-        document.getElementById(`s1_gt_todate_${d}`).innerText = cumFfb > 0 ? cumFfb.toFixed(2) : '';
+        if (document.getElementById(`s1_gt_today_${d}`)) {
+            document.getElementById(`s1_gt_today_${d}`).innerText = sumToday > 0 ? sumToday.toFixed(2) : '';
+        }
+        if (document.getElementById(`s1_gt_todate_${d}`)) {
+            document.getElementById(`s1_gt_todate_${d}`).innerText = cumFfb > 0 ? cumFfb.toFixed(2) : '';
+        }
     }
 }
 
@@ -330,55 +371,13 @@ function calcS2() {
     for (let p = 1; p <= 4; p++) {
         let cum = 0;
         for (let d = 1; d <= 31; d++) {
-            let val = parseFloat(document.getElementById(`s2_p${p}_t_${d}`).value) || 0;
+            let val = parseFloat(document.getElementById(`s2_p${p}_t_${d}`)?.value) || 0;
             cum += val;
-            document.getElementById(`s2_p${p}_td_${d}`).innerText = cum > 0 ? cum.toFixed(2) : '';
-        }
-    }
-}
-
-function syncRainfallToSummary() {
-    const selectedEstate = document.getElementById('ladangSelect').value;
-    for (let d = 1; d <= 31; d++) {
-        let val = document.getElementById(`s1_rf_${d}`) ? document.getElementById(`s1_rf_${d}`).value : '';
-        estateList.forEach((est, idx) => {
-            if (est.name === selectedEstate) {
-                let targetInput = document.getElementById(`es_${idx}_d_${d}`);
-                if (targetInput) targetInput.value = val;
-            }
-        });
-    }
-    calcSummary();
-}
-
-function calcSummary() {
-    estateList.forEach((_, idx) => {
-        let cum = 0;
-        let days = 0;
-
-        for (let d = 1; d <= 31; d++) {
-            let inputElem = document.getElementById(`es_${idx}_d_${d}`);
-            let tdElem = document.getElementById(`es_${idx}_td_${d}`);
-            let valStr = inputElem ? inputElem.value : '';
-
-            if (valStr !== '' && !isNaN(valStr)) {
-                let val = parseFloat(valStr);
-                cum += val;
-                if (val > 0) days++;
-                tdElem.innerText = cum.toFixed(1);
-            } else {
-                if (tdElem) tdElem.innerText = cum > 0 ? cum.toFixed(1) : '';
+            if (document.getElementById(`s2_p${p}_td_${d}`)) {
+                document.getElementById(`s2_p${p}_td_${d}`).innerText = cum > 0 ? cum.toFixed(2) : '';
             }
         }
-
-        let totD = document.getElementById(`tot_d_${idx}`);
-        let totTd = document.getElementById(`tot_td_${idx}`);
-        let daysElem = document.getElementById(`days_${idx}`);
-
-        if (totD) totD.innerText = cum > 0 ? cum.toFixed(1) : '0';
-        if (totTd) totTd.innerText = cum > 0 ? cum.toFixed(1) : '0';
-        if (daysElem) daysElem.innerText = days + ' Days';
-    });
+    }
 }
 
 function updateSummaryHeader() {
