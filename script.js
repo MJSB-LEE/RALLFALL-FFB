@@ -3,68 +3,81 @@ const SUPABASE_URL = 'https://tiwulxrorrmyxtosvzkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_W4-5_riBQWAUBPVtgX8Pcw_WCRET_KF';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// System Configuration & Default Role Setup
-const ADMIN_PASSWORD = "admin123"; // Admin password
-let isAdminMode = false;
-
+// Default System Databases
 let estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk"];
 
-let userProfiles = [
-    { name: "STY Manager", estate: "STY" },
-    { name: "Klagan Officer", estate: "Klagan PH1" },
-    { name: "Kars Supervisor", estate: "Kars PH1/2/4" },
-    { name: "Labuk Officer", estate: "Labuk" }
+let userAccounts = [
+    { username: "admin", password: "admin123", role: "admin", estate: "" },
+    { username: "sty_user", password: "user123", role: "user", estate: "STY" },
+    { username: "klagan_user", password: "user123", role: "user", estate: "Klagan PH1" },
+    { username: "labuk_user", password: "user123", role: "user", estate: "Labuk" }
 ];
 
-function toggleAdminLogin() {
-    if (isAdminMode) {
-        isAdminMode = false;
-        alert("Logged out of Admin Mode.");
+let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+
+// Handle User Authentication
+function handleLogin() {
+    const userIn = document.getElementById('loginUsername').value.trim();
+    const passIn = document.getElementById('loginPassword').value.trim();
+    const errorElem = document.getElementById('loginError');
+
+    const matchedUser = userAccounts.find(u => u.username === userIn && u.password === passIn);
+
+    if (matchedUser) {
+        currentUser = matchedUser;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        errorElem.style.display = "none";
+        document.getElementById('loginOverlay').style.display = "none";
+        applyUserPermissions();
     } else {
-        let pass = prompt("Enter Admin Password:");
-        if (pass === ADMIN_PASSWORD) {
-            isAdminMode = true;
-            alert("Admin Access Granted! Full permission unlocked.");
-        } else if (pass !== null) {
-            alert("Invalid Password!");
-        }
+        errorElem.innerText = "Invalid Username or Password!";
+        errorElem.style.display = "block";
     }
-    applyUserPermissions();
+}
+
+function handleLogout() {
+    currentUser = null;
+    localStorage.removeItem('currentUser');
+    document.getElementById('loginOverlay').style.display = "flex";
+    document.getElementById('loginUsername').value = "";
+    document.getElementById('loginPassword').value = "";
 }
 
 function applyUserPermissions() {
+    if (!currentUser) {
+        document.getElementById('loginOverlay').style.display = "flex";
+        return;
+    }
+
+    document.getElementById('loginOverlay').style.display = "none";
+    
     const badge = document.getElementById('userBadge');
+    const userLabel = document.getElementById('userInfoLabel');
     const ladangSelect = document.getElementById('ladangSelect');
     const settingsBtn = document.getElementById('btn-tabSettings');
 
-    if (isAdminMode) {
-        badge.innerText = "ROLE: ADMIN (FULL ACCESS)";
-        badge.style.background = "#ef4444"; // Red badge for Admin
+    userLabel.innerText = `User: ${currentUser.username}`;
+
+    renderEstateDropdown();
+
+    if (currentUser.role === "admin") {
+        badge.innerText = "ROLE: ADMIN";
+        badge.style.background = "#ef4444";
         ladangSelect.disabled = false;
         settingsBtn.style.display = "inline-block";
     } else {
-        badge.innerText = "ROLE: ESTATE USER (LOCKED)";
-        badge.style.background = "#3b82f6"; // Blue badge for User
+        badge.innerText = "ROLE: USER";
+        badge.style.background = "#3b82f6";
+        ladangSelect.value = currentUser.estate;
         ladangSelect.disabled = true; // Lock user to self estate
-        settingsBtn.style.display = "none"; // Hide settings tab from standard users
+        settingsBtn.style.display = "none";
         
-        // Return to Tab 1 if sitting on Settings tab when logging out
         if (document.getElementById('tabSettings').classList.contains('active')) {
             switchTab('tab1');
         }
     }
 
-    renderEstateDropdown();
     onEstateOrMonthChange();
-}
-
-function onUserProfileChange() {
-    if (!isAdminMode) {
-        let selectedUserIndex = document.getElementById('userSelect').value;
-        let assignedEstate = userProfiles[selectedUserIndex]?.estate || estateList[0];
-        document.getElementById('ladangSelect').value = assignedEstate;
-        onEstateOrMonthChange();
-    }
 }
 
 async function saveToCloud() {
@@ -309,31 +322,21 @@ function renderEstateDropdown() {
             newUserEstateSelect.appendChild(opt2);
         }
     });
-
-    renderUserDropdown();
 }
 
-function renderUserDropdown() {
-    const userSelect = document.getElementById('userSelect');
-    userSelect.innerHTML = '';
-
-    userProfiles.forEach((usr, idx) => {
-        let opt = document.createElement('option');
-        opt.value = idx;
-        opt.innerText = `${usr.name} (${usr.estate})`;
-        userSelect.appendChild(opt);
-    });
-
-    onUserProfileChange();
+function toggleUserEstateDropdown() {
+    const role = document.getElementById('newUserRole').value;
+    const estateSelect = document.getElementById('newUserEstate');
+    estateSelect.style.display = role === "admin" ? "none" : "block";
 }
 
 function renderSettingsUI() {
     const userListUi = document.getElementById('userSettingsList');
     if (userListUi) {
         userListUi.innerHTML = '';
-        userProfiles.forEach((usr, idx) => {
+        userAccounts.forEach((usr, idx) => {
             userListUi.innerHTML += `<li style="padding: 6px; background: white; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-                <span><b>${usr.name}</b> ➔ ${usr.estate}</span>
+                <span><b>${usr.username}</b> (${usr.role.toUpperCase()}) ${usr.estate ? '➔ ' + usr.estate : ''}</span>
                 <button onclick="removeUser(${idx})" style="background:#ef4444; color:white; border:none; padding: 2px 6px; border-radius:3px; cursor:pointer;">Delete</button>
             </li>`;
         });
@@ -352,21 +355,22 @@ function renderSettingsUI() {
 }
 
 function addNewUser() {
-    const nameInput = document.getElementById('newUserName');
-    const estateSelect = document.getElementById('newUserEstate');
+    const uName = document.getElementById('newUsername').value.trim();
+    const uPass = document.getElementById('newUserPass').value.trim();
+    const uRole = document.getElementById('newUserRole').value;
+    const uEstate = uRole === "admin" ? "" : document.getElementById('newUserEstate').value;
 
-    if (!nameInput.value.trim()) return alert("Enter user name");
+    if (!uName || !uPass) return alert("Enter both username and password");
 
-    userProfiles.push({ name: nameInput.value.trim(), estate: estateSelect.value });
-    nameInput.value = '';
+    userAccounts.push({ username: uName, password: uPass, role: uRole, estate: uEstate });
+    document.getElementById('newUsername').value = '';
+    document.getElementById('newUserPass').value = '';
 
-    renderUserDropdown();
     renderSettingsUI();
 }
 
 function removeUser(idx) {
-    userProfiles.splice(idx, 1);
-    renderUserDropdown();
+    userAccounts.splice(idx, 1);
     renderSettingsUI();
 }
 
@@ -397,4 +401,126 @@ function onEstateOrMonthChange() {
 
 function initKeyInTables() {
     let s1 = '';
-    for (let d = 1; d
+    for (let d = 1; d <= 31; d++) {
+        s1 += `<tr>
+            <td><b>${d}</b></td>
+            <td><input type="number" step="any" id="s1_rf_${d}" oninput="calcS1();"></td>
+            <td class="readonly-cell" id="s1_rf_todate_${d}"></td>
+            <td><input type="number" step="any" id="s1_rf_pm_${d}"></td>
+            <td><input type="number" step="any" id="s1_ffb1_${d}" oninput="calcS1()"></td>
+            <td><input type="number" step="any" id="s1_ffb2_${d}" oninput="calcS1()"></td>
+            <td><input type="number" step="any" id="s1_ffb3_${d}" oninput="calcS1()"></td>
+            <td><input type="number" step="any" id="s1_ffb4_${d}" oninput="calcS1()"></td>
+            <td class="readonly-cell" id="s1_gt_today_${d}"></td>
+            <td class="readonly-cell" id="s1_gt_todate_${d}"></td>
+            <td><input type="number" step="any" id="s1_ffb_pm_${d}"></td>
+        </tr>`;
+    }
+    document.getElementById('tbody-s1').innerHTML = s1;
+
+    let s2 = '';
+    for (let d = 1; d <= 31; d++) {
+        s2 += `<tr>
+            <td><b>${d}</b></td>
+            ${[1,2,3,4].map(p => `
+                <td><input type="number" step="any" id="s2_p${p}_t_${d}" oninput="calcS2();"></td>
+                <td class="readonly-cell" id="s2_p${p}_td_${d}"></td>
+                <td><input type="number" step="any" id="s2_p${p}_pm_${d}"></td>
+            `).join('')}
+        </tr>`;
+    }
+    document.getElementById('tbody-s2').innerHTML = s2;
+
+    let s3 = '';
+    for (let d = 1; d <= 31; d++) {
+        s3 += `<tr>
+            <td><b>${d}</b></td>
+            ${[1,2,3,4,5,6].map(m => `<td><input type="number" step="any" id="s3_m${m}_${d}"></td>`).join('')}
+            <td class="readonly-cell" id="s3_gt_today_${d}"></td>
+            <td class="readonly-cell" id="s3_gt_todate_${d}"></td>
+            <td><input type="number" step="any" id="s3_pm_${d}"></td>
+        </tr>`;
+    }
+    document.getElementById('tbody-s3').innerHTML = s3;
+
+    let s4Hdr = '';
+    for (let p = 1; p <= 12; p++) {
+        s4Hdr += `<th style="width: 60px;"><input type="text" value="P${p}" style="font-weight:bold; text-align:center;"></th>`;
+    }
+    s4Hdr += `<th>TODAY</th><th>TODATE</th>`;
+    document.getElementById('s4-phase-headers').innerHTML = s4Hdr;
+
+    let s4 = '';
+    for (let d = 1; d <= 31; d++) {
+        s4 += `<tr>
+            <td><b>${d}</b></td>
+            ${Array.from({length:12}, (_, i) => `<td><input type="number" step="any" id="s4_p${i+1}_${d}"></td>`).join('')}
+            <td class="readonly-cell" id="s4_gt_today_${d}"></td>
+            <td class="readonly-cell" id="s4_gt_todate_${d}"></td>
+            <td><input type="number" step="any" id="s4_pm_${d}"></td>
+        </tr>`;
+    }
+    document.getElementById('tbody-s4').innerHTML = s4;
+}
+
+function calcS1() {
+    let cumRf = 0, cumFfb = 0;
+    for (let d = 1; d <= 31; d++) {
+        let rfVal = parseFloat(document.getElementById(`s1_rf_${d}`)?.value) || 0;
+        cumRf += rfVal;
+        if (document.getElementById(`s1_rf_todate_${d}`)) {
+            document.getElementById(`s1_rf_todate_${d}`).innerText = cumRf > 0 ? cumRf.toFixed(2) : '';
+        }
+
+        let f1 = parseFloat(document.getElementById(`s1_ffb1_${d}`)?.value) || 0;
+        let f2 = parseFloat(document.getElementById(`s1_ffb2_${d}`)?.value) || 0;
+        let f3 = parseFloat(document.getElementById(`s1_ffb3_${d}`)?.value) || 0;
+        let f4 = parseFloat(document.getElementById(`s1_ffb4_${d}`)?.value) || 0;
+        let sumToday = f1 + f2 + f3 + f4;
+        cumFfb += sumToday;
+
+        if (document.getElementById(`s1_gt_today_${d}`)) {
+            document.getElementById(`s1_gt_today_${d}`).innerText = sumToday > 0 ? sumToday.toFixed(2) : '';
+        }
+        if (document.getElementById(`s1_gt_todate_${d}`)) {
+            document.getElementById(`s1_gt_todate_${d}`).innerText = cumFfb > 0 ? cumFfb.toFixed(2) : '';
+        }
+    }
+}
+
+function calcS2() {
+    for (let p = 1; p <= 4; p++) {
+        let cum = 0;
+        for (let d = 1; d <= 31; d++) {
+            let val = parseFloat(document.getElementById(`s2_p${p}_t_${d}`)?.value) || 0;
+            cum += val;
+            if (document.getElementById(`s2_p${p}_td_${d}`)) {
+                document.getElementById(`s2_p${p}_td_${d}`).innerText = cum > 0 ? cum.toFixed(2) : '';
+            }
+        }
+    }
+}
+
+function updateSummaryHeader() {
+    let val = document.getElementById('bulanTahun').value;
+    if (val) {
+        let d = new Date(val + "-01");
+        let mName = d.toLocaleString('en', { month: 'short' }).toUpperCase();
+        let y = d.getFullYear();
+        document.getElementById('sumReportTitle').innerText = `RAINFALL REPORT MONTH OF ${mName} ${y}`;
+    }
+}
+
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    document.getElementById(`btn-${tabId}`).classList.add('active');
+}
+
+window.onload = function() {
+    initKeyInTables();
+    renderEstateDropdown();
+    renderSettingsUI();
+    applyUserPermissions();
+};
