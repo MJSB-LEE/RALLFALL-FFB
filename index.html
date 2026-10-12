@@ -10,16 +10,28 @@
 <body>
 
 <div class="container">
-    <header>
-        <h1>MASIH JAYA GROUP</h1>
-        <p>Daily Rainfall & FFB Reporting System</p>
+    <header style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1>MASIH JAYA GROUP</h1>
+            <p>Daily Rainfall & FFB Reporting System</p>
+        </div>
+        <div>
+            <span id="userBadge" style="background: #3b82f6; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-right: 10px;">ROLE: USER</span>
+            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="toggleAdminLogin()">Admin Login</button>
+        </div>
     </header>
 
     <div class="meta-card">
         <div class="form-group">
-            <label>Select Estate</label>
+            <label>Select User Profile</label>
+            <select id="userSelect" onchange="onUserProfileChange()">
+                <!-- Dynamic user options -->
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Assigned Estate</label>
             <select id="ladangSelect" onchange="onEstateOrMonthChange()">
-                <!-- Populated dynamically -->
+                <!-- Populated dynamically based on user role -->
             </select>
         </div>
         <div class="form-group">
@@ -29,10 +41,6 @@
         <div class="form-group">
             <label>Prepared By</label>
             <input type="text" id="prepBy" placeholder="Preparer Name">
-        </div>
-        <div class="form-group">
-            <label>Approved By</label>
-            <input type="text" id="appBy" placeholder="Approver Name">
         </div>
     </div>
 
@@ -137,21 +145,17 @@
         </table>
     </div>
 
-    <!-- TAB 5: OVERALL SUMMARY (AUTOMATIC ALL ESTATES) -->
+    <!-- TAB 5: OVERALL SUMMARY (ADMIN/ALL ESTATES) -->
     <div id="tabSummary" class="tab-content">
         <div style="text-align: center; margin-bottom: 15px;">
             <h2 style="font-size: 18px;" id="sumReportTitle">OVERALL RAINFALL SUMMARY REPORT</h2>
-            <p style="font-size: 12px; color: #64748b;">Consolidated data loaded automatically from Database for selected month</p>
+            <p style="font-size: 12px; color: #64748b;">Consolidated group estate data loaded automatically from Database</p>
         </div>
         
         <table>
             <thead>
-                <tr id="hdr-estates">
-                    <!-- Populated dynamically -->
-                </tr>
-                <tr id="hdr-sub">
-                    <!-- Populated dynamically -->
-                </tr>
+                <tr id="hdr-estates"></tr>
+                <tr id="hdr-sub"></tr>
             </thead>
             <tbody id="tbody-summary"></tbody>
             <tfoot>
@@ -161,29 +165,30 @@
         </table>
     </div>
 
-    <!-- TAB 6: SETTINGS -->
+    <!-- TAB 6: ADMIN SETTINGS -->
     <div id="tabSettings" class="tab-content">
-        <h2 style="margin-bottom: 16px; font-size: 18px;">⚙️ USER & ESTATE ACCESS SETTINGS</h2>
+        <h2 style="margin-bottom: 16px; font-size: 18px;">⚙️ ADMIN MANAGEMENT PANEL</h2>
         
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
-            <!-- Select Assigned Estate -->
+            <!-- User Management Card -->
             <div style="background: #f1f5f9; padding: 15px; border-radius: 8px;">
-                <h3 style="font-size: 14px; margin-bottom: 10px;">Lock User To Specific Estate</h3>
-                <p style="font-size: 12px; color: #64748b; margin-bottom: 10px;">Select an estate to lock data entry for this browser session:</p>
-                <div style="display: flex; gap: 8px;">
-                    <select id="userLockEstateSelect" style="flex: 1; padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1;">
-                        <option value="">-- ALL ESTATES (ADMIN MODE) --</option>
+                <h3 style="font-size: 14px; margin-bottom: 10px;">User Management & Estate Assignment</h3>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
+                    <input type="text" id="newUserName" placeholder="Full User Name" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    <select id="newUserEstate" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        <!-- Dynamic estates -->
                     </select>
-                    <button class="btn btn-primary" onclick="lockUserEstate()">Lock Estate</button>
+                    <button class="btn btn-primary" onclick="addNewUser()">Add User Profile</button>
                 </div>
+                <ul id="userSettingsList" style="list-style: none; max-height: 180px; overflow-y: auto;"></ul>
             </div>
 
-            <!-- Manage Estates -->
+            <!-- Estate Management Card -->
             <div style="background: #f1f5f9; padding: 15px; border-radius: 8px;">
-                <h3 style="font-size: 14px; margin-bottom: 10px;">Manage Estates</h3>
+                <h3 style="font-size: 14px; margin-bottom: 10px;">Estate Management</h3>
                 <div style="display: flex; gap: 8px; margin-bottom: 10px;">
                     <input type="text" id="newEstateName" placeholder="New Estate Name" style="flex: 1; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                    <button class="btn btn-primary" onclick="addNewEstate()">Add</button>
+                    <button class="btn btn-primary" onclick="addNewEstate()">Add Estate</button>
                 </div>
                 <ul id="estateSettingsList" style="list-style: none; max-height: 180px; overflow-y: auto;"></ul>
             </div>
