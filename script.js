@@ -39,7 +39,7 @@ async function fetchUserProfiles() {
 }
 
 // Fetch Activity & Audit Logs
-async function fetchActivityLogs() {
+ function fetchActivityLogs() {
     const tableBody = document.getElementById('activityLogTableBody');
     if (!tableBody) return;
 
@@ -538,6 +538,7 @@ function closeEditModal() {
 }
 
 // ADD NEW USER
+// 1. ADD NEW USER (WITH AUDIT LOGGING)
 async function addNewUser() {
     const uFull = document.getElementById('newUserFull').value.trim();
     const uEmail = document.getElementById('newUserEmail').value.trim();
@@ -569,10 +570,14 @@ async function addNewUser() {
     if (error) {
         alert("Error creating user: " + error.message);
     } else {
+        // Write User Creation to Audit Log
+        const activeAdmin = currentUser ? currentUser.username : 'ADMIN';
+        const estateSummary = uRole === 'admin' ? 'ALL ESTATES' : (uEstates.join(', ') || 'NONE');
+
         await supabaseClient.from('activity_logs').insert([{
-            username: currentUser ? currentUser.username : 'ADMIN',
+            username: activeAdmin,
             action: 'CREATE_USER',
-            details: `Created user '${uName}' (${uRole}) with estates: ${uRole === 'admin' ? 'ALL' : uEstates.join(', ')}`,
+            details: `Created user '${uName}' (${uRole.toUpperCase()}) with access: ${estateSummary}`,
             estate: 'SYSTEM',
             timestamp: new Date().toISOString()
         }]);
@@ -588,6 +593,81 @@ async function addNewUser() {
         fetchUserProfiles();
         fetchActivityLogs();
     }
+}
+
+// 2. SAVE USER EDIT (WITH AUDIT LOGGING)
+async function saveUserEdit() {
+    const idx = document.getElementById('editIndex').value;
+    let targetUser = userAccounts[idx];
+
+    const newFull = document.getElementById('editFull').value.trim();
+    const newEmail = document.getElementById('editEmail').value.trim();
+    const newPass = document.getElementById('editPass').value.trim();
+    const newRole = document.getElementById('editRole').value;
+
+    let newEstates = [];
+    if (newRole === "admin") {
+        newEstates = [...estateList];
+    } else {
+        const checkedBoxes = document.querySelectorAll('.edit-estate-chk:checked');
+        newEstates = Array.from(checkedBoxes).map(chk => chk.value);
+    }
+
+    targetUser.full_name = newFull;
+    targetUser.email = newEmail;
+    if (newPass) targetUser.password = newPass;
+    targetUser.role = newRole;
+    targetUser.assigned_estates = newEstates;
+
+    if (targetUser.id) {
+        let updateObj = { full_name: newFull, email: newEmail, role: newRole, assigned_estates: newEstates };
+        if (newPass) updateObj.password = newPass;
+
+        const { error } = await supabaseClient.from('user_profiles').update(updateObj).eq('id', targetUser.id);
+        if (error) return alert("Error updating database: " + error.message);
+    }
+
+    // Write Profile Edit to Audit Log
+    const activeAdmin = currentUser ? currentUser.username : 'ADMIN';
+    const estateSummary = newRole === 'admin' ? 'ALL ESTATES' : (newEstates.join(', ') || 'NONE');
+
+    await supabaseClient.from('activity_logs').insert([{
+        username: activeAdmin,
+        action: 'EDIT_USER',
+        details: `Updated user '${targetUser.username}' (${newRole.toUpperCase()}). Access: ${estateSummary}`,
+        estate: 'SYSTEM',
+        timestamp: new Date().toISOString()
+    }]);
+
+    alert("User profile updated successfully!");
+    closeEditModal();
+    fetchUserProfiles();
+    fetchActivityLogs();
+}
+
+// 3. REMOVE USER (WITH AUDIT LOGGING)
+async function removeUser(idx) {
+    let targetUser = userAccounts[idx];
+    if (!confirmITAction(`User Account: "${targetUser.username}"`)) return;
+
+    if (targetUser.id) {
+        const { error } = await supabaseClient.from('user_profiles').delete().eq('id', targetUser.id);
+        if (error) return alert("Error deleting user: " + error.message);
+    }
+    
+    // Write User Deletion to Audit Log
+    const activeAdmin = currentUser ? currentUser.username : 'ADMIN';
+    await supabaseClient.from('activity_logs').insert([{
+        username: activeAdmin,
+        action: 'DELETE_USER',
+        details: `Deleted user profile '${targetUser.username}' (${targetUser.role ? targetUser.role.toUpperCase() : 'USER'})`,
+        estate: 'SYSTEM',
+        timestamp: new Date().toISOString()
+    }]);
+
+    userAccounts.splice(idx, 1);
+    renderSettingsUI();
+    fetchActivityLogs();
 }
 
 // SAVE USER EDIT
