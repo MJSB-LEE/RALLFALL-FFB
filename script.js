@@ -17,7 +17,9 @@ async function fetchEstates() {
     } else {
         estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk"];
     }
+    
     renderEstateDropdown();
+    renderNewUserEstateCheckboxes(); // Trigger checkbox render immediately after loading estates
     renderSettingsUI();
     loadOverallSummary();
 }
@@ -429,7 +431,6 @@ function toggleEditEstateDropdown() {
     if (container) container.style.display = role === "admin" ? "none" : "block";
 }
 
-// GUARANTEED CHECKBOX RENDER FOR REGISTRATION
 function renderNewUserEstateCheckboxes() {
     const container = document.getElementById('newUserEstateCheckboxes');
     if (!container) return;
@@ -486,10 +487,13 @@ function renderSettingsUI() {
     renderNewUserEstateCheckboxes();
 }
 
-// GUARANTEED OPEN EDIT MODAL & POPULATE CHECKBOXES
+// BULLETPROOF OPEN EDIT USER MODAL
 function openEditUserModal(idx) {
     const user = userAccounts[idx];
-    if (!user) return alert("User not found!");
+    if (!user) {
+        alert("Error: User record not found.");
+        return;
+    }
 
     document.getElementById('editIndex').value = idx;
     document.getElementById('editFull').value = user.full_name || '';
@@ -502,14 +506,13 @@ function openEditUserModal(idx) {
     const editContainer = document.getElementById('editEstateCheckboxes');
     if (editContainer) {
         editContainer.innerHTML = '';
-        
         if (!estateList || estateList.length === 0) {
-            editContainer.innerHTML = '<span style="color:#ef4444; font-size:11px;">No estates found in database.</span>';
+            editContainer.innerHTML = '<span style="color:#ef4444; font-size:11px;">No estate locations loaded.</span>';
         } else {
             estateList.forEach(est => {
                 let isChecked = userAssigned.includes(est) ? 'checked' : '';
                 editContainer.innerHTML += `
-                    <label class="checkbox-item">
+                    <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; cursor: pointer; text-align: left;">
                         <input type="checkbox" value="${est}" class="edit-estate-chk" ${isChecked}>
                         <span style="font-size: 12px; color: #1e293b;">${est}</span>
                     </label>`;
@@ -518,11 +521,16 @@ function openEditUserModal(idx) {
     }
 
     toggleEditEstateDropdown();
-    document.getElementById('editUserModal').style.display = 'flex';
+
+    const modalElem = document.getElementById('editUserModal');
+    if (modalElem) {
+        modalElem.style.display = 'flex';
+    }
 }
 
 function closeEditModal() {
-    document.getElementById('editUserModal').style.display = 'none';
+    const modalElem = document.getElementById('editUserModal');
+    if (modalElem) modalElem.style.display = 'none';
 }
 
 async function saveUserEdit() {
@@ -820,7 +828,7 @@ function switchTab(tabId) {
     }
 }
 
-// FIXED ASYNC INITIALIZATION SEQUENCE
+// ASYNC INITIALIZATION SEQUENCE
 window.onload = async function() {
     initKeyInTables();
     await fetchEstates();        // Load estate locations first
