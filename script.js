@@ -3,7 +3,7 @@ const SUPABASE_URL = 'https://tiwulxrorrmyxtosvzkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_W4-5_riBQWAUBPVtgX8Pcw_WCRET_KF';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const IT_DELETE_PASSWORD = "ITREF2026"; // Required password for delete operations
+const IT_DELETE_PASSWORD = "ITREF2026"; // Security key for deletion
 
 let estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk"];
 let userAccounts = [];
@@ -365,6 +365,12 @@ function toggleUserEstateDropdown() {
     estateSelect.style.display = role === "admin" ? "none" : "block";
 }
 
+function toggleEditEstateDropdown() {
+    const role = document.getElementById('editRole').value;
+    const estateSelect = document.getElementById('editEstate');
+    estateSelect.style.display = role === "admin" ? "none" : "block";
+}
+
 function renderSettingsUI() {
     const userListUi = document.getElementById('userSettingsList');
     if (userListUi) {
@@ -375,7 +381,10 @@ function renderSettingsUI() {
                     <b>${usr.full_name || usr.username}</b> (${usr.username})<br>
                     <small style="color: #64748b;">${usr.email || 'No email'} | ${usr.role.toUpperCase()} ${usr.assigned_estate ? '➔ ' + usr.assigned_estate : ''}</small>
                 </div>
-                <button onclick="removeUser(${idx})" style="background:#ef4444; color:white; border:none; padding: 4px 8px; border-radius:3px; cursor:pointer;">Delete</button>
+                <div>
+                    <button class="btn-edit" onclick="openEditUserModal(${idx})">Edit</button>
+                    <button class="btn-delete" onclick="removeUser(${idx})">Delete</button>
+                </div>
             </li>`;
         });
     }
@@ -386,9 +395,80 @@ function renderSettingsUI() {
         estateList.forEach((est, idx) => {
             estListUi.innerHTML += `<li style="padding: 6px; background: white; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
                 <span>${est}</span>
-                <button onclick="removeEstate(${idx})" style="background:#ef4444; color:white; border:none; padding: 4px 8px; border-radius:3px; cursor:pointer;">Delete</button>
+                <div>
+                    <button class="btn-edit" onclick="editEstateName(${idx})">Edit</button>
+                    <button class="btn-delete" onclick="removeEstate(${idx})">Delete</button>
+                </div>
             </li>`;
         });
+    }
+}
+
+function openEditUserModal(idx) {
+    const user = userAccounts[idx];
+    document.getElementById('editIndex').value = idx;
+    document.getElementById('editFull').value = user.full_name || '';
+    document.getElementById('editEmail').value = user.email || '';
+    document.getElementById('editPass').value = '';
+    document.getElementById('editRole').value = user.role || 'user';
+
+    const editEstateSelect = document.getElementById('editEstate');
+    editEstateSelect.innerHTML = '';
+    estateList.forEach(est => {
+        let opt = document.createElement('option');
+        opt.value = est;
+        opt.innerText = est;
+        if (est === user.assigned_estate) opt.selected = true;
+        editEstateSelect.appendChild(opt);
+    });
+
+    toggleEditEstateDropdown();
+    document.getElementById('editUserModal').style.display = 'flex';
+}
+
+function closeEditModal() {
+    document.getElementById('editUserModal').style.display = 'none';
+}
+
+async function saveUserEdit() {
+    const idx = document.getElementById('editIndex').value;
+    let targetUser = userAccounts[idx];
+
+    const newFull = document.getElementById('editFull').value.trim();
+    const newEmail = document.getElementById('editEmail').value.trim();
+    const newPass = document.getElementById('editPass').value.trim();
+    const newRole = document.getElementById('editRole').value;
+    const newEstate = newRole === "admin" ? "" : document.getElementById('editEstate').value;
+
+    targetUser.full_name = newFull;
+    targetUser.email = newEmail;
+    if (newPass) targetUser.password = newPass;
+    targetUser.role = newRole;
+    targetUser.assigned_estate = newEstate;
+
+    if (targetUser.id) {
+        let updateObj = { full_name: newFull, email: newEmail, role: newRole, assigned_estate: newEstate };
+        if (newPass) updateObj.password = newPass;
+
+        const { error } = await supabaseClient.from('user_profiles').update(updateObj).eq('id', targetUser.id);
+        if (error) return alert("Error updating database: " + error.message);
+    }
+
+    alert("User profile updated successfully!");
+    closeEditModal();
+    renderSettingsUI();
+}
+
+function editEstateName(idx) {
+    let oldName = estateList[idx];
+    let newName = prompt(`Edit Estate Location Name:`, oldName);
+
+    if (newName && newName.trim() !== "" && newName !== oldName) {
+        estateList[idx] = newName.trim();
+        renderEstateDropdown();
+        renderSettingsUI();
+        loadOverallSummary();
+        alert(`Estate renamed to "${newName.trim()}"`);
     }
 }
 
