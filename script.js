@@ -3,7 +3,7 @@ const SUPABASE_URL = 'https://tiwulxrorrmyxtosvzkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_W4-5_riBQWAUBPVtgX8Pcw_WCRET_KF';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const IT_DELETE_PASSWORD = "ITREF2026"; // Security key for deletion
+const IT_DELETE_PASSWORD = "ITREF2026"; 
 
 let estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk"];
 let userAccounts = [];
@@ -22,7 +22,7 @@ async function fetchEstates() {
     loadOverallSummary();
 }
 
-// Fetch Permanent User Profiles from Supabase Database
+// Fetch User Profiles
 async function fetchUserProfiles() {
     const { data, error } = await supabaseClient.from('user_profiles').select('*');
     if (!error && data && data.length > 0) {
@@ -34,6 +34,36 @@ async function fetchUserProfiles() {
         ];
     }
     renderSettingsUI();
+}
+
+// Fetch QNE Activity & Audit Logs
+async function fetchActivityLogs() {
+    const tableBody = document.getElementById('activityLogTableBody');
+    if (!tableBody) return;
+
+    const { data, error } = await supabaseClient
+        .from('activity_logs')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(30);
+
+    if (error || !data || data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No activity logs recorded yet.</td></tr>`;
+        return;
+    }
+
+    let rowsHtml = '';
+    data.forEach(log => {
+        let timeStr = log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A';
+        rowsHtml += `<tr>
+            <td style="color: #64748b; font-size: 11px;">${timeStr}</td>
+            <td><b>${log.username || log.user_name || 'SYSTEM'}</b></td>
+            <td><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 10px;">${log.action || log.action_type || 'INFO'}</span></td>
+            <td>${log.estate || log.estate_name || '-'}</td>
+            <td style="color: #334155;">${log.details || '-'}</td>
+        </tr>`;
+    });
+    tableBody.innerHTML = rowsHtml;
 }
 
 async function handleLogin() {
@@ -50,6 +80,16 @@ async function handleLogin() {
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
         errorElem.style.display = "none";
         document.getElementById('loginOverlay').style.display = "none";
+        
+        // Log Login Action
+        await supabaseClient.from('activity_logs').insert([{
+            username: currentUser.username,
+            action: 'LOGIN',
+            details: `User logged into system`,
+            estate: 'SYSTEM',
+            timestamp: new Date().toISOString()
+        }]);
+
         applyUserPermissions();
     } else {
         errorElem.innerText = "Invalid Username or Password!";
@@ -78,9 +118,8 @@ function applyUserPermissions() {
     const ladangSelect = document.getElementById('ladangSelect');
     const settingsBtn = document.getElementById('btn-tabSettings');
 
-    userLabel.innerText = `User: ${currentUser.full_name || currentUser.username} (${currentUser.username})`;
+    userLabel.innerText = `User: ${currentUser.full_name \vert{}\vert{} currentUser.username} (${currentUser.username})`;
 
-    // Standardize assigned estates into an array for multi-location access
     let allowedEstates = currentUser.assigned_estates || [];
     if (!Array.isArray(allowedEstates) && currentUser.assigned_estate) {
         allowedEstates = [currentUser.assigned_estate];
@@ -90,14 +129,12 @@ function applyUserPermissions() {
 
     if (currentUser.role === "admin") {
         badge.innerText = "ROLE: ADMIN";
-        badge.style.background = "#ef4444";
+        badge.style.background = "#dc2626";
         ladangSelect.disabled = false;
         settingsBtn.style.display = "inline-block";
     } else {
         badge.innerText = `ROLE: USER (${allowedEstates.length} Location${allowedEstates.length > 1 ? 's' : ''})`;
-        badge.style.background = "#3b82f6";
-        
-        // Unlock dropdown ONLY if user has 2 or more assigned locations
+        badge.style.background = "#2563eb";
         ladangSelect.disabled = allowedEstates.length <= 1; 
         settingsBtn.style.display = "none";
         
@@ -120,10 +157,7 @@ async function saveToCloud() {
     const estate = document.getElementById('ladangSelect').value;
     const monthYear = document.getElementById('bulanTahun').value;
     
-    if (!monthYear) {
-        alert("Please select a Month and Year.");
-        return;
-    }
+    if (!monthYear) return alert("Please select a Month and Year.");
 
     const [year, month] = monthYear.split('-').map(Number);
     const daysInMonth = new Date(year, month, 0).getDate();
@@ -187,7 +221,7 @@ async function saveToCloud() {
         await supabaseClient.from('activity_logs').insert([{
             username: currentUser ? currentUser.username : 'ADMIN',
             action: 'SAVE_DATA',
-            details: `Saved Data via ${activeTab.toUpperCase()} for ${monthYear}`,
+            details: `Saved Data via ${activeTab.toUpperCase()} for${monthYear}`,
             estate: estate,
             timestamp: new Date().toISOString()
         }]);
@@ -195,6 +229,7 @@ async function saveToCloud() {
         alert(`Data for "${estate}" saved successfully by ${activeUserName}!`);
         loadFromCloud();
         loadOverallSummary();
+        fetchActivityLogs();
     }
 }
 
@@ -223,7 +258,7 @@ async function loadFromCloud() {
         let lastRecord = data[data.length - 1];
         let editBy = lastRecord.updated_by || 'Unknown';
         let editTime = lastRecord.updated_at ? new Date(lastRecord.updated_at).toLocaleString() : 'N/A';
-        document.getElementById('auditLogDisplay').innerText = `Last Modified By: ${editBy} on ${editTime}`;
+        document.getElementById('auditLogDisplay').innerText = `Last Modified By: ${editBy} on${editTime}`;
     } else {
         document.getElementById('auditLogDisplay').innerText = `Data Record Info: No records for ${monthYear}`;
     }
@@ -365,16 +400,12 @@ function confirmITAction(actionName) {
     if (!confirmWarning) return false;
 
     let pass = prompt(`IT SECURITY KEY REQUIRED:\nEnter IT Authorization Password to confirm deletion of ${actionName}:`);
-    if (pass === IT_DELETE_PASSWORD) {
-        return true;
-    } else {
-        alert("❌ Invalid IT Authorization Password! Deletion cancelled.");
-        return false;
-    }
+    return pass === IT_DELETE_PASSWORD;
 }
 
 function renderEstateDropdown(allowedEstatesFilter = null) {
     const estateSelect = document.getElementById('ladangSelect');
+    if (!estateSelect) return;
     estateSelect.innerHTML = '';
 
     estateList.forEach(est => {
@@ -387,7 +418,6 @@ function renderEstateDropdown(allowedEstatesFilter = null) {
     });
 }
 
-// UPDATE 1: TOGGLE CHECKBOX CONTAINERS
 function toggleUserEstateDropdown() {
     const role = document.getElementById('newUserRole').value;
     const container = document.getElementById('newUserEstateCheckboxes');
@@ -400,7 +430,6 @@ function toggleEditEstateDropdown() {
     if (container) container.style.display = role === "admin" ? "none" : "block";
 }
 
-// UPDATE 2: POPULATE REGISTRATION CHECKBOXES
 function renderNewUserEstateCheckboxes() {
     const container = document.getElementById('newUserEstateCheckboxes');
     if (!container) return;
@@ -408,7 +437,7 @@ function renderNewUserEstateCheckboxes() {
     
     estateList.forEach(est => {
         container.innerHTML += `
-            <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; cursor: pointer;">
+            <label class="checkbox-item">
                 <input type="checkbox" value="${est}" class="new-estate-chk">
                 <span>${est}</span>
             </label>`;
@@ -421,10 +450,10 @@ function renderSettingsUI() {
         userListUi.innerHTML = '';
         userAccounts.forEach((usr, idx) => {
             let userAssigned = usr.assigned_estates || (usr.assigned_estate ? [usr.assigned_estate] : []);
-            userListUi.innerHTML += `<li style="padding: 6px; background: white; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+            userListUi.innerHTML += `<li style="padding: 6px; background: #f8fafc; margin-bottom: 4px; border-radius: 4px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <b>${usr.full_name || usr.username}</b> (${usr.username})<br>
-                    <small style="color: #64748b;">${usr.email || 'No email'} | ${usr.role.toUpperCase()} ${userAssigned.length > 0 ? '➔ ' + userAssigned.join(', ') : ''}</small>
+                    <b>${usr.full_name \vert{}\vert{} usr.username}</b> (${usr.username})<br>
+                    <small style="color: #64748b;">${usr.email || 'No email'} | ${usr.role.toUpperCase()}${userAssigned.length > 0 ? '➔ ' + userAssigned.join(', ') : ''}</small>
                 </div>
                 <div>
                     <button class="btn-edit" onclick="openEditUserModal(${idx})">Edit</button>
@@ -438,7 +467,7 @@ function renderSettingsUI() {
     if (estListUi) {
         estListUi.innerHTML = '';
         estateList.forEach((est, idx) => {
-            estListUi.innerHTML += `<li style="padding: 6px; background: white; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+            estListUi.innerHTML += `<li style="padding: 6px; background: #f8fafc; margin-bottom: 4px; border-radius: 4px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
                 <span>${est}</span>
                 <div>
                     <button class="btn-edit" onclick="editEstateName(${idx})">Edit</button>
@@ -451,7 +480,7 @@ function renderSettingsUI() {
     renderNewUserEstateCheckboxes();
 }
 
-// UPDATE 3: EDIT MODAL WITH CHECKBOXES
+// FIX: OPEN EDIT USER MODAL WORKING CLEANLY
 function openEditUserModal(idx) {
     const user = userAccounts[idx];
     document.getElementById('editIndex').value = idx;
@@ -468,314 +497,5 @@ function openEditUserModal(idx) {
         estateList.forEach(est => {
             let isChecked = userAssigned.includes(est) ? 'checked' : '';
             editContainer.innerHTML += `
-                <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" value="${est}" class="edit-estate-chk" ${isChecked}>
-                    <span>${est}</span>
-                </label>`;
-        });
-    }
-
-    toggleEditEstateDropdown();
-    document.getElementById('editUserModal').style.display = 'flex';
-}
-
-function closeEditModal() {
-    document.getElementById('editUserModal').style.display = 'none';
-}
-
-// UPDATE 4: SAVE EDIT WITH CHECKBOXES AND LOGGING
-async function saveUserEdit() {
-    const idx = document.getElementById('editIndex').value;
-    let targetUser = userAccounts[idx];
-
-    const newFull = document.getElementById('editFull').value.trim();
-    const newEmail = document.getElementById('editEmail').value.trim();
-    const newPass = document.getElementById('editPass').value.trim();
-    const newRole = document.getElementById('editRole').value;
-
-    let newEstates = [];
-    if (newRole !== "admin") {
-        const checkedBoxes = document.querySelectorAll('.edit-estate-chk:checked');
-        newEstates = Array.from(checkedBoxes).map(chk => chk.value);
-    }
-
-    targetUser.full_name = newFull;
-    targetUser.email = newEmail;
-    if (newPass) targetUser.password = newPass;
-    targetUser.role = newRole;
-    targetUser.assigned_estates = newEstates;
-
-    if (targetUser.id) {
-        let updateObj = { full_name: newFull, email: newEmail, role: newRole, assigned_estates: newEstates };
-        if (newPass) updateObj.password = newPass;
-
-        const { error } = await supabaseClient.from('user_profiles').update(updateObj).eq('id', targetUser.id);
-        if (error) return alert("Error updating database: " + error.message);
-    }
-
-    await supabaseClient.from('activity_logs').insert([{
-        username: typeof currentUser !== 'undefined' && currentUser ? currentUser.username : 'ADMIN',
-        action: 'EDIT_USER',
-        details: `Updated profile for '${targetUser.username}' (${newRole}). Estates: ${newEstates.join(', ') || 'ALL'}`,
-        estate: newEstates.length > 0 ? newEstates[0] : 'SYSTEM',
-        timestamp: new Date().toISOString()
-    }]);
-
-    alert("User profile updated successfully!");
-    closeEditModal();
-    if (typeof fetchUserProfiles === 'function') fetchUserProfiles();
-}
-
-async function addNewUser() {
-    const uFull = document.getElementById('newUserFull').value.trim();
-    const uEmail = document.getElementById('newUserEmail').value.trim();
-    const uName = document.getElementById('newUsername').value.trim();
-    const uPass = document.getElementById('newUserPass').value.trim();
-    const uRole = document.getElementById('newUserRole').value;
-    
-    let uEstates = [];
-    if (uRole !== "admin") {
-        const checkedBoxes = document.querySelectorAll('.new-estate-chk:checked');
-        uEstates = Array.from(checkedBoxes).map(chk => chk.value);
-    }
-
-    if (!uName || !uPass || !uFull) return alert("Fill in Full Name, Username, and Password");
-
-    const newUserObj = { 
-        username: uName, 
-        password: uPass, 
-        full_name: uFull, 
-        email: uEmail, 
-        role: uRole, 
-        assigned_estates: uEstates 
-    };
-
-    const { error } = await supabaseClient.from('user_profiles').insert([newUserObj]);
-
-    if (error) {
-        alert("Error creating user: " + error.message);
-    } else {
-        await supabaseClient.from('activity_logs').insert([{
-            username: typeof currentUser !== 'undefined' && currentUser ? currentUser.username : 'ADMIN',
-            action: 'CREATE_USER',
-            details: `Created user '${uName}' (${uRole}) with estates: ${uEstates.join(', ') || 'ALL'}`,
-            estate: uEstates.length > 0 ? uEstates[0] : 'SYSTEM',
-            timestamp: new Date().toISOString()
-        }]);
-
-        alert(`User "${uName}" created successfully with ${uEstates.length} assigned estate(s)!`);
-        
-        document.getElementById('newUserFull').value = '';
-        document.getElementById('newUserEmail').value = '';
-        document.getElementById('newUsername').value = '';
-        document.getElementById('newUserPass').value = '';
-        
-        document.querySelectorAll('.new-estate-chk').forEach(chk => chk.checked = false);
-
-        if (typeof fetchUserProfiles === 'function') fetchUserProfiles();
-    }
-}
-
-async function addNewEstate() {
-    const nameInput = document.getElementById('newEstateName');
-    const newName = nameInput.value.trim();
-    if (!newName) return alert("Enter estate name");
-
-    const { error } = await supabaseClient.from('estates').insert([{ name: newName }]);
-
-    if (error) {
-        alert("Error adding estate: " + error.message);
-    } else {
-        alert(`Estate "${newName}" added permanently!`);
-        nameInput.value = '';
-        await fetchEstates();
-    }
-}
-
-async function removeEstate(idx) {
-    let targetEstate = estateList[idx];
-    if (!confirmITAction(`Estate Location: "${targetEstate}"`)) return;
-
-    const { error } = await supabaseClient.from('estates').delete().eq('name', targetEstate);
-
-    if (error) {
-        alert("Error deleting estate: " + error.message);
-    } else {
-        alert(`Estate "${targetEstate}" permanently deleted!`);
-        await fetchEstates();
-    }
-}
-
-async function editEstateName(idx) {
-    let oldName = estateList[idx];
-    let newName = prompt(`Edit Estate Location Name:`, oldName);
-
-    if (newName && newName.trim() !== "" && newName !== oldName) {
-        const trimmedName = newName.trim();
-        const { error } = await supabaseClient
-            .from('estates')
-            .update({ name: trimmedName })
-            .eq('name', oldName);
-
-        if (error) {
-            alert("Error updating estate: " + error.message);
-        } else {
-            alert(`Estate renamed to "${trimmedName}" permanently!`);
-            await fetchEstates();
-        }
-    }
-}
-
-async function removeUser(idx) {
-    let targetUser = userAccounts[idx];
-    if (!confirmITAction(`User Account: "${targetUser.username}"`)) return;
-
-    if (targetUser.id) {
-        await supabaseClient.from('user_profiles').delete().eq('id', targetUser.id);
-    }
-    
-    userAccounts.splice(idx, 1);
-    renderSettingsUI();
-}
-
-function onEstateOrMonthChange() {
-    updateSummaryHeader();
-    loadFromCloud();
-    loadOverallSummary();
-}
-
-function initKeyInTables() {
-    let s1 = '';
-    for (let d = 1; d <= 31; d++) {
-        s1 += `<tr>
-            <td><b>${d}</b></td>
-            <td><input type="number" step="any" id="s1_rf_${d}" oninput="calcS1();"></td>
-            <td class="readonly-cell" id="s1_rf_todate_${d}"></td>
-            <td><input type="number" step="any" id="s1_rf_pm_${d}"></td>
-            <td><input type="number" step="any" id="s1_ffb1_${d}" oninput="calcS1()"></td>
-            <td><input type="number" step="any" id="s1_ffb2_${d}" oninput="calcS1()"></td>
-            <td><input type="number" step="any" id="s1_ffb3_${d}" oninput="calcS1()"></td>
-            <td><input type="number" step="any" id="s1_ffb4_${d}" oninput="calcS1()"></td>
-            <td class="readonly-cell" id="s1_gt_today_${d}"></td>
-            <td class="readonly-cell" id="s1_gt_todate_${d}"></td>
-            <td><input type="number" step="any" id="s1_ffb_pm_${d}"></td>
-        </tr>`;
-    }
-    document.getElementById('tbody-s1').innerHTML = s1;
-
-    let s2 = '';
-    for (let d = 1; d <= 31; d++) {
-        s2 += `<tr>
-            <td><b>${d}</b></td>
-            ${[1,2,3,4].map(p => `
-                <td><input type="number" step="any" id="s2_p${p}_t_${d}" oninput="calcS2();"></td>
-                <td class="readonly-cell" id="s2_p${p}_td_${d}"></td>
-                <td><input type="number" step="any" id="s2_p${p}_pm_${d}"></td>
-            `).join('')}
-        </tr>`;
-    }
-    document.getElementById('tbody-s2').innerHTML = s2;
-
-    let s3 = '';
-    for (let d = 1; d <= 31; d++) {
-        s3 += `<tr>
-            <td><b>${d}</b></td>
-            ${[1,2,3,4,5,6].map(m => `<td><input type="number" step="any" id="s3_m${m}_${d}"></td>`).join('')}
-            <td class="readonly-cell" id="s3_gt_today_${d}"></td>
-            <td class="readonly-cell" id="s3_gt_todate_${d}"></td>
-            <td><input type="number" step="any" id="s3_pm_${d}"></td>
-        </tr>`;
-    }
-    document.getElementById('tbody-s3').innerHTML = s3;
-
-    let s4Hdr = '';
-    for (let p = 1; p <= 12; p++) {
-        s4Hdr += `<th style="width: 60px;"><input type="text" value="P${p}" style="font-weight:bold; text-align:center;"></th>`;
-    }
-    s4Hdr += `<th>TODAY</th><th>TODATE</th>`;
-    document.getElementById('s4-phase-headers').innerHTML = s4Hdr;
-
-    let s4 = '';
-    for (let d = 1; d <= 31; d++) {
-        s4 += `<tr>
-            <td><b>${d}</b></td>
-            ${Array.from({length:12}, (_, i) => `<td><input type="number" step="any" id="s4_p${i+1}_${d}"></td>`).join('')}
-            <td class="readonly-cell" id="s4_gt_today_${d}"></td>
-            <td class="readonly-cell" id="s4_gt_todate_${d}"></td>
-            <td><input type="number" step="any" id="s4_pm_${d}"></td>
-        </tr>`;
-    }
-    document.getElementById('tbody-s4').innerHTML = s4;
-}
-
-function calcS1() {
-    let cumRf = 0, cumFfb = 0;
-    for (let d = 1; d <= 31; d++) {
-        let rfVal = parseFloat(document.getElementById(`s1_rf_${d}`)?.value) || 0;
-        cumRf += rfVal;
-        if (document.getElementById(`s1_rf_todate_${d}`)) {
-            document.getElementById(`s1_rf_todate_${d}`).innerText = cumRf > 0 ? cumRf.toFixed(2) : '';
-        }
-
-        let f1 = parseFloat(document.getElementById(`s1_ffb1_${d}`)?.value) || 0;
-        let f2 = parseFloat(document.getElementById(`s1_ffb2_${d}`)?.value) || 0;
-        let f3 = parseFloat(document.getElementById(`s1_ffb3_${d}`)?.value) || 0;
-        let f4 = parseFloat(document.getElementById(`s1_ffb4_${d}`)?.value) || 0;
-        let sumToday = f1 + f2 + f3 + f4;
-        cumFfb += sumToday;
-
-        if (document.getElementById(`s1_gt_today_${d}`)) {
-            document.getElementById(`s1_gt_today_${d}`).innerText = sumToday > 0 ? sumToday.toFixed(2) : '';
-        }
-        if (document.getElementById(`s1_gt_todate_${d}`)) {
-            document.getElementById(`s1_gt_todate_${d}`).innerText = cumFfb > 0 ? cumFfb.toFixed(2) : '';
-        }
-    }
-}
-
-function calcS2() {
-    for (let p = 1; p <= 4; p++) {
-        let cum = 0;
-        for (let d = 1; d <= 31; d++) {
-            let val = parseFloat(document.getElementById(`s2_p${p}_t_${d}`)?.value) || 0;
-            cum += val;
-            if (document.getElementById(`s2_p${p}_td_${d}`)) {
-                document.getElementById(`s2_p${p}_td_${d}`).innerText = cum > 0 ? cum.toFixed(2) : '';
-            }
-        }
-    }
-}
-
-function updateSummaryHeader() {
-    let val = document.getElementById('bulanTahun').value;
-    if (val) {
-        let d = new Date(val + "-01");
-        let mName = d.toLocaleString('en', { month: 'short' }).toUpperCase();
-        let y = d.getFullYear();
-        document.getElementById('sumReportTitle').innerText = `RAINFALL REPORT MONTH OF ${mName} ${y}`;
-    }
-}
-
-function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    
-    document.getElementById(tabId).classList.add('active');
-    document.getElementById(`btn-${tabId}`).classList.add('active');
-
-    const saveBtn = document.getElementById('saveBtn');
-    if (saveBtn) {
-        if (tabId === 'tabSummary' || tabId === 'tabSettings') {
-            saveBtn.style.display = 'none';
-        } else {
-            saveBtn.style.display = 'inline-block';
-        }
-    }
-}
-
-window.onload = function() {
-    initKeyInTables();
-    fetchEstates();
-    fetchUserProfiles();
-    applyUserPermissions();
-};
+                <label class="checkbox-item">
+                    <input type="checkbox" value
