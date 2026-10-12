@@ -9,17 +9,54 @@ let estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1
 let userAccounts = [];
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
 
-async function fetchUserProfiles() {
-    const { data, error } = await supabaseClient.from('user_profiles').select('*');
-    if (!error && data && data.length > 0) {
-        userAccounts = data;
+async function addNewEstate() {
+    const nameInput = document.getElementById('newEstateName');
+    const newName = nameInput.value.trim();
+    if (!newName) return alert("Enter estate name");
+
+    const { error } = await supabaseClient.from('estates').insert([{ name: newName }]);
+
+    if (error) {
+        alert("Error adding estate: " + error.message);
     } else {
-        userAccounts = [
-            { username: "admin", password: "admin123", full_name: "System Admin", email: "admin@masihjaya.com", role: "admin", assigned_estate: "" },
-            { username: "sty_user", password: "user123", full_name: "STY Officer", email: "sty@masihjaya.com", role: "user", assigned_estate: "STY" }
-        ];
+        alert(`Estate "${newName}" added permanently!`);
+        nameInput.value = '';
+        await fetchEstates();
     }
-    renderSettingsUI();
+}
+
+async function removeEstate(idx) {
+    let targetEstate = estateList[idx];
+    if (!confirmITAction(`Estate Location: "${targetEstate}"`)) return;
+
+    const { error } = await supabaseClient.from('estates').delete().eq('name', targetEstate);
+
+    if (error) {
+        alert("Error deleting estate: " + error.message);
+    } else {
+        alert(`Estate "${targetEstate}" permanently deleted!`);
+        await fetchEstates();
+    }
+}
+
+async function editEstateName(idx) {
+    let oldName = estateList[idx];
+    let newName = prompt(`Edit Estate Location Name:`, oldName);
+
+    if (newName && newName.trim() !== "" && newName !== oldName) {
+        const trimmedName = newName.trim();
+        const { error } = await supabaseClient
+            .from('estates')
+            .update({ name: trimmedName })
+            .eq('name', oldName);
+
+        if (error) {
+            alert("Error updating estate: " + error.message);
+        } else {
+            alert(`Estate renamed to "${trimmedName}" permanently!`);
+            await fetchEstates();
+        }
+    }
 }
 
 async function handleLogin() {
@@ -659,7 +696,7 @@ function switchTab(tabId) {
 
 window.onload = function() {
     initKeyInTables();
-    renderEstateDropdown();
+    fetchEstates();
     fetchUserProfiles();
     applyUserPermissions();
 };
