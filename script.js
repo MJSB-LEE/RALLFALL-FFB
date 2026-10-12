@@ -103,6 +103,15 @@ function applyUserPermissions() {
 }
 
 async function saveToCloud() {
+    // Determine current active tab
+    const activeTab = document.querySelector('.tab-content.active')?.id;
+    
+    // Tab Restriction: Prevent saving when viewing Overall Summary or Settings
+    if (activeTab === 'tabSummary' || activeTab === 'tabSettings') {
+        alert("⚠️ Save operation is only available on Input Tabs (Tabs 1 to 4).");
+        return;
+    }
+
     const estate = document.getElementById('ladangSelect').value;
     const monthYear = document.getElementById('bulanTahun').value;
     
@@ -163,6 +172,7 @@ async function saveToCloud() {
         });
     }
 
+    // Save records to main database table
     const { error } = await supabaseClient
         .from('daily_records')
         .upsert(updates, { onConflict: 'estate_name,record_date' });
@@ -170,12 +180,19 @@ async function saveToCloud() {
     if (error) {
         alert("Error saving data: " + error.message);
     } else {
-        alert(`Data saved successfully by ${activeUserName}!`);
+        // Record Activity Trail Entry
+        await supabaseClient.from('activity_logs').insert([{
+            user_name: activeUserName,
+            estate_name: estate,
+            record_date: monthYear,
+            action_type: `Saved Data via ${activeTab.toUpperCase()}`
+        }]);
+
+        alert(`Data for "${estate}" saved successfully by ${activeUserName}!`);
         loadFromCloud();
         loadOverallSummary();
     }
 }
-
 async function loadFromCloud() {
     clearForm();
 
@@ -683,8 +700,19 @@ function updateSummaryHeader() {
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    
     document.getElementById(tabId).classList.add('active');
     document.getElementById(`btn-${tabId}`).classList.add('active');
+
+    // Hide Save Button when viewing Summary or Settings
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {
+        if (tabId === 'tabSummary' || tabId === 'tabSettings') {
+            saveBtn.style.display = 'none';
+        } else {
+            saveBtn.style.display = 'inline-block';
+        }
+    }
 }
 
 window.onload = function() {
