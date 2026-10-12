@@ -557,6 +557,7 @@ async function editEstateName(idx) {
     }
 }
 
+// 1. ADD NEW USER (Replaces existing addNewUser function)
 async function addNewUser() {
     const uFull = document.getElementById('newUserFull').value.trim();
     const uEmail = document.getElementById('newUserEmail').value.trim();
@@ -582,13 +583,13 @@ async function addNewUser() {
         assigned_estates: uEstates 
     };
 
-    // 1. Insert user into database
+    // Save to Supabase user_profiles
     const { error } = await supabaseClient.from('user_profiles').insert([newUserObj]);
 
     if (error) {
         alert("Error creating user: " + error.message);
     } else {
-        // 2. Insert audit log entry into activity_logs
+        // Log creation into activity_logs table
         await supabaseClient.from('activity_logs').insert([{
             username: typeof currentUser !== 'undefined' && currentUser ? currentUser.username : 'ADMIN',
             action: 'CREATE_USER',
@@ -605,11 +606,26 @@ async function addNewUser() {
         document.getElementById('newUsername').value = '';
         document.getElementById('newUserPass').value = '';
         
-        // Uncheck estate checkboxes
+        // Uncheck all registration checkboxes
         document.querySelectorAll('.new-estate-chk').forEach(chk => chk.checked = false);
 
         if (typeof fetchUserProfiles === 'function') fetchUserProfiles();
     }
+}
+
+// 2. HELPER TO POPULATE REGISTRATION CHECKBOXES (Call inside renderSettingsUI or page initialization)
+function renderNewUserEstateCheckboxes() {
+    const container = document.getElementById('newUserEstateCheckboxes');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    estateList.forEach(est => {
+        container.innerHTML += `
+            <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" value="${est}" class="new-estate-chk">
+                <span>${est}</span>
+            </label>`;
+    });
 }
 async function removeUser(idx) {
     let targetUser = userAccounts[idx];
