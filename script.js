@@ -38,25 +38,32 @@ async function fetchUserProfiles() {
     renderSettingsUI();
 }
 
-// Fetch Activity & Audit Logs
- function fetchActivityLogs() {
+// Fetch Activity & Audit Logs (FIXED: Sorts by id to avoid 400 Bad Request column errors)
+async function fetchActivityLogs() {
     const tableBody = document.getElementById('activityLogTableBody');
     if (!tableBody) return;
 
     const { data, error } = await supabaseClient
         .from('activity_logs')
         .select('*')
-        .order('timestamp', { ascending: false })
+        .order('id', { ascending: false })
         .limit(30);
 
-    if (error || !data || data.length === 0) {
+    if (error) {
+        console.error("Fetch Activity Error:", error.message);
+        tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #ef4444;">Error loading logs: ${error.message}</td></tr>`;
+        return;
+    }
+
+    if (!data || data.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No activity logs recorded yet.</td></tr>`;
         return;
     }
 
     let rowsHtml = '';
     data.forEach(log => {
-        let timeStr = log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A';
+        let logTime = log.timestamp || log.created_at;
+        let timeStr = logTime ? new Date(logTime).toLocaleString() : 'N/A';
         rowsHtml += `<tr>
             <td style="color: #64748b; font-size: 11px;">${timeStr}</td>
             <td><b>${log.username || log.user_name || 'SYSTEM'}</b></td>
@@ -83,8 +90,8 @@ async function handleLogin() {
         errorElem.style.display = "none";
         document.getElementById('loginOverlay').style.display = "none";
         
-        // Log Login Activity safely to Supabase
-        await supabaseClient.from('activity_logs').insert([{
+        // Record Login Event in Audit Log
+        const { error: logErr } = await supabaseClient.from('activity_logs').insert([{
             username: currentUser.username,
             action: 'LOGIN',
             details: `User '${currentUser.username}' logged into system`,
@@ -92,9 +99,11 @@ async function handleLogin() {
             timestamp: new Date().toISOString()
         }]);
 
+        if (logErr) console.error("Login Activity Log Error:", logErr.message);
+
         applyUserPermissions();
         renderSettingsUI();
-        fetchActivityLogs(); // Refresh activity log table immediately after login
+        await fetchActivityLogs();
     } else {
         errorElem.innerText = "Invalid Username or Password!";
         errorElem.style.display = "block";
@@ -422,7 +431,6 @@ function renderEstateDropdown(allowedEstatesFilter = null) {
     });
 }
 
-// Toggle functions to hide estate checkbox block for Admin role
 function toggleUserEstateDropdown() {
     const role = document.getElementById('newUserRole').value;
     const container = document.getElementById('newUserEstateCheckboxes');
@@ -537,8 +545,7 @@ function closeEditModal() {
     if (modalElem) modalElem.style.display = 'none';
 }
 
-// ADD NEW USER
-// 1. ADD NEW USER (WITH AUDIT LOGGING)
+// ADD NEW USER (WITH AUDIT LOGGING)
 async function addNewUser() {
     const uFull = document.getElementById('newUserFull').value.trim();
     const uEmail = document.getElementById('newUserEmail').value.trim();
@@ -570,7 +577,6 @@ async function addNewUser() {
     if (error) {
         alert("Error creating user: " + error.message);
     } else {
-        // Write User Creation to Audit Log
         const activeAdmin = currentUser ? currentUser.username : 'ADMIN';
         const estateSummary = uRole === 'admin' ? 'ALL ESTATES' : (uEstates.join(', ') || 'NONE');
 
@@ -595,7 +601,7 @@ async function addNewUser() {
     }
 }
 
-// 2. SAVE USER EDIT (WITH AUDIT LOGGING)
+// SAVE USER EDIT (WITH AUDIT LOGGING)
 async function saveUserEdit() {
     const idx = document.getElementById('editIndex').value;
     let targetUser = userAccounts[idx];
@@ -627,7 +633,6 @@ async function saveUserEdit() {
         if (error) return alert("Error updating database: " + error.message);
     }
 
-    // Write Profile Edit to Audit Log
     const activeAdmin = currentUser ? currentUser.username : 'ADMIN';
     const estateSummary = newRole === 'admin' ? 'ALL ESTATES' : (newEstates.join(', ') || 'NONE');
 
@@ -635,77 +640,6 @@ async function saveUserEdit() {
         username: activeAdmin,
         action: 'EDIT_USER',
         details: `Updated user '${targetUser.username}' (${newRole.toUpperCase()}). Access: ${estateSummary}`,
-        estate: 'SYSTEM',
-        timestamp: new Date().toISOString()
-    }]);
-
-    alert("User profile updated successfully!");
-    closeEditModal();
-    fetchUserProfiles();
-    fetchActivityLogs();
-}
-
-// 3. REMOVE USER (WITH AUDIT LOGGING)
-async function removeUser(idx) {
-    let targetUser = userAccounts[idx];
-    if (!confirmITAction(`User Account: "${targetUser.username}"`)) return;
-
-    if (targetUser.id) {
-        const { error } = await supabaseClient.from('user_profiles').delete().eq('id', targetUser.id);
-        if (error) return alert("Error deleting user: " + error.message);
-    }
-    
-    // Write User Deletion to Audit Log
-    const activeAdmin = currentUser ? currentUser.username : 'ADMIN';
-    await supabaseClient.from('activity_logs').insert([{
-        username: activeAdmin,
-        action: 'DELETE_USER',
-        details: `Deleted user profile '${targetUser.username}' (${targetUser.role ? targetUser.role.toUpperCase() : 'USER'})`,
-        estate: 'SYSTEM',
-        timestamp: new Date().toISOString()
-    }]);
-
-    userAccounts.splice(idx, 1);
-    renderSettingsUI();
-    fetchActivityLogs();
-}
-
-// SAVE USER EDIT
-async function saveUserEdit() {
-    const idx = document.getElementById('editIndex').value;
-    let targetUser = userAccounts[idx];
-
-    const newFull = document.getElementById('editFull').value.trim();
-    const newEmail = document.getElementById('editEmail').value.trim();
-    const newPass = document.getElementById('editPass').value.trim();
-    const newRole = document.getElementById('editRole').value;
-
-    let newEstates = [];
-    if (newRole === "admin") {
-        newEstates = [...estateList];
-    } else {
-        const checkedBoxes = document.querySelectorAll('.edit-estate-chk:checked');
-        newEstates = Array.from(checkedBoxes).map(chk => chk.value);
-    }
-
-    targetUser.full_name = newFull;
-    targetUser.email = newEmail;
-    if (newPass) targetUser.password = newPass;
-    targetUser.role = newRole;
-    targetUser.assigned_estates = newEstates;
-
-    if (targetUser.id) {
-        let updateObj = { full_name: newFull, email: newEmail, role: newRole, assigned_estates: newEstates };
-        if (newPass) updateObj.password = newPass;
-
-        const { error } = await supabaseClient.from('user_profiles').update(updateObj).eq('id', targetUser.id);
-        if (error) return alert("Error updating database: " + error.message);
-    }
-
-    await supabaseClient.from('activity_logs').insert([{
-        username: currentUser ? currentUser.username : 'ADMIN',
-        action: 'EDIT_USER',
-        details: `Updated profile for '${targetUser.username}' (${newRole}). Estates: ${newRole === 'admin' ? 'ALL' : newEstates.join(', ')}`,
         estate: 'SYSTEM',
         timestamp: new Date().toISOString()
     }]);
@@ -766,16 +700,28 @@ async function editEstateName(idx) {
     }
 }
 
+// REMOVE USER (WITH AUDIT LOGGING)
 async function removeUser(idx) {
     let targetUser = userAccounts[idx];
     if (!confirmITAction(`User Account: "${targetUser.username}"`)) return;
 
     if (targetUser.id) {
-        await supabaseClient.from('user_profiles').delete().eq('id', targetUser.id);
+        const { error } = await supabaseClient.from('user_profiles').delete().eq('id', targetUser.id);
+        if (error) return alert("Error deleting user: " + error.message);
     }
-    
+
+    const activeAdmin = currentUser ? currentUser.username : 'ADMIN';
+    await supabaseClient.from('activity_logs').insert([{
+        username: activeAdmin,
+        action: 'DELETE_USER',
+        details: `Deleted user profile '${targetUser.username}' (${targetUser.role ? targetUser.role.toUpperCase() : 'USER'})`,
+        estate: 'SYSTEM',
+        timestamp: new Date().toISOString()
+    }]);
+
     userAccounts.splice(idx, 1);
     renderSettingsUI();
+    fetchActivityLogs();
 }
 
 function onEstateOrMonthChange() {
