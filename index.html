@@ -7,29 +7,27 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Login Screen Overlay Styling */
         #loginOverlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.9);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 9999;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.95); display: flex;
+            align-items: center; justify-content: center; z-index: 9999;
         }
         .login-card {
             background: white; padding: 30px; border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 340px; text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 360px; text-align: center;
         }
         .login-card h2 { margin-bottom: 5px; color: #1e293b; font-size: 20px; }
         .login-card p { font-size: 12px; color: #64748b; margin-bottom: 20px; }
-        .login-card input, .login-card select {
+        .login-card input {
             width: 100%; padding: 10px; margin-bottom: 12px;
             border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;
         }
+        .audit-info { font-size: 11px; color: #64748b; margin-top: 5px; font-style: italic; }
     </style>
 </head>
 <body>
 
-<!-- LOGIN OVERLAY SCREEN -->
+<!-- LOGIN OVERLAY -->
 <div id="loginOverlay">
     <div class="login-card">
         <h2>MASIH JAYA GROUP</h2>
@@ -40,16 +38,10 @@
         
         <button class="btn btn-primary" style="width: 100%; padding: 10px;" onclick="handleLogin()">Login</button>
         <p id="loginError" style="color: #ef4444; font-size: 12px; margin-top: 10px; display: none;"></p>
-        
-        <div style="margin-top: 15px; text-align: left; background: #f8fafc; padding: 10px; border-radius: 6px; font-size: 11px; color: #475569;">
-            <b>Default Credentials:</b><br>
-            • Admin: <code>admin</code> / <code>admin123</code><br>
-            • User: <code>sty_user</code> / <code>user123</code>
-        </div>
     </div>
 </div>
 
-<!-- MAIN SYSTEM APP -->
+<!-- MAIN SYSTEM -->
 <div class="container">
     <header style="display: flex; justify-content: space-between; align-items: center;">
         <div>
@@ -67,7 +59,7 @@
         <div class="form-group">
             <label>Assigned Estate</label>
             <select id="ladangSelect" onchange="onEstateOrMonthChange()">
-                <!-- Dynamic based on user role -->
+                <!-- Populated dynamically -->
             </select>
         </div>
         <div class="form-group">
@@ -80,7 +72,10 @@
         </div>
     </div>
 
-    <!-- NAVIGATION TABS -->
+    <!-- AUDIT FOOTNOTE -->
+    <div id="auditLogDisplay" class="audit-info">Data Record Info: Not Saved Yet</div>
+
+    <!-- TABS -->
     <div class="tabs">
         <button class="tab-btn active" id="btn-tab1" onclick="switchTab('tab1')">1. RAINFALL + MILL</button>
         <button class="tab-btn" id="btn-tab2" onclick="switchTab('tab2')">2. RAINFALL BY PHASE</button>
@@ -90,7 +85,7 @@
         <button class="tab-btn settings-tab-btn" id="btn-tabSettings" onclick="switchTab('tabSettings')">⚙️ SETTINGS</button>
     </div>
 
-    <!-- TAB 1: RAINFALL + MILL -->
+    <!-- TAB 1 -->
     <div id="tab1" class="tab-content active">
         <h2>1. DAILY RAINFALL & FFB RECORD BY MILL</h2>
         <table>
@@ -104,34 +99,25 @@
                     <th rowspan="3" style="width: 90px;">PREV MONTH FFB</th>
                 </tr>
                 <tr>
-                    <th style="width: 80px;">TODAY</th>
-                    <th style="width: 80px;">TODATE</th>
-                    <th style="width: 80px;">Mill 1</th>
-                    <th style="width: 80px;">Mill 2</th>
-                    <th style="width: 80px;">Mill 3</th>
-                    <th style="width: 80px;">Mill 4</th>
-                    <th style="width: 80px;">TODAY</th>
-                    <th style="width: 80px;">TODATE</th>
+                    <th style="width: 80px;">TODAY</th><th style="width: 80px;">TODATE</th>
+                    <th style="width: 80px;">Mill 1</th><th style="width: 80px;">Mill 2</th><th style="width: 80px;">Mill 3</th><th style="width: 80px;">Mill 4</th>
+                    <th style="width: 80px;">TODAY</th><th style="width: 80px;">TODATE</th>
                 </tr>
-                <tr>
-                    <th>TODAY</th><th>TODATE</th><th>TODAY</th><th>TODAY</th><th>TODAY</th><th>TODAY</th><th>TODAY</th><th>TODATE</th>
-                </tr>
+                <tr><th>TODAY</th><th>TODATE</th><th>TODAY</th><th>TODAY</th><th>TODAY</th><th>TODAY</th><th>TODAY</th><th>TODATE</th></tr>
             </thead>
             <tbody id="tbody-s1"></tbody>
         </table>
     </div>
 
-    <!-- TAB 2: RAINFALL BY PHASE -->
+    <!-- TAB 2 -->
     <div id="tab2" class="tab-content">
         <h2>2. DAILY RAINFALL RECORD BY PHASE</h2>
         <table>
             <thead>
                 <tr>
                     <th rowspan="2" style="width: 40px;">DATE</th>
-                    <th colspan="3" class="section-hdr">PHASE 1</th>
-                    <th colspan="3" class="section-hdr">PHASE 2</th>
-                    <th colspan="3" class="section-hdr">PHASE 3</th>
-                    <th colspan="3" class="section-hdr">PHASE 4</th>
+                    <th colspan="3" class="section-hdr">PHASE 1</th><th colspan="3" class="section-hdr">PHASE 2</th>
+                    <th colspan="3" class="section-hdr">PHASE 3</th><th colspan="3" class="section-hdr">PHASE 4</th>
                 </tr>
                 <tr>
                     <th>TODAY</th><th>TODATE</th><th>PREV MONTH</th>
@@ -144,7 +130,7 @@
         </table>
     </div>
 
-    <!-- TAB 3: FFB BY MILL -->
+    <!-- TAB 3 -->
     <div id="tab3" class="tab-content">
         <h2>3. DAILY FFB RECORD BY MILL</h2>
         <table>
@@ -164,7 +150,7 @@
         </table>
     </div>
 
-    <!-- TAB 4: FFB BY PHASE -->
+    <!-- TAB 4 -->
     <div id="tab4" class="tab-content">
         <h2>4. DAILY FFB RECORD BY PHASE</h2>
         <table>
@@ -181,13 +167,12 @@
         </table>
     </div>
 
-    <!-- TAB 5: OVERALL SUMMARY (ALL ESTATES) -->
+    <!-- TAB 5: OVERALL SUMMARY -->
     <div id="tabSummary" class="tab-content">
         <div style="text-align: center; margin-bottom: 15px;">
             <h2 style="font-size: 18px;" id="sumReportTitle">OVERALL RAINFALL SUMMARY REPORT</h2>
             <p style="font-size: 12px; color: #64748b;">Consolidated group estate data loaded automatically from Database</p>
         </div>
-        
         <table>
             <thead>
                 <tr id="hdr-estates"></tr>
@@ -201,15 +186,17 @@
         </table>
     </div>
 
-    <!-- TAB 6: ADMIN SETTINGS -->
+    <!-- TAB 6: SETTINGS -->
     <div id="tabSettings" class="tab-content">
         <h2 style="margin-bottom: 16px; font-size: 18px;">⚙️ ADMIN MANAGEMENT PANEL</h2>
         
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
-            <!-- User Management Card -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px;">
+            <!-- User Registration Card -->
             <div style="background: #f1f5f9; padding: 15px; border-radius: 8px;">
-                <h3 style="font-size: 14px; margin-bottom: 10px;">User Account Management</h3>
+                <h3 style="font-size: 14px; margin-bottom: 10px;">User Account & Access Settings</h3>
                 <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
+                    <input type="text" id="newUserFull" placeholder="Full Name (e.g. John Doe)" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    <input type="email" id="newUserEmail" placeholder="Email Address" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
                     <input type="text" id="newUsername" placeholder="Username" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
                     <input type="password" id="newUserPass" placeholder="Password" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
                     <select id="newUserRole" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;" onchange="toggleUserEstateDropdown()">
@@ -219,19 +206,19 @@
                     <select id="newUserEstate" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
                         <!-- Dynamic estates -->
                     </select>
-                    <button class="btn btn-primary" onclick="addNewUser()">Add User Account</button>
+                    <button class="btn btn-primary" onclick="addNewUser()">Add New User Account</button>
                 </div>
-                <ul id="userSettingsList" style="list-style: none; max-height: 180px; overflow-y: auto;"></ul>
+                <ul id="userSettingsList" style="list-style: none; max-height: 220px; overflow-y: auto;"></ul>
             </div>
 
             <!-- Estate Management Card -->
             <div style="background: #f1f5f9; padding: 15px; border-radius: 8px;">
-                <h3 style="font-size: 14px; margin-bottom: 10px;">Estate Management</h3>
+                <h3 style="font-size: 14px; margin-bottom: 10px;">Estate Location Management</h3>
                 <div style="display: flex; gap: 8px; margin-bottom: 10px;">
                     <input type="text" id="newEstateName" placeholder="New Estate Name" style="flex: 1; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
                     <button class="btn btn-primary" onclick="addNewEstate()">Add Estate</button>
                 </div>
-                <ul id="estateSettingsList" style="list-style: none; max-height: 180px; overflow-y: auto;"></ul>
+                <ul id="estateSettingsList" style="list-style: none; max-height: 220px; overflow-y: auto;"></ul>
             </div>
         </div>
     </div>
