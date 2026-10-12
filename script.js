@@ -3,25 +3,20 @@ const SUPABASE_URL = 'https://tiwulxrorrmyxtosvzkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_W4-5_riBQWAUBPVtgX8Pcw_WCRET_KF';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let estateList = [
-    { name: "STY", aug: "1304.68", pfb: "389" },
-    { name: "Klagan PH1", aug: "1877.14", pfb: "231" },
-    { name: "Kars PH1/2/4", aug: "1251.25", pfb: "232" },
-    { name: "Kars PH3", aug: "553.94", pfb: "158" },
-    { name: "Sg Millian 1", aug: "279.58", pfb: "261" },
-    { name: "Sg Millian 2", aug: "81.12", pfb: "100" },
-    { name: "Sg Millian 3", aug: "55.24", pfb: "193" },
-    { name: "Labuk", aug: "223.62", pfb: "178" }
-];
-
-let systemUsers = ["Manager 1", "Estate Supervisor", "Data Entry Officer"];
+let estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk"];
+let lockedEstate = localStorage.getItem('assignedEstate') || "";
 
 async function saveToCloud() {
     const estate = document.getElementById('ladangSelect').value;
     const monthYear = document.getElementById('bulanTahun').value;
     
     if (!monthYear) {
-        alert("Please select a Month and Year first.");
+        alert("Please select a Month and Year.");
+        return;
+    }
+
+    if (lockedEstate && estate !== lockedEstate) {
+        alert(`Access Denied: You are locked to key in data for "${lockedEstate}" only.`);
         return;
     }
 
@@ -81,6 +76,7 @@ async function saveToCloud() {
         alert("Error saving data: " + error.message);
     } else {
         alert("Data saved successfully!");
+        loadOverallSummary();
     }
 }
 
@@ -92,7 +88,6 @@ async function loadFromCloud() {
 
     if (!monthYear || !estate) return;
 
-    // Calculate exact last day of selected month dynamically
     const [year, month] = monthYear.split('-').map(Number);
     const lastDay = new Date(year, month, 0).getDate();
     const lastDayStr = String(lastDay).padStart(2, '0');
@@ -138,6 +133,85 @@ async function loadFromCloud() {
     calcS2();
 }
 
+async function loadOverallSummary() {
+    const monthYear = document.getElementById('bulanTahun').value;
+    if (!monthYear) return;
+
+    const [year, month] = monthYear.split('-').map(Number);
+    const lastDay = new Date(year, month, 0).getDate();
+    const lastDayStr = String(lastDay).padStart(2, '0');
+
+    // Fetch records across all estates for the selected month/year
+    const { data, error } = await supabaseClient
+        .from('daily_records')
+        .select('estate_name, record_date, rainfall_today')
+        .gte('record_date', `${monthYear}-01`)
+        .lte('record_date', `${monthYear}-${lastDayStr}`);
+
+    if (error) return;
+
+    // Map data by estate and day
+    let matrix = {};
+    estateList.forEach(est => { matrix[est] = {}; });
+
+    if (data) {
+        data.forEach(r => {
+            let day = parseInt(r.record_date.split('-')[2], 10);
+            if (matrix[r.estate_name]) {
+                matrix[r.estate_name][day] = r.rainfall_today || 0;
+            }
+        });
+    }
+
+    // Build headers
+    let estateHdr = '<th>Date</th>';
+    let subHdr = '<th>Date</th>';
+    estateList.forEach(est => {
+        estateHdr += `<th colspan="2" class="header-estate">${est}</th>`;
+        subHdr += `<th>To Day</th><th>To Date</th>`;
+    });
+    estateHdr += '<th>Date</th>';
+    subHdr += '<th>Date</th>';
+
+    document.getElementById('hdr-estates').innerHTML = estateHdr;
+    document.getElementById('hdr-sub').innerHTML = subHdr;
+
+    // Build Rows for each day of the month
+    let tbody = '';
+    let estateTotals = {};
+    let estateDays = {};
+    estateList.forEach(est => { estateTotals[est] = 0; estateDays[est] = 0; });
+
+    for (let d = 1; d <= lastDay; d++) {
+        tbody += `<tr><td><b>${d}</b></td>`;
+        estateList.forEach(est => {
+            let val = matrix[est][d] || 0;
+            estateTotals[est] += val;
+            if (val > 0) estateDays[est]++;
+
+            let toDayStr = val > 0 ? val.toFixed(1) : '';
+            let toDateStr = estateTotals[est] > 0 ? estateTotals[est].toFixed(1) : '';
+
+            tbody += `<td>${toDayStr}</td><td class="readonly-cell">${toDateStr}</td>`;
+        });
+        tbody += `<td><b>${d}</b></td></tr>`;
+    }
+    document.getElementById('tbody-summary').innerHTML = tbody;
+
+    // Build Totals Footer
+    let totHtml = '<td>Total</td>';
+    let daysHtml = '<td>Days</td>';
+    estateList.forEach(est => {
+        totHtml += `<td>${estateTotals[est].toFixed(1)}</td><td class="readonly-cell">${estateTotals[est].toFixed(1)}</td>`;
+        daysHtml += `<td colspan="2">${estateDays[est]} Days</td>`;
+    });
+    totHtml += '<td>-</td>';
+    daysHtml += '<td>-</td>';
+
+    document.getElementById('row-totals').innerHTML = totHtml;
+    document.getElementById('row-days').innerHTML = daysHtml;
+}
+
 function clearForm() {
     for (let d = 1; d <= 31; d++) {
         if (document.getElementById(`s1_rf_${d}`)) document.getElementById(`s1_rf_${d}`).value = '';
@@ -164,74 +238,52 @@ function clearForm() {
     }
 }
 
+function lockUserEstate() {
+    const sel = document.getElementById('userLockEstateSelect').value;
+    lockedEstate = sel;
+    localStorage.setItem('assignedEstate', sel);
+
+    applyEstateLock();
+    alert(sel ? `User locked to "${sel}".` : "Unlocked. Full Admin access enabled.");
+}
+
+function applyEstateLock() {
+    const select = document.getElementById('ladangSelect');
+    if (lockedEstate) {
+        select.value = lockedEstate;
+        select.disabled = true; // Prevents changing estate dropdown
+    } else {
+        select.disabled = false;
+    }
+}
+
 function renderEstateDropdown() {
     const select = document.getElementById('ladangSelect');
+    const lockSelect = document.getElementById('userLockEstateSelect');
+    
     select.innerHTML = '';
+    lockSelect.innerHTML = '<option value="">-- ALL ESTATES (ADMIN MODE) --</option>';
+
     estateList.forEach(est => {
-        let opt = document.createElement('option');
-        opt.value = est.name;
-        opt.innerText = est.name;
-        select.appendChild(opt);
-    });
-}
+        let opt1 = document.createElement('option');
+        opt1.value = est;
+        opt1.innerText = est;
+        select.appendChild(opt1);
 
-function renderSettingsUI() {
-    const estListUi = document.getElementById('estateSettingsList');
-    if (!estListUi) return;
-    estListUi.innerHTML = '';
-    estateList.forEach((est, idx) => {
-        estListUi.innerHTML += `<li style="padding: 6px; background: white; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-            <span>${est.name}</span>
-            <button onclick="removeEstate(${idx})" style="background:#ef4444; color:white; border:none; padding: 2px 6px; border-radius:3px; cursor:pointer;">Delete</button>
-        </li>`;
+        let opt2 = document.createElement('option');
+        opt2.value = est;
+        opt2.innerText = est;
+        if (est === lockedEstate) opt2.selected = true;
+        lockSelect.appendChild(opt2);
     });
 
-    const userListUi = document.getElementById('userSettingsList');
-    if (!userListUi) return;
-    userListUi.innerHTML = '';
-    systemUsers.forEach((usr, idx) => {
-        userListUi.innerHTML += `<li style="padding: 6px; background: white; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-            <span>${usr}</span>
-            <button onclick="removeUser(${idx})" style="background:#ef4444; color:white; border:none; padding: 2px 6px; border-radius:3px; cursor:pointer;">Delete</button>
-        </li>`;
-    });
-}
-
-function addNewEstate() {
-    const nameInput = document.getElementById('newEstateName');
-    if (!nameInput.value.trim()) return alert("Enter estate name");
-    estateList.push({ name: nameInput.value.trim(), aug: "0", pfb: "0" });
-    nameInput.value = '';
-    renderEstateDropdown();
-    buildSummaryHeader();
-    buildSummaryBody();
-    renderSettingsUI();
-}
-
-function removeEstate(idx) {
-    estateList.splice(idx, 1);
-    renderEstateDropdown();
-    buildSummaryHeader();
-    buildSummaryBody();
-    renderSettingsUI();
-}
-
-function addNewUser() {
-    const userInput = document.getElementById('newUserName');
-    if (!userInput.value.trim()) return alert("Enter user name");
-    systemUsers.push(userInput.value.trim());
-    userInput.value = '';
-    renderSettingsUI();
-}
-
-function removeUser(idx) {
-    systemUsers.splice(idx, 1);
-    renderSettingsUI();
+    applyEstateLock();
 }
 
 function onEstateOrMonthChange() {
     updateSummaryHeader();
     loadFromCloud();
+    loadOverallSummary();
 }
 
 function initKeyInTables() {
@@ -298,50 +350,6 @@ function initKeyInTables() {
     document.getElementById('tbody-s4').innerHTML = s4;
 }
 
-function buildSummaryHeader() {
-    let augHtml = '<th class="header-aug" style="width: 40px;">AUG</th>';
-    let pfbHtml = '<th class="header-pfb">PFB</th>';
-    let estateHtml = '<th class="header-rain">Rain</th>';
-    let subHtml = '<th>Date</th>';
-    let totHtml = '<td>Total</td>';
-    let daysHtml = '<td>Days</td>';
-
-    estateList.forEach((est, idx) => {
-        augHtml += `<th colspan="2" class="header-pfb"><input type="number" step="any" value="${est.aug}" style="font-weight:bold; text-align:center;"></th>`;
-        pfbHtml += `<th colspan="2"><input type="number" step="any" value="${est.pfb}" style="text-align:center;"></th>`;
-        estateHtml += `<th colspan="2" class="header-estate">${est.name}</th>`;
-        subHtml += `<th>To Day</th><th>To Date</th>`;
-        totHtml += `<td id="tot_d_${idx}">0</td><td id="tot_td_${idx}">0</td>`;
-        daysHtml += `<td colspan="2" id="days_${idx}">0 Days</td>`;
-    });
-
-    augHtml += '<th rowspan="4" style="width: 40px;">Date</th>';
-    totHtml += '<td>-</td>';
-    daysHtml += '<td>-</td>';
-
-    document.getElementById('hdr-aug').innerHTML = augHtml;
-    document.getElementById('hdr-pfb').innerHTML = pfbHtml;
-    document.getElementById('hdr-estates').innerHTML = estateHtml;
-    document.getElementById('hdr-sub').innerHTML = subHtml;
-    document.getElementById('row-totals').innerHTML = totHtml;
-    document.getElementById('row-days').innerHTML = daysHtml;
-}
-
-function buildSummaryBody() {
-    let html = '';
-    for (let d = 1; d <= 31; d++) {
-        html += `<tr><td><b>${d}</b></td>`;
-        estateList.forEach((_, idx) => {
-            html += `
-                <td><input type="number" step="any" id="es_${idx}_d_${d}"></td>
-                <td class="readonly-cell" id="es_${idx}_td_${d}"></td>
-            `;
-        });
-        html += `<td><b>${d}</b></td></tr>`;
-    }
-    document.getElementById('tbody-summary').innerHTML = html;
-}
-
 function calcS1() {
     let cumRf = 0, cumFfb = 0;
     for (let d = 1; d <= 31; d++) {
@@ -400,9 +408,7 @@ function switchTab(tabId) {
 window.onload = function() {
     renderEstateDropdown();
     initKeyInTables();
-    buildSummaryHeader();
-    buildSummaryBody();
     updateSummaryHeader();
-    renderSettingsUI();
     loadFromCloud();
+    loadOverallSummary();
 };
