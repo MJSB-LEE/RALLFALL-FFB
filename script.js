@@ -92,7 +92,7 @@ async function handleLogin() {
         }]);
 
         applyUserPermissions();
-        renderSettingsUI(); // Re-render the UI state upon login
+        renderSettingsUI();
     } else {
         errorElem.innerText = "Invalid Username or Password!";
         errorElem.style.display = "block";
