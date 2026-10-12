@@ -1,6 +1,6 @@
 // Supabase Configuration
 const SUPABASE_URL = 'https://tiwulxrorrmyxtosvzkw.supabase.co';
-const SUPABASE_KEY = 'PASTE_YOUR_COPIED_ANON_KEY_HERE'; // Replace with real key from Supabase dashboard
+const SUPABASE_KEY = 'sb_publishable_W4-5_riBQWAUBPVtgX8Pcw_WCRET_KF';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let estateList = [
@@ -131,6 +131,7 @@ function renderEstateDropdown() {
 
 function renderSettingsUI() {
     const estListUi = document.getElementById('estateSettingsList');
+    if (!estListUi) return;
     estListUi.innerHTML = '';
     estateList.forEach((est, idx) => {
         estListUi.innerHTML += `<li style="padding: 6px; background: white; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
@@ -140,6 +141,7 @@ function renderSettingsUI() {
     });
 
     const userListUi = document.getElementById('userSettingsList');
+    if (!userListUi) return;
     userListUi.innerHTML = '';
     systemUsers.forEach((usr, idx) => {
         userListUi.innerHTML += `<li style="padding: 6px; background: white; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
