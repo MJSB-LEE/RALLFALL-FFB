@@ -564,9 +564,12 @@ async function addNewUser() {
     const uPass = document.getElementById('newUserPass').value.trim();
     const uRole = document.getElementById('newUserRole').value;
     
-    // Read multiple selected options from UI
-    const estateSelect = document.getElementById('newUserEstate');
-    const uEstates = uRole === "admin" ? [] : Array.from(estateSelect.selectedOptions).map(opt => opt.value);
+    // Read selected checkboxes for estate assignments
+    let uEstates = [];
+    if (uRole !== "admin") {
+        const checkedBoxes = document.querySelectorAll('.new-estate-chk:checked');
+        uEstates = Array.from(checkedBoxes).map(chk => chk.value);
+    }
 
     if (!uName || !uPass || !uFull) return alert("Fill in Full Name, Username, and Password");
 
@@ -579,20 +582,35 @@ async function addNewUser() {
         assigned_estates: uEstates 
     };
 
+    // 1. Insert user into database
     const { error } = await supabaseClient.from('user_profiles').insert([newUserObj]);
 
     if (error) {
         alert("Error creating user: " + error.message);
     } else {
+        // 2. Insert audit log entry into activity_logs
+        await supabaseClient.from('activity_logs').insert([{
+            username: typeof currentUser !== 'undefined' && currentUser ? currentUser.username : 'ADMIN',
+            action: 'CREATE_USER',
+            details: `Created user '${uName}' (${uRole}) with estates: ${uEstates.join(', ') || 'ALL'}`,
+            estate: uEstates.length > 0 ? uEstates[0] : 'SYSTEM',
+            timestamp: new Date().toISOString()
+        }]);
+
         alert(`User "${uName}" created successfully with ${uEstates.length} assigned estate(s)!`);
+        
+        // Clear input fields
         document.getElementById('newUserFull').value = '';
         document.getElementById('newUserEmail').value = '';
         document.getElementById('newUsername').value = '';
         document.getElementById('newUserPass').value = '';
-        fetchUserProfiles();
+        
+        // Uncheck estate checkboxes
+        document.querySelectorAll('.new-estate-chk').forEach(chk => chk.checked = false);
+
+        if (typeof fetchUserProfiles === 'function') fetchUserProfiles();
     }
 }
-
 async function removeUser(idx) {
     let targetUser = userAccounts[idx];
     if (!confirmITAction(`User Account: "${targetUser.username}"`)) return;
