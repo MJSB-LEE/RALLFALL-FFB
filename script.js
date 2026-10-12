@@ -60,7 +60,7 @@ async function fetchActivityLogs() {
         rowsHtml += `<tr>
             <td style="color: #64748b; font-size: 11px;">${timeStr}</td>
             <td><b>${log.username || log.user_name || 'SYSTEM'}</b></td>
-            <td><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 10px;">${log.action || log.action_type || 'INFO'}</span></td>
+            <td><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;">${log.action || log.action_type || 'INFO'}</span></td>
             <td>${log.estate || log.estate_name || '-'}</td>
             <td style="color: #334155;">${log.details || '-'}</td>
         </tr>`;
@@ -83,16 +83,18 @@ async function handleLogin() {
         errorElem.style.display = "none";
         document.getElementById('loginOverlay').style.display = "none";
         
+        // Log Login Activity safely to Supabase
         await supabaseClient.from('activity_logs').insert([{
             username: currentUser.username,
             action: 'LOGIN',
-            details: `User logged into system`,
-            estate: 'SYSTEM',
+            details: `User '${currentUser.username}' logged into system`,
+            estate: currentUser.role === 'admin' ? 'ALL ESTATES' : (currentUser.assigned_estates?.[0] || 'SYSTEM'),
             timestamp: new Date().toISOString()
         }]);
 
         applyUserPermissions();
         renderSettingsUI();
+        fetchActivityLogs(); // Refresh activity log table immediately after login
     } else {
         errorElem.innerText = "Invalid Username or Password!";
         errorElem.style.display = "block";
@@ -420,16 +422,23 @@ function renderEstateDropdown(allowedEstatesFilter = null) {
     });
 }
 
+// Toggle functions to hide estate checkbox block for Admin role
 function toggleUserEstateDropdown() {
     const role = document.getElementById('newUserRole').value;
     const container = document.getElementById('newUserEstateCheckboxes');
+    const label = container?.previousElementSibling;
+    
     if (container) container.style.display = role === "admin" ? "none" : "block";
+    if (label && label.tagName === "LABEL") label.style.display = role === "admin" ? "none" : "block";
 }
 
 function toggleEditEstateDropdown() {
     const role = document.getElementById('editRole').value;
     const container = document.getElementById('editEstateCheckboxes');
+    const label = container?.previousElementSibling;
+
     if (container) container.style.display = role === "admin" ? "none" : "block";
+    if (label && label.tagName === "LABEL") label.style.display = role === "admin" ? "none" : "block";
 }
 
 function renderNewUserEstateCheckboxes() {
@@ -450,6 +459,8 @@ function renderNewUserEstateCheckboxes() {
                 <span style="font-size: 12px; color: #1e293b;">${est}</span>
             </label>`;
     });
+
+    toggleUserEstateDropdown();
 }
 
 function renderSettingsUI() {
@@ -458,10 +469,12 @@ function renderSettingsUI() {
         userListUi.innerHTML = '';
         userAccounts.forEach((usr, idx) => {
             let userAssigned = usr.assigned_estates || (usr.assigned_estate ? [usr.assigned_estate] : []);
+            let estateText = usr.role === 'admin' ? '➔ ALL ESTATES' : (userAssigned.length > 0 ? '➔ ' + userAssigned.join(', ') : '');
+
             userListUi.innerHTML += `<li style="padding: 8px; background: #ffffff; margin-bottom: 6px; border-radius: 4px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <b style="font-size: 13px; color: #0f172a;">${usr.full_name || usr.username}</b> <span style="font-size: 12px; color: #64748b;">(${usr.username})</span><br>
-                    <small style="color: #64748b; font-size: 11px;">${usr.email || 'No email'} | <b>${usr.role ? usr.role.toUpperCase() : 'USER'}</b> ${userAssigned.length > 0 ? '➔ ' + userAssigned.join(', ') : ''}</small>
+                    <small style="color: #64748b; font-size: 11px;">${usr.email || 'No email'} | <b>${usr.role ? usr.role.toUpperCase() : 'USER'}</b> ${estateText}</small>
                 </div>
                 <div>
                     <button class="btn-edit" onclick="openEditUserModal(${idx})">Edit</button>
@@ -475,8 +488,8 @@ function renderSettingsUI() {
     if (estListUi) {
         estListUi.innerHTML = '';
         estateList.forEach((est, idx) => {
-            estListUi.innerHTML += `<li style="padding: 6px 8px; background: #ffffff; margin-bottom: 4px; border-radius: 4px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 12px; font-weight: 600; color: #334155;">${est}</span>
+            estListUi.innerHTML += `<li style="padding: 8px 12px; background: #ffffff; margin-bottom: 6px; border-radius: 4px; border: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box;">
+                <span style="font-size: 13px; font-weight: 600; color: #334155;">${est}</span>
                 <div>
                     <button class="btn-edit" onclick="editEstateName(${idx})">Edit</button>
                     <button class="btn-delete" onclick="removeEstate(${idx})">Delete</button>
@@ -490,10 +503,7 @@ function renderSettingsUI() {
 
 function openEditUserModal(idx) {
     const user = userAccounts[idx];
-    if (!user) {
-        alert("Error: User record not found.");
-        return;
-    }
+    if (!user) return alert("Error: User record not found.");
 
     document.getElementById('editIndex').value = idx;
     document.getElementById('editFull').value = user.full_name || '';
@@ -506,26 +516,20 @@ function openEditUserModal(idx) {
     const editContainer = document.getElementById('editEstateCheckboxes');
     if (editContainer) {
         editContainer.innerHTML = '';
-        if (!estateList || estateList.length === 0) {
-            editContainer.innerHTML = '<span style="color:#ef4444; font-size:11px;">No estate locations loaded.</span>';
-        } else {
-            estateList.forEach(est => {
-                let isChecked = userAssigned.includes(est) ? 'checked' : '';
-                editContainer.innerHTML += `
-                    <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; cursor: pointer; text-align: left;">
-                        <input type="checkbox" value="${est}" class="edit-estate-chk" ${isChecked}>
-                        <span style="font-size: 12px; color: #1e293b;">${est}</span>
-                    </label>`;
-            });
-        }
+        estateList.forEach(est => {
+            let isChecked = userAssigned.includes(est) ? 'checked' : '';
+            editContainer.innerHTML += `
+                <label class="checkbox-item">
+                    <input type="checkbox" value="${est}" class="edit-estate-chk" ${isChecked}>
+                    <span style="font-size: 12px; color: #1e293b;">${est}</span>
+                </label>`;
+        });
     }
 
     toggleEditEstateDropdown();
 
     const modalElem = document.getElementById('editUserModal');
-    if (modalElem) {
-        modalElem.style.display = 'flex';
-    }
+    if (modalElem) modalElem.style.display = 'flex';
 }
 
 function closeEditModal() {
@@ -573,16 +577,15 @@ async function addNewUser() {
             timestamp: new Date().toISOString()
         }]);
 
-        alert(`User "${uName}" created successfully as ${uRole.toUpperCase()} with ${uEstates.length} assigned estate(s)!`);
+        alert(`User "${uName}" created successfully as ${uRole.toUpperCase()}!`);
         
         document.getElementById('newUserFull').value = '';
         document.getElementById('newUserEmail').value = '';
         document.getElementById('newUsername').value = '';
         document.getElementById('newUserPass').value = '';
-        
         document.querySelectorAll('.new-estate-chk').forEach(chk => chk.checked = false);
 
-        if (typeof fetchUserProfiles === 'function') fetchUserProfiles();
+        fetchUserProfiles();
         fetchActivityLogs();
     }
 }
@@ -629,7 +632,7 @@ async function saveUserEdit() {
 
     alert("User profile updated successfully!");
     closeEditModal();
-    if (typeof fetchUserProfiles === 'function') fetchUserProfiles();
+    fetchUserProfiles();
     fetchActivityLogs();
 }
 
@@ -840,4 +843,5 @@ window.onload = async function() {
     await fetchEstates();        
     await fetchUserProfiles();   
     applyUserPermissions();
+    fetchActivityLogs();
 };
