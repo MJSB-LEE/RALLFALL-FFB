@@ -18,15 +18,25 @@ let systemUsers = ["Manager 1", "Estate Supervisor", "Data Entry Officer"];
 
 async function saveToCloud() {
     const estate = document.getElementById('ladangSelect').value;
-    const monthYear = document.getElementById('bulanTahun').value;
+    const monthYear = document.getElementById('bulanTahun').value; // e.g. "2026-09"
+    
+    if (!monthYear) {
+        alert("Please select a Month and Year first.");
+        return;
+    }
+
+    // Get the exact number of days for the selected month (e.g., 30 for Sept, 31 for Oct)
+    const [year, month] = monthYear.split('-').map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
+
     let updates = [];
 
-    for (let d = 1; d <= 31; d++) {
-        let rf = parseFloat(document.getElementById(`s1_rf_${d}`).value) || 0;
-        let f1 = parseFloat(document.getElementById(`s1_ffb1_${d}`).value) || 0;
-        let f2 = parseFloat(document.getElementById(`s1_ffb2_${d}`).value) || 0;
-        let f3 = parseFloat(document.getElementById(`s1_ffb3_${d}`).value) || 0;
-        let f4 = parseFloat(document.getElementById(`s1_ffb4_${d}`).value) || 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+        let rf = parseFloat(document.getElementById(`s1_rf_${d}`)?.value) || 0;
+        let f1 = parseFloat(document.getElementById(`s1_ffb1_${d}`)?.value) || 0;
+        let f2 = parseFloat(document.getElementById(`s1_ffb2_${d}`)?.value) || 0;
+        let f3 = parseFloat(document.getElementById(`s1_ffb3_${d}`)?.value) || 0;
+        let f4 = parseFloat(document.getElementById(`s1_ffb4_${d}`)?.value) || 0;
 
         let rf_p1 = parseFloat(document.getElementById(`s2_p1_t_${d}`)?.value) || 0;
         let rf_p2 = parseFloat(document.getElementById(`s2_p2_t_${d}`)?.value) || 0;
