@@ -403,14 +403,14 @@ function renderEstateDropdown(allowedEstatesFilter = null) {
 
 function toggleUserEstateDropdown() {
     const role = document.getElementById('newUserRole').value;
-    const estateSelect = document.getElementById('newUserEstate');
-    estateSelect.style.display = role === "admin" ? "none" : "block";
+    const container = document.getElementById('newUserEstateCheckboxes');
+    if (container) container.style.display = role === "admin" ? "none" : "block";
 }
 
 function toggleEditEstateDropdown() {
     const role = document.getElementById('editRole').value;
-    const estateSelect = document.getElementById('editEstate');
-    estateSelect.style.display = role === "admin" ? "none" : "block";
+    const container = document.getElementById('editEstateCheckboxes');
+    if (container) container.style.display = role === "admin" ? "none" : "block";
 }
 
 function renderSettingsUI() {
@@ -425,7 +425,7 @@ function renderSettingsUI() {
                     <small style="color: #64748b;">${usr.email || 'No email'} | ${usr.role.toUpperCase()} ${userAssigned.length > 0 ? '➔ ' + userAssigned.join(', ') : ''}</small>
                 </div>
                 <div>
-                    <button class="btn-edit" onclick="openEditUserModal(${idx})">Edit</button>
+                    <button class="btn-edit" onclick="UserModal(${idx})">Edit</button>
                     <button class="btn-delete" onclick="removeUser(${idx})">Delete</button>
                 </div>
             </li>`;
@@ -457,15 +457,19 @@ function openEditUserModal(idx) {
 
     let userAssigned = user.assigned_estates || (user.assigned_estate ? [user.assigned_estate] : []);
 
-    const editEstateSelect = document.getElementById('editEstate');
-    editEstateSelect.innerHTML = '';
-    estateList.forEach(est => {
-        let opt = document.createElement('option');
-        opt.value = est;
-        opt.innerText = est;
-        if (userAssigned.includes(est)) opt.selected = true;
-        editEstateSelect.appendChild(opt);
-    });
+    // Render estate checkboxes for the edit modal
+    const editContainer = document.getElementById('editEstateCheckboxes');
+    if (editContainer) {
+        editContainer.innerHTML = '';
+        estateList.forEach(est => {
+            let isChecked = userAssigned.includes(est) ? 'checked' : '';
+            editContainer.innerHTML += `
+                <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" value="${est}" class="edit-estate-chk" ${isChecked}>
+                    <span>${est}</span>
+                </label>`;
+        });
+    }
 
     toggleEditEstateDropdown();
     document.getElementById('editUserModal').style.display = 'flex';
@@ -483,9 +487,13 @@ async function saveUserEdit() {
     const newEmail = document.getElementById('editEmail').value.trim();
     const newPass = document.getElementById('editPass').value.trim();
     const newRole = document.getElementById('editRole').value;
-    
-    const editEstateSelect = document.getElementById('editEstate');
-    const newEstates = newRole === "admin" ? [] : Array.from(editEstateSelect.selectedOptions).map(opt => opt.value);
+
+    // Collect checked estates from the edit modal
+    let newEstates = [];
+    if (newRole !== "admin") {
+        const checkedBoxes = document.querySelectorAll('.edit-estate-chk:checked');
+        newEstates = Array.from(checkedBoxes).map(chk => chk.value);
+    }
 
     targetUser.full_name = newFull;
     targetUser.email = newEmail;
@@ -501,9 +509,18 @@ async function saveUserEdit() {
         if (error) return alert("Error updating database: " + error.message);
     }
 
+    // Record activity log entry
+    await supabaseClient.from('activity_logs').insert([{
+        username: typeof currentUser !== 'undefined' && currentUser ? currentUser.username : 'ADMIN',
+        action: 'EDIT_USER',
+        details: `Updated profile for '${targetUser.username}' (${newRole}). Estates: ${newEstates.join(', ') || 'ALL'}`,
+        estate: newEstates.length > 0 ? newEstates[0] : 'SYSTEM',
+        timestamp: new Date().toISOString()
+    }]);
+
     alert("User profile updated successfully!");
     closeEditModal();
-    renderSettingsUI();
+    if (typeof fetchUserProfiles === 'function') fetchUserProfiles();
 }
 
 // Database-connected Permanent Estate Functions
