@@ -29,8 +29,8 @@ async function fetchUserProfiles() {
         userAccounts = data;
     } else {
         userAccounts = [
-            { username: "admin", password: "admin123", full_name: "System Admin", email: "admin@masihjaya.com", role: "admin", assigned_estate: "" },
-            { username: "sty_user", password: "user123", full_name: "STY Officer", email: "sty@masihjaya.com", role: "user", assigned_estate: "STY" }
+            { username: "admin", password: "admin123", full_name: "System Admin", email: "admin@masihjaya.com", role: "admin", assigned_estates: [] },
+            { username: "sty_user", password: "user123", full_name: "STY Officer", email: "sty@masihjaya.com", role: "user", assigned_estates: ["STY"] }
         ];
     }
     renderSettingsUI();
@@ -80,7 +80,13 @@ function applyUserPermissions() {
 
     userLabel.innerText = `User: ${currentUser.full_name || currentUser.username} (${currentUser.username})`;
 
-    renderEstateDropdown();
+    // Standardize assigned estates into an array for multi-location access
+    let allowedEstates = currentUser.assigned_estates || [];
+    if (!Array.isArray(allowedEstates) && currentUser.assigned_estate) {
+        allowedEstates = [currentUser.assigned_estate];
+    }
+
+    renderEstateDropdown(allowedEstates);
 
     if (currentUser.role === "admin") {
         badge.innerText = "ROLE: ADMIN";
@@ -88,10 +94,11 @@ function applyUserPermissions() {
         ladangSelect.disabled = false;
         settingsBtn.style.display = "inline-block";
     } else {
-        badge.innerText = "ROLE: USER";
+        badge.innerText = `ROLE: USER (${allowedEstates.length} Location${allowedEstates.length > 1 ? 's' : ''})`;
         badge.style.background = "#3b82f6";
-        ladangSelect.value = currentUser.assigned_estate || currentUser.estate;
-        ladangSelect.disabled = true;
+        
+        // Unlock dropdown ONLY if user has 2 or more assigned locations
+        ladangSelect.disabled = allowedEstates.length <= 1; 
         settingsBtn.style.display = "none";
         
         if (document.getElementById('tabSettings').classList.contains('active')) {
@@ -193,6 +200,7 @@ async function saveToCloud() {
         loadOverallSummary();
     }
 }
+
 async function loadFromCloud() {
     clearForm();
 
@@ -368,7 +376,7 @@ function confirmITAction(actionName) {
     }
 }
 
-function renderEstateDropdown() {
+function renderEstateDropdown(allowedEstatesFilter = null) {
     const estateSelect = document.getElementById('ladangSelect');
     const newUserEstateSelect = document.getElementById('newUserEstate');
 
@@ -376,10 +384,13 @@ function renderEstateDropdown() {
     if (newUserEstateSelect) newUserEstateSelect.innerHTML = '';
 
     estateList.forEach(est => {
-        let opt1 = document.createElement('option');
-        opt1.value = est;
-        opt1.innerText = est;
-        estateSelect.appendChild(opt1);
+        // Show estate if admin OR if it exists in the user's allowedEstates array
+        if (!allowedEstatesFilter || (currentUser && currentUser.role === "admin") || allowedEstatesFilter.includes(est)) {
+            let opt1 = document.createElement('option');
+            opt1.value = est;
+            opt1.innerText = est;
+            estateSelect.appendChild(opt1);
+        }
 
         if (newUserEstateSelect) {
             let opt2 = document.createElement('option');
@@ -407,10 +418,11 @@ function renderSettingsUI() {
     if (userListUi) {
         userListUi.innerHTML = '';
         userAccounts.forEach((usr, idx) => {
+            let userAssigned = usr.assigned_estates || (usr.assigned_estate ? [usr.assigned_estate] : []);
             userListUi.innerHTML += `<li style="padding: 6px; background: white; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <b>${usr.full_name || usr.username}</b> (${usr.username})<br>
-                    <small style="color: #64748b;">${usr.email || 'No email'} | ${usr.role.toUpperCase()} ${usr.assigned_estate ? '➔ ' + usr.assigned_estate : ''}</small>
+                    <small style="color: #64748b;">${usr.email || 'No email'} | ${usr.role.toUpperCase()} ${userAssigned.length > 0 ? '➔ ' + userAssigned.join(', ') : ''}</small>
                 </div>
                 <div>
                     <button class="btn-edit" onclick="openEditUserModal(${idx})">Edit</button>
@@ -443,13 +455,15 @@ function openEditUserModal(idx) {
     document.getElementById('editPass').value = '';
     document.getElementById('editRole').value = user.role || 'user';
 
+    let userAssigned = user.assigned_estates || (user.assigned_estate ? [user.assigned_estate] : []);
+
     const editEstateSelect = document.getElementById('editEstate');
     editEstateSelect.innerHTML = '';
     estateList.forEach(est => {
         let opt = document.createElement('option');
         opt.value = est;
         opt.innerText = est;
-        if (est === user.assigned_estate) opt.selected = true;
+        if (userAssigned.includes(est)) opt.selected = true;
         editEstateSelect.appendChild(opt);
     });
 
@@ -469,16 +483,18 @@ async function saveUserEdit() {
     const newEmail = document.getElementById('editEmail').value.trim();
     const newPass = document.getElementById('editPass').value.trim();
     const newRole = document.getElementById('editRole').value;
-    const newEstate = newRole === "admin" ? "" : document.getElementById('editEstate').value;
+    
+    const editEstateSelect = document.getElementById('editEstate');
+    const newEstates = newRole === "admin" ? [] : Array.from(editEstateSelect.selectedOptions).map(opt => opt.value);
 
     targetUser.full_name = newFull;
     targetUser.email = newEmail;
     if (newPass) targetUser.password = newPass;
     targetUser.role = newRole;
-    targetUser.assigned_estate = newEstate;
+    targetUser.assigned_estates = newEstates;
 
     if (targetUser.id) {
-        let updateObj = { full_name: newFull, email: newEmail, role: newRole, assigned_estate: newEstate };
+        let updateObj = { full_name: newFull, email: newEmail, role: newRole, assigned_estates: newEstates };
         if (newPass) updateObj.password = newPass;
 
         const { error } = await supabaseClient.from('user_profiles').update(updateObj).eq('id', targetUser.id);
@@ -547,18 +563,28 @@ async function addNewUser() {
     const uName = document.getElementById('newUsername').value.trim();
     const uPass = document.getElementById('newUserPass').value.trim();
     const uRole = document.getElementById('newUserRole').value;
-    const uEstate = uRole === "admin" ? "" : document.getElementById('newUserEstate').value;
+    
+    // Read multiple selected options from UI
+    const estateSelect = document.getElementById('newUserEstate');
+    const uEstates = uRole === "admin" ? [] : Array.from(estateSelect.selectedOptions).map(opt => opt.value);
 
     if (!uName || !uPass || !uFull) return alert("Fill in Full Name, Username, and Password");
 
-    const newUserObj = { username: uName, password: uPass, full_name: uFull, email: uEmail, role: uRole, assigned_estate: uEstate };
+    const newUserObj = { 
+        username: uName, 
+        password: uPass, 
+        full_name: uFull, 
+        email: uEmail, 
+        role: uRole, 
+        assigned_estates: uEstates 
+    };
 
     const { error } = await supabaseClient.from('user_profiles').insert([newUserObj]);
 
     if (error) {
         alert("Error creating user: " + error.message);
     } else {
-        alert(`User account "${uName}" created successfully!`);
+        alert(`User "${uName}" created successfully with ${uEstates.length} assigned estate(s)!`);
         document.getElementById('newUserFull').value = '';
         document.getElementById('newUserEmail').value = '';
         document.getElementById('newUsername').value = '';
