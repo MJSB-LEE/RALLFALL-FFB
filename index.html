@@ -7,37 +7,64 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css">
     <style>
-        #loginOverlay {
+        #loginOverlay, #editUserModal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.95); display: flex;
             align-items: center; justify-content: center; z-index: 9999;
         }
-        .login-card {
-            background: white; padding: 30px; border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 360px; text-align: center;
+        .modal-card {
+            background: white; padding: 25px; border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 380px; text-align: center;
         }
-        .login-card h2 { margin-bottom: 5px; color: #1e293b; font-size: 20px; }
-        .login-card p { font-size: 12px; color: #64748b; margin-bottom: 20px; }
-        .login-card input {
-            width: 100%; padding: 10px; margin-bottom: 12px;
+        .modal-card h2 { margin-bottom: 5px; color: #1e293b; font-size: 18px; }
+        .modal-card input, .modal-card select {
+            width: 100%; padding: 8px; margin-bottom: 10px;
             border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;
         }
         .audit-info { font-size: 11px; color: #64748b; margin-top: 5px; font-style: italic; }
+        .btn-edit { background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; margin-right: 4px; }
+        .btn-delete { background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <!-- LOGIN OVERLAY -->
 <div id="loginOverlay">
-    <div class="login-card">
+    <div class="modal-card">
         <h2>MASIH JAYA GROUP</h2>
-        <p>Rainfall & FFB Reporting System</p>
+        <p style="font-size: 12px; color: #64748b; margin-bottom: 15px;">Rainfall & FFB Reporting System</p>
         
         <input type="text" id="loginUsername" placeholder="Username (e.g. admin)">
         <input type="password" id="loginPassword" placeholder="Password">
         
         <button class="btn btn-primary" style="width: 100%; padding: 10px;" onclick="handleLogin()">Login</button>
         <p id="loginError" style="color: #ef4444; font-size: 12px; margin-top: 10px; display: none;"></p>
+    </div>
+</div>
+
+<!-- EDIT USER MODAL -->
+<div id="editUserModal" style="display: none;">
+    <div class="modal-card">
+        <h2>Edit User Profile</h2>
+        <input type="hidden" id="editIndex">
+        <label style="font-size: 11px; display: block; text-align: left;">Full Name</label>
+        <input type="text" id="editFull">
+        <label style="font-size: 11px; display: block; text-align: left;">Email</label>
+        <input type="email" id="editEmail">
+        <label style="font-size: 11px; display: block; text-align: left;">Password</label>
+        <input type="password" id="editPass" placeholder="Leave blank to keep same password">
+        <label style="font-size: 11px; display: block; text-align: left;">Role</label>
+        <select id="editRole" onchange="toggleEditEstateDropdown()">
+            <option value="user">Estate User</option>
+            <option value="admin">Administrator</option>
+        </select>
+        <label style="font-size: 11px; display: block; text-align: left;">Assigned Estate</label>
+        <select id="editEstate"></select>
+        
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+            <button class="btn btn-primary" style="flex: 1;" onclick="saveUserEdit()">Save Changes</button>
+            <button class="btn btn-secondary" style="flex: 1;" onclick="closeEditModal()">Cancel</button>
+        </div>
     </div>
 </div>
 
@@ -193,7 +220,7 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px;">
             <!-- User Registration Card -->
             <div style="background: #f1f5f9; padding: 15px; border-radius: 8px;">
-                <h3 style="font-size: 14px; margin-bottom: 10px;">User Account & Access Settings</h3>
+                <h3 style="font-size: 14px; margin-bottom: 10px;">User Account Management</h3>
                 <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
                     <input type="text" id="newUserFull" placeholder="Full Name (e.g. John Doe)" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
                     <input type="email" id="newUserEmail" placeholder="Email Address" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
