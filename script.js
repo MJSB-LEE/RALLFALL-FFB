@@ -1,9 +1,9 @@
 // Supabase Configuration
 const SUPABASE_URL = 'https://tiwulxrorrmyxtosvzkw.supabase.co';
-const SUPABASE_KEY = 'YOUR-ANON-PUBLIC-KEY'; // Ensure your copied anon public key is pasted here
+const SUPABASE_KEY = 'PASTE_YOUR_COPIED_ANON_KEY_HERE'; // Replace with real key from Supabase dashboard
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const estateList = [
+let estateList = [
     { name: "STY", aug: "1304.68", pfb: "389" },
     { name: "Klagan PH1", aug: "1877.14", pfb: "231" },
     { name: "Kars PH1/2/4", aug: "1251.25", pfb: "232" },
@@ -13,6 +13,8 @@ const estateList = [
     { name: "Sg Millian 3", aug: "55.24", pfb: "193" },
     { name: "Labuk", aug: "223.62", pfb: "178" }
 ];
+
+let systemUsers = ["Manager 1", "Estate Supervisor", "Data Entry Officer"];
 
 async function saveToCloud() {
     const estate = document.getElementById('ladangSelect').value;
@@ -67,7 +69,7 @@ async function saveToCloud() {
         .upsert(updates, { onConflict: 'estate_name,record_date' });
 
     if (error) alert("Error saving data: " + error.message);
-    else alert("Data successfully saved to cloud!");
+    else alert("Data successfully saved to Cloud!");
 }
 
 async function loadFromCloud() {
@@ -114,6 +116,69 @@ async function loadFromCloud() {
     calcS1();
     calcS2();
     syncRainfallToSummary();
+}
+
+function renderEstateDropdown() {
+    const select = document.getElementById('ladangSelect');
+    select.innerHTML = '';
+    estateList.forEach(est => {
+        let opt = document.createElement('option');
+        opt.value = est.name;
+        opt.innerText = est.name;
+        select.appendChild(opt);
+    });
+}
+
+function renderSettingsUI() {
+    const estListUi = document.getElementById('estateSettingsList');
+    estListUi.innerHTML = '';
+    estateList.forEach((est, idx) => {
+        estListUi.innerHTML += `<li style="padding: 6px; background: white; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+            <span>${est.name}</span>
+            <button onclick="removeEstate(${idx})" style="background:#ef4444; color:white; border:none; padding: 2px 6px; border-radius:3px; cursor:pointer;">Delete</button>
+        </li>`;
+    });
+
+    const userListUi = document.getElementById('userSettingsList');
+    userListUi.innerHTML = '';
+    systemUsers.forEach((usr, idx) => {
+        userListUi.innerHTML += `<li style="padding: 6px; background: white; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+            <span>${usr}</span>
+            <button onclick="removeUser(${idx})" style="background:#ef4444; color:white; border:none; padding: 2px 6px; border-radius:3px; cursor:pointer;">Delete</button>
+        </li>`;
+    });
+}
+
+function addNewEstate() {
+    const nameInput = document.getElementById('newEstateName');
+    if (!nameInput.value.trim()) return alert("Enter estate name");
+    estateList.push({ name: nameInput.value.trim(), aug: "0", pfb: "0" });
+    nameInput.value = '';
+    renderEstateDropdown();
+    buildSummaryHeader();
+    buildSummaryBody();
+    renderSettingsUI();
+}
+
+function removeEstate(idx) {
+    estateList.splice(idx, 1);
+    renderEstateDropdown();
+    buildSummaryHeader();
+    buildSummaryBody();
+    renderSettingsUI();
+}
+
+function addNewUser() {
+    const userInput = document.getElementById('newUserName');
+    if (!userInput.value.trim()) return alert("Enter user name");
+    systemUsers.push(userInput.value.trim());
+    userInput.value = '';
+    renderSettingsUI();
+}
+
+function removeUser(idx) {
+    systemUsers.splice(idx, 1);
+    renderSettingsUI();
 }
 
 function onEstateOrMonthChange() {
@@ -322,9 +387,11 @@ function switchTab(tabId) {
 }
 
 window.onload = function() {
+    renderEstateDropdown();
     initKeyInTables();
     buildSummaryHeader();
     buildSummaryBody();
     updateSummaryHeader();
+    renderSettingsUI();
     loadFromCloud();
 };
