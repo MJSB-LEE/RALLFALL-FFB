@@ -9,7 +9,7 @@ let estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1
 let userAccounts = [];
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
 
-// Fetch Permanent Estates from Supabase Database
+// Fetch Permanent Estates from Supabase
 async function fetchEstates() {
     const { data, error } = await supabaseClient.from('estates').select('name').order('id', { ascending: true });
     if (!error && data && data.length > 0) {
@@ -22,7 +22,7 @@ async function fetchEstates() {
     loadOverallSummary();
 }
 
-// Fetch User Profiles
+// Fetch User Profiles from Supabase
 async function fetchUserProfiles() {
     const { data, error } = await supabaseClient.from('user_profiles').select('*');
     if (!error && data && data.length > 0) {
@@ -81,7 +81,6 @@ async function handleLogin() {
         errorElem.style.display = "none";
         document.getElementById('loginOverlay').style.display = "none";
         
-        // Log Login Action
         await supabaseClient.from('activity_logs').insert([{
             username: currentUser.username,
             action: 'LOGIN',
@@ -118,7 +117,7 @@ function applyUserPermissions() {
     const ladangSelect = document.getElementById('ladangSelect');
     const settingsBtn = document.getElementById('btn-tabSettings');
 
-    userLabel.innerText = `User: ${currentUser.full_name \vert{}\vert{} currentUser.username} (${currentUser.username})`;
+    userLabel.innerText = `User: ${currentUser.full_name || currentUser.username} (${currentUser.username})`;
 
     let allowedEstates = currentUser.assigned_estates || [];
     if (!Array.isArray(allowedEstates) && currentUser.assigned_estate) {
@@ -221,7 +220,7 @@ async function saveToCloud() {
         await supabaseClient.from('activity_logs').insert([{
             username: currentUser ? currentUser.username : 'ADMIN',
             action: 'SAVE_DATA',
-            details: `Saved Data via ${activeTab.toUpperCase()} for${monthYear}`,
+            details: `Saved Data via ${activeTab.toUpperCase()} for ${monthYear}`,
             estate: estate,
             timestamp: new Date().toISOString()
         }]);
@@ -258,7 +257,7 @@ async function loadFromCloud() {
         let lastRecord = data[data.length - 1];
         let editBy = lastRecord.updated_by || 'Unknown';
         let editTime = lastRecord.updated_at ? new Date(lastRecord.updated_at).toLocaleString() : 'N/A';
-        document.getElementById('auditLogDisplay').innerText = `Last Modified By: ${editBy} on${editTime}`;
+        document.getElementById('auditLogDisplay').innerText = `Last Modified By: ${editBy} on ${editTime}`;
     } else {
         document.getElementById('auditLogDisplay').innerText = `Data Record Info: No records for ${monthYear}`;
     }
@@ -409,93 +408,4 @@ function renderEstateDropdown(allowedEstatesFilter = null) {
     estateSelect.innerHTML = '';
 
     estateList.forEach(est => {
-        if (!allowedEstatesFilter || (currentUser && currentUser.role === "admin") || allowedEstatesFilter.includes(est)) {
-            let opt1 = document.createElement('option');
-            opt1.value = est;
-            opt1.innerText = est;
-            estateSelect.appendChild(opt1);
-        }
-    });
-}
-
-function toggleUserEstateDropdown() {
-    const role = document.getElementById('newUserRole').value;
-    const container = document.getElementById('newUserEstateCheckboxes');
-    if (container) container.style.display = role === "admin" ? "none" : "block";
-}
-
-function toggleEditEstateDropdown() {
-    const role = document.getElementById('editRole').value;
-    const container = document.getElementById('editEstateCheckboxes');
-    if (container) container.style.display = role === "admin" ? "none" : "block";
-}
-
-function renderNewUserEstateCheckboxes() {
-    const container = document.getElementById('newUserEstateCheckboxes');
-    if (!container) return;
-    container.innerHTML = '';
-    
-    estateList.forEach(est => {
-        container.innerHTML += `
-            <label class="checkbox-item">
-                <input type="checkbox" value="${est}" class="new-estate-chk">
-                <span>${est}</span>
-            </label>`;
-    });
-}
-
-function renderSettingsUI() {
-    const userListUi = document.getElementById('userSettingsList');
-    if (userListUi) {
-        userListUi.innerHTML = '';
-        userAccounts.forEach((usr, idx) => {
-            let userAssigned = usr.assigned_estates || (usr.assigned_estate ? [usr.assigned_estate] : []);
-            userListUi.innerHTML += `<li style="padding: 6px; background: #f8fafc; margin-bottom: 4px; border-radius: 4px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <b>${usr.full_name \vert{}\vert{} usr.username}</b> (${usr.username})<br>
-                    <small style="color: #64748b;">${usr.email || 'No email'} | ${usr.role.toUpperCase()}${userAssigned.length > 0 ? '➔ ' + userAssigned.join(', ') : ''}</small>
-                </div>
-                <div>
-                    <button class="btn-edit" onclick="openEditUserModal(${idx})">Edit</button>
-                    <button class="btn-delete" onclick="removeUser(${idx})">Delete</button>
-                </div>
-            </li>`;
-        });
-    }
-
-    const estListUi = document.getElementById('estateSettingsList');
-    if (estListUi) {
-        estListUi.innerHTML = '';
-        estateList.forEach((est, idx) => {
-            estListUi.innerHTML += `<li style="padding: 6px; background: #f8fafc; margin-bottom: 4px; border-radius: 4px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                <span>${est}</span>
-                <div>
-                    <button class="btn-edit" onclick="editEstateName(${idx})">Edit</button>
-                    <button class="btn-delete" onclick="removeEstate(${idx})">Delete</button>
-                </div>
-            </li>`;
-        });
-    }
-
-    renderNewUserEstateCheckboxes();
-}
-
-// FIX: OPEN EDIT USER MODAL WORKING CLEANLY
-function openEditUserModal(idx) {
-    const user = userAccounts[idx];
-    document.getElementById('editIndex').value = idx;
-    document.getElementById('editFull').value = user.full_name || '';
-    document.getElementById('editEmail').value = user.email || '';
-    document.getElementById('editPass').value = '';
-    document.getElementById('editRole').value = user.role || 'user';
-
-    let userAssigned = user.assigned_estates || (user.assigned_estate ? [user.assigned_estate] : []);
-
-    const editContainer = document.getElementById('editEstateCheckboxes');
-    if (editContainer) {
-        editContainer.innerHTML = '';
-        estateList.forEach(est => {
-            let isChecked = userAssigned.includes(est) ? 'checked' : '';
-            editContainer.innerHTML += `
-                <label class="checkbox-item">
-                    <input type="checkbox" value
+        if (!allowedEstatesFilter || (currentUser && currentUser.role === "admin") || allowedEstatesFilter.includes(
