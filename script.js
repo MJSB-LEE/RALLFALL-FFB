@@ -1,4 +1,3 @@
-// Supabase Configuration
 const SUPABASE_URL = 'https://tiwulxrorrmyxtosvzkw.supabase.co';
 const SUPABASE_KEY = 'YOUR-ANON-PUBLIC-KEY'; // Insert your copied anon key here
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -26,38 +25,53 @@ async function saveToCloud() {
         let f3 = parseFloat(document.getElementById(`s1_ffb3_${d}`).value) || 0;
         let f4 = parseFloat(document.getElementById(`s1_ffb4_${d}`).value) || 0;
 
-        if (rf === 0 && f1 === 0 && f2 === 0 && f3 === 0 && f4 === 0) continue;
+        let rf_p1 = parseFloat(document.getElementById(`s2_p1_t_${d}`)?.value) || 0;
+        let rf_p2 = parseFloat(document.getElementById(`s2_p2_t_${d}`)?.value) || 0;
+        let rf_p3 = parseFloat(document.getElementById(`s2_p3_t_${d}`)?.value) || 0;
+        let rf_p4 = parseFloat(document.getElementById(`s2_p4_t_${d}`)?.value) || 0;
+
+        let m1 = parseFloat(document.getElementById(`s3_m1_${d}`)?.value) || 0;
+        let m2 = parseFloat(document.getElementById(`s3_m2_${d}`)?.value) || 0;
+        let m3 = parseFloat(document.getElementById(`s3_m3_${d}`)?.value) || 0;
+        let m4 = parseFloat(document.getElementById(`s3_m4_${d}`)?.value) || 0;
+        let m5 = parseFloat(document.getElementById(`s3_m5_${d}`)?.value) || 0;
+        let m6 = parseFloat(document.getElementById(`s3_m6_${d}`)?.value) || 0;
+
+        let ffb_phases = {};
+        for (let p = 1; p <= 12; p++) {
+            ffb_phases[`ffb_phase${p}`] = parseFloat(document.getElementById(`s4_p${p}_${d}`)?.value) || 0;
+        }
 
         let dayStr = String(d).padStart(2, '0');
         updates.push({
             estate_name: estate,
             record_date: `${monthYear}-${dayStr}`,
             rainfall_today: rf,
-            ffb1: f1, ffb2: f2, ffb3: f3, ffb4: f4
+            ffb1: f1 || m1,
+            ffb2: f2 || m2,
+            ffb3: f3 || m3,
+            ffb4: f4 || m4,
+            ffb5: m5,
+            ffb6: m6,
+            rf_phase1: rf_p1,
+            rf_phase2: rf_p2,
+            rf_phase3: rf_p3,
+            rf_phase4: rf_p4,
+            ...ffb_phases
         });
     }
-
-    if (updates.length === 0) return alert("Tiada data untuk disimpan.");
 
     const { error } = await supabaseClient
         .from('daily_records')
         .upsert(updates, { onConflict: 'estate_name,record_date' });
 
-    if (error) alert("Ralat semasa menyimpan: " + error.message);
-    else alert("Data berjaya disimpan ke Cloud!");
+    if (error) alert("Error saving data: " + error.message);
+    else alert("Data successfully saved to cloud!");
 }
 
 async function loadFromCloud() {
     const estate = document.getElementById('ladangSelect').value;
     const monthYear = document.getElementById('bulanTahun').value;
-
-    for (let d = 1; d <= 31; d++) {
-        if (document.getElementById(`s1_rf_${d}`)) document.getElementById(`s1_rf_${d}`).value = '';
-        if (document.getElementById(`s1_ffb1_${d}`)) document.getElementById(`s1_ffb1_${d}`).value = '';
-        if (document.getElementById(`s1_ffb2_${d}`)) document.getElementById(`s1_ffb2_${d}`).value = '';
-        if (document.getElementById(`s1_ffb3_${d}`)) document.getElementById(`s1_ffb3_${d}`).value = '';
-        if (document.getElementById(`s1_ffb4_${d}`)) document.getElementById(`s1_ffb4_${d}`).value = '';
-    }
 
     const { data, error } = await supabaseClient
         .from('daily_records')
@@ -66,25 +80,38 @@ async function loadFromCloud() {
         .gte('record_date', `${monthYear}-01`)
         .lte('record_date', `${monthYear}-31`);
 
-    if (error) {
-        console.error("Ralat memuatkan data:", error);
-        return;
-    }
+    if (error || !data) return;
 
-    if (data && data.length > 0) {
-        data.forEach(row => {
-            let day = parseInt(row.record_date.split('-')[2], 10);
-            if (document.getElementById(`s1_rf_${day}`)) {
-                document.getElementById(`s1_rf_${day}`).value = row.rainfall_today || '';
-                document.getElementById(`s1_ffb1_${day}`).value = row.ffb1 || '';
-                document.getElementById(`s1_ffb2_${day}`).value = row.ffb2 || '';
-                document.getElementById(`s1_ffb3_${day}`).value = row.ffb3 || '';
-                document.getElementById(`s1_ffb4_${day}`).value = row.ffb4 || '';
+    data.forEach(row => {
+        let day = parseInt(row.record_date.split('-')[2], 10);
+
+        if (document.getElementById(`s1_rf_${day}`)) document.getElementById(`s1_rf_${day}`).value = row.rainfall_today || '';
+        if (document.getElementById(`s1_ffb1_${day}`)) document.getElementById(`s1_ffb1_${day}`).value = row.ffb1 || '';
+        if (document.getElementById(`s1_ffb2_${day}`)) document.getElementById(`s1_ffb2_${day}`).value = row.ffb2 || '';
+        if (document.getElementById(`s1_ffb3_${day}`)) document.getElementById(`s1_ffb3_${day}`).value = row.ffb3 || '';
+        if (document.getElementById(`s1_ffb4_${day}`)) document.getElementById(`s1_ffb4_${day}`).value = row.ffb4 || '';
+
+        if (document.getElementById(`s2_p1_t_${day}`)) document.getElementById(`s2_p1_t_${day}`).value = row.rf_phase1 || '';
+        if (document.getElementById(`s2_p2_t_${day}`)) document.getElementById(`s2_p2_t_${day}`).value = row.rf_phase2 || '';
+        if (document.getElementById(`s2_p3_t_${day}`)) document.getElementById(`s2_p3_t_${day}`).value = row.rf_phase3 || '';
+        if (document.getElementById(`s2_p4_t_${day}`)) document.getElementById(`s2_p4_t_${day}`).value = row.rf_phase4 || '';
+
+        if (document.getElementById(`s3_m1_${day}`)) document.getElementById(`s3_m1_${day}`).value = row.ffb1 || '';
+        if (document.getElementById(`s3_m2_${day}`)) document.getElementById(`s3_m2_${day}`).value = row.ffb2 || '';
+        if (document.getElementById(`s3_m3_${day}`)) document.getElementById(`s3_m3_${day}`).value = row.ffb3 || '';
+        if (document.getElementById(`s3_m4_${day}`)) document.getElementById(`s3_m4_${day}`).value = row.ffb4 || '';
+        if (document.getElementById(`s3_m5_${day}`)) document.getElementById(`s3_m5_${day}`).value = row.ffb5 || '';
+        if (document.getElementById(`s3_m6_${day}`)) document.getElementById(`s3_m6_${day}`).value = row.ffb6 || '';
+
+        for (let p = 1; p <= 12; p++) {
+            if (document.getElementById(`s4_p${p}_${day}`)) {
+                document.getElementById(`s4_p${p}_${day}`).value = row[`ffb_phase${p}`] || '';
             }
-        });
-    }
+        }
+    });
 
     calcS1();
+    calcS2();
     syncRainfallToSummary();
 }
 
@@ -95,7 +122,6 @@ function onEstateOrMonthChange() {
 }
 
 function initKeyInTables() {
-    // Tab 1
     let s1 = '';
     for (let d = 1; d <= 31; d++) {
         s1 += `<tr>
@@ -114,7 +140,6 @@ function initKeyInTables() {
     }
     document.getElementById('tbody-s1').innerHTML = s1;
 
-    // Tab 2
     let s2 = '';
     for (let d = 1; d <= 31; d++) {
         s2 += `<tr>
@@ -128,7 +153,6 @@ function initKeyInTables() {
     }
     document.getElementById('tbody-s2').innerHTML = s2;
 
-    // Tab 3
     let s3 = '';
     for (let d = 1; d <= 31; d++) {
         s3 += `<tr>
@@ -141,7 +165,6 @@ function initKeyInTables() {
     }
     document.getElementById('tbody-s3').innerHTML = s3;
 
-    // Tab 4 Header & Body
     let s4Hdr = '';
     for (let p = 1; p <= 12; p++) {
         s4Hdr += `<th style="width: 60px;"><input type="text" value="P${p}" style="font-weight:bold; text-align:center;"></th>`;
@@ -176,7 +199,7 @@ function buildSummaryHeader() {
         estateHtml += `<th colspan="2" class="header-estate">${est.name}</th>`;
         subHtml += `<th>To Day</th><th>To Date</th>`;
         totHtml += `<td id="tot_d_${idx}">0</td><td id="tot_td_${idx}">0</td>`;
-        daysHtml += `<td colspan="2" id="days_${idx}">0 Hari</td>`;
+        daysHtml += `<td colspan="2" id="days_${idx}">0 Days</td>`;
     });
 
     augHtml += '<th rowspan="4" style="width: 40px;">Date</th>';
@@ -238,16 +261,12 @@ function calcS2() {
 
 function syncRainfallToSummary() {
     const selectedEstate = document.getElementById('ladangSelect').value;
-    
     for (let d = 1; d <= 31; d++) {
         let val = document.getElementById(`s1_rf_${d}`) ? document.getElementById(`s1_rf_${d}`).value : '';
-        
         estateList.forEach((est, idx) => {
             if (est.name === selectedEstate) {
                 let targetInput = document.getElementById(`es_${idx}_d_${d}`);
-                if (targetInput) {
-                    targetInput.value = val;
-                }
+                if (targetInput) targetInput.value = val;
             }
         });
     }
@@ -262,8 +281,8 @@ function calcSummary() {
         for (let d = 1; d <= 31; d++) {
             let inputElem = document.getElementById(`es_${idx}_d_${d}`);
             let tdElem = document.getElementById(`es_${idx}_td_${d}`);
-            
             let valStr = inputElem ? inputElem.value : '';
+
             if (valStr !== '' && !isNaN(valStr)) {
                 let val = parseFloat(valStr);
                 cum += val;
@@ -280,7 +299,7 @@ function calcSummary() {
 
         if (totD) totD.innerText = cum > 0 ? cum.toFixed(1) : '0';
         if (totTd) totTd.innerText = cum > 0 ? cum.toFixed(1) : '0';
-        if (daysElem) daysElem.innerText = days + ' Hari';
+        if (daysElem) daysElem.innerText = days + ' Days';
     });
 }
 
@@ -288,9 +307,9 @@ function updateSummaryHeader() {
     let val = document.getElementById('bulanTahun').value;
     if (val) {
         let d = new Date(val + "-01");
-        let mName = d.toLocaleString('ms', { month: 'short' }).toUpperCase();
+        let mName = d.toLocaleString('en', { month: 'short' }).toUpperCase();
         let y = d.getFullYear();
-        document.getElementById('sumReportTitle').innerText = `LAPORAN HUJAN BULAN ${mName} ${y}`;
+        document.getElementById('sumReportTitle').innerText = `RAINFALL REPORT MONTH OF ${mName} ${y}`;
     }
 }
 
