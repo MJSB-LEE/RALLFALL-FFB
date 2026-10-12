@@ -17,25 +17,25 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 400px; text-align: center;
             border: 1px solid #cbd5e1;
         }
-        .modal-card h2 { margin-bottom: 5px; color: #0f172a; font-size: 18px; }
+        .modal-card h2 { margin-bottom: 12px; color: #0f172a; font-size: 18px; }
         .modal-card input, .modal-card select {
             width: 100%; padding: 8px; margin-bottom: 10px;
             border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;
         }
         .checkbox-container {
-            max-height: 110px; overflow-y: auto; border: 1px solid #cbd5e1; 
-            border-radius: 4px; padding: 8px; text-align: left; background: #ffffff; 
-            margin-bottom: 10px; font-size: 12px;
+            min-height: 80px; max-height: 120px; overflow-y: auto; 
+            border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; 
+            text-align: left; background: #ffffff; margin-bottom: 10px; font-size: 12px;
         }
         .checkbox-item {
             display: flex; align-items: center; gap: 8px; margin-bottom: 4px; cursor: pointer; color: #1e293b;
         }
-        .checkbox-item input { width: auto; margin-bottom: 0; }
+        .checkbox-item input { width: auto; margin-bottom: 0; cursor: pointer; }
         .audit-info { font-size: 11px; color: #64748b; margin-top: 5px; font-style: italic; }
         .btn-edit { background: #2563eb; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; margin-right: 4px; font-size: 11px; }
         .btn-delete { background: #dc2626; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; }
         
-        /* QNE ACCOUNTING UI STYLES */
+        /* QNE ACCOUNTING STYLES */
         .qne-card {
             background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 16px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -84,7 +84,7 @@
             <option value="admin">Administrator</option>
         </select>
         
-        <label style="font-size: 11px; display: block; text-align: left; color: #475569; font-weight: 600;">Assigned Estates:</label>
+        <label style="font-size: 11px; display: block; text-align: left; color: #475569; font-weight: 600; margin-top: 4px;">Assigned Estates:</label>
         <div id="editEstateCheckboxes" class="checkbox-container"></div>
         
         <div style="display: flex; gap: 8px; margin-top: 10px;">
@@ -253,9 +253,9 @@
                         <option value="user">Estate User</option>
                         <option value="admin">Administrator</option>
                     </select>
-                    <label style="font-size: 11px; color: #64748b; font-weight: 600;">Assigned Estates:</label>
+                    <label style="font-size: 11px; color: #64748b; font-weight: 600;">Assigned Estates (Tick all that apply):</label>
                     <div id="newUserEstateCheckboxes" class="checkbox-container"></div>
-                    <button class="btn btn-primary" onclick="addNewUser()">+ Register New User Account</button>
+                    <button class="btn btn-primary" onclick="addNewUser()">+ Add New User Account</button>
                 </div>
                 <ul id="userSettingsList" style="list-style: none; max-height: 200px; overflow-y: auto; padding-left: 0;"></ul>
             </div>
