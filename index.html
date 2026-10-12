@@ -21,6 +21,15 @@
             width: 100%; padding: 8px; margin-bottom: 10px;
             border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;
         }
+        .checkbox-container {
+            max-height: 120px; overflow-y: auto; border: 1px solid #cbd5e1; 
+            border-radius: 6px; padding: 8px; text-align: left; background: #f8fafc; 
+            margin-bottom: 10px; font-size: 12px;
+        }
+        .checkbox-item {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 4px; cursor: pointer; color: #1e293b;
+        }
+        .checkbox-item input { width: auto; margin-bottom: 0; }
         .audit-info { font-size: 11px; color: #64748b; margin-top: 5px; font-style: italic; }
         .btn-edit { background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; margin-right: 4px; }
         .btn-delete { background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; }
@@ -58,9 +67,11 @@
             <option value="user">Estate User</option>
             <option value="admin">Administrator</option>
         </select>
-        <label style="font-size: 11px; display: block; text-align: left; color: #64748b;">Assigned Estates (Hold Ctrl / Cmd for multiple)</label>
-        <!-- ADDED multiple ATTRIBUTE HERE FOR EDIT MODAL -->
-        <select id="editEstate" multiple style="height: 100px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px;"></select>
+        
+        <label style="font-size: 11px; display: block; text-align: left; color: #64748b;">Assigned Estates (Tick all that apply):</label>
+        <div id="editEstateCheckboxes" class="checkbox-container">
+            <!-- Dynamically populated via JavaScript -->
+        </div>
         
         <div style="display: flex; gap: 8px; margin-top: 10px;">
             <button class="btn btn-primary" style="flex: 1;" onclick="saveUserEdit()">Save Changes</button>
@@ -231,11 +242,10 @@
                         <option value="user">Estate User</option>
                         <option value="admin">Administrator</option>
                     </select>
-                    <label style="font-size: 11px; color: #64748b; margin-top: 2px;">Assigned Estates (Hold Ctrl / Cmd for multiple)</label>
-                    <!-- ADDED multiple ATTRIBUTE HERE FOR REGISTRATION FORM -->
-                    <select id="newUserEstate" multiple style="height: 90px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; background: white;">
-                        <!-- Dynamic estates -->
-                    </select>
+                    <label style="font-size: 11px; color: #64748b; margin-top: 2px;">Assigned Estates (Tick all that apply):</label>
+                    <div id="newUserEstateCheckboxes" class="checkbox-container">
+                        <!-- Checkboxes populated dynamically via JS -->
+                    </div>
                     <button class="btn btn-primary" onclick="addNewUser()">Add New User Account</button>
                 </div>
                 <ul id="userSettingsList" style="list-style: none; max-height: 220px; overflow-y: auto;"></ul>
