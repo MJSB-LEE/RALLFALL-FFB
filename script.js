@@ -3,23 +3,31 @@ const SUPABASE_URL = 'https://tiwulxrorrmyxtosvzkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_W4-5_riBQWAUBPVtgX8Pcw_WCRET_KF';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Default System Databases
+const IT_DELETE_PASSWORD = "ITREF2026"; // Required password for delete operations
+
 let estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk"];
-
-let userAccounts = [
-    { username: "admin", password: "admin123", role: "admin", estate: "" },
-    { username: "sty_user", password: "user123", role: "user", estate: "STY" },
-    { username: "klagan_user", password: "user123", role: "user", estate: "Klagan PH1" },
-    { username: "labuk_user", password: "user123", role: "user", estate: "Labuk" }
-];
-
+let userAccounts = [];
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
 
-// Handle User Authentication
-function handleLogin() {
+async function fetchUserProfiles() {
+    const { data, error } = await supabaseClient.from('user_profiles').select('*');
+    if (!error && data && data.length > 0) {
+        userAccounts = data;
+    } else {
+        userAccounts = [
+            { username: "admin", password: "admin123", full_name: "System Admin", email: "admin@masihjaya.com", role: "admin", assigned_estate: "" },
+            { username: "sty_user", password: "user123", full_name: "STY Officer", email: "sty@masihjaya.com", role: "user", assigned_estate: "STY" }
+        ];
+    }
+    renderSettingsUI();
+}
+
+async function handleLogin() {
     const userIn = document.getElementById('loginUsername').value.trim();
     const passIn = document.getElementById('loginPassword').value.trim();
     const errorElem = document.getElementById('loginError');
+
+    await fetchUserProfiles();
 
     const matchedUser = userAccounts.find(u => u.username === userIn && u.password === passIn);
 
@@ -56,7 +64,7 @@ function applyUserPermissions() {
     const ladangSelect = document.getElementById('ladangSelect');
     const settingsBtn = document.getElementById('btn-tabSettings');
 
-    userLabel.innerText = `User: ${currentUser.username}`;
+    userLabel.innerText = `User: ${currentUser.full_name || currentUser.username} (${currentUser.username})`;
 
     renderEstateDropdown();
 
@@ -68,8 +76,8 @@ function applyUserPermissions() {
     } else {
         badge.innerText = "ROLE: USER";
         badge.style.background = "#3b82f6";
-        ladangSelect.value = currentUser.estate;
-        ladangSelect.disabled = true; // Lock user to self estate
+        ladangSelect.value = currentUser.assigned_estate || currentUser.estate;
+        ladangSelect.disabled = true;
         settingsBtn.style.display = "none";
         
         if (document.getElementById('tabSettings').classList.contains('active')) {
@@ -91,6 +99,8 @@ async function saveToCloud() {
 
     const [year, month] = monthYear.split('-').map(Number);
     const daysInMonth = new Date(year, month, 0).getDate();
+    const timestampNow = new Date().toISOString();
+    const activeUserName = currentUser ? (currentUser.full_name || currentUser.username) : "Unknown User";
 
     let updates = [];
 
@@ -133,6 +143,8 @@ async function saveToCloud() {
             rf_phase2: rf_p2,
             rf_phase3: rf_p3,
             rf_phase4: rf_p4,
+            updated_by: activeUserName,
+            updated_at: timestampNow,
             ...ffb_phases
         });
     }
@@ -144,7 +156,8 @@ async function saveToCloud() {
     if (error) {
         alert("Error saving data: " + error.message);
     } else {
-        alert(`Data for "${estate}" saved successfully!`);
+        alert(`Data saved successfully by ${activeUserName}!`);
+        loadFromCloud();
         loadOverallSummary();
     }
 }
@@ -169,6 +182,15 @@ async function loadFromCloud() {
         .lte('record_date', `${monthYear}-${lastDayStr}`);
 
     if (error || !data) return;
+
+    if (data.length > 0) {
+        let lastRecord = data[data.length - 1];
+        let editBy = lastRecord.updated_by || 'Unknown';
+        let editTime = lastRecord.updated_at ? new Date(lastRecord.updated_at).toLocaleString() : 'N/A';
+        document.getElementById('auditLogDisplay').innerText = `Last Modified By: ${editBy} on ${editTime}`;
+    } else {
+        document.getElementById('auditLogDisplay').innerText = `Data Record Info: No records for ${monthYear}`;
+    }
 
     data.forEach(row => {
         let day = parseInt(row.record_date.split('-')[2], 10);
@@ -302,6 +324,19 @@ function clearForm() {
     }
 }
 
+function confirmITAction(actionName) {
+    let confirmWarning = confirm(`⚠️ WARNING: Are you sure you want to delete ${actionName}? This action cannot be undone!`);
+    if (!confirmWarning) return false;
+
+    let pass = prompt(`IT SECURITY KEY REQUIRED:\nEnter IT Authorization Password to confirm deletion of ${actionName}:`);
+    if (pass === IT_DELETE_PASSWORD) {
+        return true;
+    } else {
+        alert("❌ Invalid IT Authorization Password! Deletion cancelled.");
+        return false;
+    }
+}
+
 function renderEstateDropdown() {
     const estateSelect = document.getElementById('ladangSelect');
     const newUserEstateSelect = document.getElementById('newUserEstate');
@@ -336,8 +371,11 @@ function renderSettingsUI() {
         userListUi.innerHTML = '';
         userAccounts.forEach((usr, idx) => {
             userListUi.innerHTML += `<li style="padding: 6px; background: white; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-                <span><b>${usr.username}</b> (${usr.role.toUpperCase()}) ${usr.estate ? '➔ ' + usr.estate : ''}</span>
-                <button onclick="removeUser(${idx})" style="background:#ef4444; color:white; border:none; padding: 2px 6px; border-radius:3px; cursor:pointer;">Delete</button>
+                <div>
+                    <b>${usr.full_name || usr.username}</b> (${usr.username})<br>
+                    <small style="color: #64748b;">${usr.email || 'No email'} | ${usr.role.toUpperCase()} ${usr.assigned_estate ? '➔ ' + usr.assigned_estate : ''}</small>
+                </div>
+                <button onclick="removeUser(${idx})" style="background:#ef4444; color:white; border:none; padding: 4px 8px; border-radius:3px; cursor:pointer;">Delete</button>
             </li>`;
         });
     }
@@ -348,28 +386,46 @@ function renderSettingsUI() {
         estateList.forEach((est, idx) => {
             estListUi.innerHTML += `<li style="padding: 6px; background: white; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
                 <span>${est}</span>
-                <button onclick="removeEstate(${idx})" style="background:#ef4444; color:white; border:none; padding: 2px 6px; border-radius:3px; cursor:pointer;">Delete</button>
+                <button onclick="removeEstate(${idx})" style="background:#ef4444; color:white; border:none; padding: 4px 8px; border-radius:3px; cursor:pointer;">Delete</button>
             </li>`;
         });
     }
 }
 
-function addNewUser() {
+async function addNewUser() {
+    const uFull = document.getElementById('newUserFull').value.trim();
+    const uEmail = document.getElementById('newUserEmail').value.trim();
     const uName = document.getElementById('newUsername').value.trim();
     const uPass = document.getElementById('newUserPass').value.trim();
     const uRole = document.getElementById('newUserRole').value;
     const uEstate = uRole === "admin" ? "" : document.getElementById('newUserEstate').value;
 
-    if (!uName || !uPass) return alert("Enter both username and password");
+    if (!uName || !uPass || !uFull) return alert("Fill in Full Name, Username, and Password");
 
-    userAccounts.push({ username: uName, password: uPass, role: uRole, estate: uEstate });
-    document.getElementById('newUsername').value = '';
-    document.getElementById('newUserPass').value = '';
+    const newUserObj = { username: uName, password: uPass, full_name: uFull, email: uEmail, role: uRole, assigned_estate: uEstate };
 
-    renderSettingsUI();
+    const { error } = await supabaseClient.from('user_profiles').insert([newUserObj]);
+
+    if (error) {
+        alert("Error creating user: " + error.message);
+    } else {
+        alert(`User account "${uName}" created successfully!`);
+        document.getElementById('newUserFull').value = '';
+        document.getElementById('newUserEmail').value = '';
+        document.getElementById('newUsername').value = '';
+        document.getElementById('newUserPass').value = '';
+        fetchUserProfiles();
+    }
 }
 
-function removeUser(idx) {
+async function removeUser(idx) {
+    let targetUser = userAccounts[idx];
+    if (!confirmITAction(`User Account: "${targetUser.username}"`)) return;
+
+    if (targetUser.id) {
+        await supabaseClient.from('user_profiles').delete().eq('id', targetUser.id);
+    }
+    
     userAccounts.splice(idx, 1);
     renderSettingsUI();
 }
@@ -387,6 +443,9 @@ function addNewEstate() {
 }
 
 function removeEstate(idx) {
+    let targetEstate = estateList[idx];
+    if (!confirmITAction(`Estate Location: "${targetEstate}"`)) return;
+
     estateList.splice(idx, 1);
     renderEstateDropdown();
     renderSettingsUI();
@@ -521,6 +580,6 @@ function switchTab(tabId) {
 window.onload = function() {
     initKeyInTables();
     renderEstateDropdown();
-    renderSettingsUI();
+    fetchUserProfiles();
     applyUserPermissions();
 };
