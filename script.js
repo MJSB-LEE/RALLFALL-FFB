@@ -110,10 +110,8 @@ function applyUserPermissions() {
 }
 
 async function saveToCloud() {
-    // Determine current active tab
     const activeTab = document.querySelector('.tab-content.active')?.id;
     
-    // Tab Restriction: Prevent saving when viewing Overall Summary or Settings
     if (activeTab === 'tabSummary' || activeTab === 'tabSettings') {
         alert("⚠️ Save operation is only available on Input Tabs (Tabs 1 to 4).");
         return;
@@ -179,7 +177,6 @@ async function saveToCloud() {
         });
     }
 
-    // Save records to main database table
     const { error } = await supabaseClient
         .from('daily_records')
         .upsert(updates, { onConflict: 'estate_name,record_date' });
@@ -187,12 +184,12 @@ async function saveToCloud() {
     if (error) {
         alert("Error saving data: " + error.message);
     } else {
-        // Record Activity Trail Entry
         await supabaseClient.from('activity_logs').insert([{
-            user_name: activeUserName,
-            estate_name: estate,
-            record_date: monthYear,
-            action_type: `Saved Data via ${activeTab.toUpperCase()}`
+            username: currentUser ? currentUser.username : 'ADMIN',
+            action: 'SAVE_DATA',
+            details: `Saved Data via ${activeTab.toUpperCase()} for ${monthYear}`,
+            estate: estate,
+            timestamp: new Date().toISOString()
         }]);
 
         alert(`Data for "${estate}" saved successfully by ${activeUserName}!`);
@@ -378,29 +375,19 @@ function confirmITAction(actionName) {
 
 function renderEstateDropdown(allowedEstatesFilter = null) {
     const estateSelect = document.getElementById('ladangSelect');
-    const newUserEstateSelect = document.getElementById('newUserEstate');
-
     estateSelect.innerHTML = '';
-    if (newUserEstateSelect) newUserEstateSelect.innerHTML = '';
 
     estateList.forEach(est => {
-        // Show estate if admin OR if it exists in the user's allowedEstates array
         if (!allowedEstatesFilter || (currentUser && currentUser.role === "admin") || allowedEstatesFilter.includes(est)) {
             let opt1 = document.createElement('option');
             opt1.value = est;
             opt1.innerText = est;
             estateSelect.appendChild(opt1);
         }
-
-        if (newUserEstateSelect) {
-            let opt2 = document.createElement('option');
-            opt2.value = est;
-            opt2.innerText = est;
-            newUserEstateSelect.appendChild(opt2);
-        }
     });
 }
 
+// UPDATE 1: TOGGLE CHECKBOX CONTAINERS
 function toggleUserEstateDropdown() {
     const role = document.getElementById('newUserRole').value;
     const container = document.getElementById('newUserEstateCheckboxes');
@@ -411,6 +398,21 @@ function toggleEditEstateDropdown() {
     const role = document.getElementById('editRole').value;
     const container = document.getElementById('editEstateCheckboxes');
     if (container) container.style.display = role === "admin" ? "none" : "block";
+}
+
+// UPDATE 2: POPULATE REGISTRATION CHECKBOXES
+function renderNewUserEstateCheckboxes() {
+    const container = document.getElementById('newUserEstateCheckboxes');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    estateList.forEach(est => {
+        container.innerHTML += `
+            <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" value="${est}" class="new-estate-chk">
+                <span>${est}</span>
+            </label>`;
+    });
 }
 
 function renderSettingsUI() {
@@ -425,7 +427,7 @@ function renderSettingsUI() {
                     <small style="color: #64748b;">${usr.email || 'No email'} | ${usr.role.toUpperCase()} ${userAssigned.length > 0 ? '➔ ' + userAssigned.join(', ') : ''}</small>
                 </div>
                 <div>
-                    <button class="btn-edit" onclick="UserModal(${idx})">Edit</button>
+                    <button class="btn-edit" onclick="openEditUserModal(${idx})">Edit</button>
                     <button class="btn-delete" onclick="removeUser(${idx})">Delete</button>
                 </div>
             </li>`;
@@ -445,8 +447,11 @@ function renderSettingsUI() {
             </li>`;
         });
     }
+
+    renderNewUserEstateCheckboxes();
 }
 
+// UPDATE 3: EDIT MODAL WITH CHECKBOXES
 function openEditUserModal(idx) {
     const user = userAccounts[idx];
     document.getElementById('editIndex').value = idx;
@@ -457,7 +462,6 @@ function openEditUserModal(idx) {
 
     let userAssigned = user.assigned_estates || (user.assigned_estate ? [user.assigned_estate] : []);
 
-    // Render estate checkboxes for the edit modal
     const editContainer = document.getElementById('editEstateCheckboxes');
     if (editContainer) {
         editContainer.innerHTML = '';
@@ -479,6 +483,7 @@ function closeEditModal() {
     document.getElementById('editUserModal').style.display = 'none';
 }
 
+// UPDATE 4: SAVE EDIT WITH CHECKBOXES AND LOGGING
 async function saveUserEdit() {
     const idx = document.getElementById('editIndex').value;
     let targetUser = userAccounts[idx];
@@ -488,7 +493,6 @@ async function saveUserEdit() {
     const newPass = document.getElementById('editPass').value.trim();
     const newRole = document.getElementById('editRole').value;
 
-    // Collect checked estates from the edit modal
     let newEstates = [];
     if (newRole !== "admin") {
         const checkedBoxes = document.querySelectorAll('.edit-estate-chk:checked');
@@ -509,7 +513,6 @@ async function saveUserEdit() {
         if (error) return alert("Error updating database: " + error.message);
     }
 
-    // Record activity log entry
     await supabaseClient.from('activity_logs').insert([{
         username: typeof currentUser !== 'undefined' && currentUser ? currentUser.username : 'ADMIN',
         action: 'EDIT_USER',
@@ -523,7 +526,56 @@ async function saveUserEdit() {
     if (typeof fetchUserProfiles === 'function') fetchUserProfiles();
 }
 
-// Database-connected Permanent Estate Functions
+async function addNewUser() {
+    const uFull = document.getElementById('newUserFull').value.trim();
+    const uEmail = document.getElementById('newUserEmail').value.trim();
+    const uName = document.getElementById('newUsername').value.trim();
+    const uPass = document.getElementById('newUserPass').value.trim();
+    const uRole = document.getElementById('newUserRole').value;
+    
+    let uEstates = [];
+    if (uRole !== "admin") {
+        const checkedBoxes = document.querySelectorAll('.new-estate-chk:checked');
+        uEstates = Array.from(checkedBoxes).map(chk => chk.value);
+    }
+
+    if (!uName || !uPass || !uFull) return alert("Fill in Full Name, Username, and Password");
+
+    const newUserObj = { 
+        username: uName, 
+        password: uPass, 
+        full_name: uFull, 
+        email: uEmail, 
+        role: uRole, 
+        assigned_estates: uEstates 
+    };
+
+    const { error } = await supabaseClient.from('user_profiles').insert([newUserObj]);
+
+    if (error) {
+        alert("Error creating user: " + error.message);
+    } else {
+        await supabaseClient.from('activity_logs').insert([{
+            username: typeof currentUser !== 'undefined' && currentUser ? currentUser.username : 'ADMIN',
+            action: 'CREATE_USER',
+            details: `Created user '${uName}' (${uRole}) with estates: ${uEstates.join(', ') || 'ALL'}`,
+            estate: uEstates.length > 0 ? uEstates[0] : 'SYSTEM',
+            timestamp: new Date().toISOString()
+        }]);
+
+        alert(`User "${uName}" created successfully with ${uEstates.length} assigned estate(s)!`);
+        
+        document.getElementById('newUserFull').value = '';
+        document.getElementById('newUserEmail').value = '';
+        document.getElementById('newUsername').value = '';
+        document.getElementById('newUserPass').value = '';
+        
+        document.querySelectorAll('.new-estate-chk').forEach(chk => chk.checked = false);
+
+        if (typeof fetchUserProfiles === 'function') fetchUserProfiles();
+    }
+}
+
 async function addNewEstate() {
     const nameInput = document.getElementById('newEstateName');
     const newName = nameInput.value.trim();
@@ -574,76 +626,6 @@ async function editEstateName(idx) {
     }
 }
 
-// 1. ADD NEW USER (Replaces existing addNewUser function)
-async function addNewUser() {
-    const uFull = document.getElementById('newUserFull').value.trim();
-    const uEmail = document.getElementById('newUserEmail').value.trim();
-    const uName = document.getElementById('newUsername').value.trim();
-    const uPass = document.getElementById('newUserPass').value.trim();
-    const uRole = document.getElementById('newUserRole').value;
-    
-    // Read selected checkboxes for estate assignments
-    let uEstates = [];
-    if (uRole !== "admin") {
-        const checkedBoxes = document.querySelectorAll('.new-estate-chk:checked');
-        uEstates = Array.from(checkedBoxes).map(chk => chk.value);
-    }
-
-    if (!uName || !uPass || !uFull) return alert("Fill in Full Name, Username, and Password");
-
-    const newUserObj = { 
-        username: uName, 
-        password: uPass, 
-        full_name: uFull, 
-        email: uEmail, 
-        role: uRole, 
-        assigned_estates: uEstates 
-    };
-
-    // Save to Supabase user_profiles
-    const { error } = await supabaseClient.from('user_profiles').insert([newUserObj]);
-
-    if (error) {
-        alert("Error creating user: " + error.message);
-    } else {
-        // Log creation into activity_logs table
-        await supabaseClient.from('activity_logs').insert([{
-            username: typeof currentUser !== 'undefined' && currentUser ? currentUser.username : 'ADMIN',
-            action: 'CREATE_USER',
-            details: `Created user '${uName}' (${uRole}) with estates: ${uEstates.join(', ') || 'ALL'}`,
-            estate: uEstates.length > 0 ? uEstates[0] : 'SYSTEM',
-            timestamp: new Date().toISOString()
-        }]);
-
-        alert(`User "${uName}" created successfully with ${uEstates.length} assigned estate(s)!`);
-        
-        // Clear input fields
-        document.getElementById('newUserFull').value = '';
-        document.getElementById('newUserEmail').value = '';
-        document.getElementById('newUsername').value = '';
-        document.getElementById('newUserPass').value = '';
-        
-        // Uncheck all registration checkboxes
-        document.querySelectorAll('.new-estate-chk').forEach(chk => chk.checked = false);
-
-        if (typeof fetchUserProfiles === 'function') fetchUserProfiles();
-    }
-}
-
-// 2. HELPER TO POPULATE REGISTRATION CHECKBOXES (Call inside renderSettingsUI or page initialization)
-function renderNewUserEstateCheckboxes() {
-    const container = document.getElementById('newUserEstateCheckboxes');
-    if (!container) return;
-    container.innerHTML = '';
-    
-    estateList.forEach(est => {
-        container.innerHTML += `
-            <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; cursor: pointer;">
-                <input type="checkbox" value="${est}" class="new-estate-chk">
-                <span>${est}</span>
-            </label>`;
-    });
-}
 async function removeUser(idx) {
     let targetUser = userAccounts[idx];
     if (!confirmITAction(`User Account: "${targetUser.username}"`)) return;
@@ -781,7 +763,6 @@ function switchTab(tabId) {
     document.getElementById(tabId).classList.add('active');
     document.getElementById(`btn-${tabId}`).classList.add('active');
 
-    // Hide Save Button when viewing Summary or Settings
     const saveBtn = document.getElementById('saveBtn');
     if (saveBtn) {
         if (tabId === 'tabSummary' || tabId === 'tabSettings') {
