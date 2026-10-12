@@ -19,7 +19,7 @@ async function fetchEstates() {
     }
     
     renderEstateDropdown();
-    renderNewUserEstateCheckboxes(); // Trigger checkbox render immediately after loading estates
+    renderNewUserEstateCheckboxes();
     renderSettingsUI();
     loadOverallSummary();
 }
@@ -487,7 +487,6 @@ function renderSettingsUI() {
     renderNewUserEstateCheckboxes();
 }
 
-// BULLETPROOF OPEN EDIT USER MODAL
 function openEditUserModal(idx) {
     const user = userAccounts[idx];
     if (!user) {
@@ -533,50 +532,7 @@ function closeEditModal() {
     if (modalElem) modalElem.style.display = 'none';
 }
 
-async function saveUserEdit() {
-    const idx = document.getElementById('editIndex').value;
-    let targetUser = userAccounts[idx];
-
-    const newFull = document.getElementById('editFull').value.trim();
-    const newEmail = document.getElementById('editEmail').value.trim();
-    const newPass = document.getElementById('editPass').value.trim();
-    const newRole = document.getElementById('editRole').value;
-
-    let newEstates = [];
-    if (newRole !== "admin") {
-        const checkedBoxes = document.querySelectorAll('.edit-estate-chk:checked');
-        newEstates = Array.from(checkedBoxes).map(chk => chk.value);
-    }
-
-    targetUser.full_name = newFull;
-    targetUser.email = newEmail;
-    if (newPass) targetUser.password = newPass;
-    targetUser.role = newRole;
-    targetUser.assigned_estates = newEstates;
-
-    if (targetUser.id) {
-        let updateObj = { full_name: newFull, email: newEmail, role: newRole, assigned_estates: newEstates };
-        if (newPass) updateObj.password = newPass;
-
-        const { error } = await supabaseClient.from('user_profiles').update(updateObj).eq('id', targetUser.id);
-        if (error) return alert("Error updating database: " + error.message);
-    }
-
-    await supabaseClient.from('activity_logs').insert([{
-        username: currentUser ? currentUser.username : 'ADMIN',
-        action: 'EDIT_USER',
-        details: `Updated profile for '${targetUser.username}' (${newRole}). Estates: ${newEstates.join(', ') || 'ALL'}`,
-        estate: newEstates.length > 0 ? newEstates[0] : 'SYSTEM',
-        timestamp: new Date().toISOString()
-    }]);
-
-    alert("User profile updated successfully!");
-    closeEditModal();
-    if (typeof fetchUserProfiles === 'function') fetchUserProfiles();
-    fetchActivityLogs();
-}
-
-// 1. ADD NEW USER
+// ADD NEW USER
 async function addNewUser() {
     const uFull = document.getElementById('newUserFull').value.trim();
     const uEmail = document.getElementById('newUserEmail').value.trim();
@@ -584,7 +540,6 @@ async function addNewUser() {
     const uPass = document.getElementById('newUserPass').value.trim();
     const uRole = document.getElementById('newUserRole').value;
     
-    // Automatically assign ALL estates if Admin, otherwise read checked boxes
     let uEstates = [];
     if (uRole === "admin") {
         uEstates = [...estateList];
@@ -631,7 +586,7 @@ async function addNewUser() {
     }
 }
 
-// 2. SAVE USER EDIT
+// SAVE USER EDIT
 async function saveUserEdit() {
     const idx = document.getElementById('editIndex').value;
     let targetUser = userAccounts[idx];
@@ -641,7 +596,6 @@ async function saveUserEdit() {
     const newPass = document.getElementById('editPass').value.trim();
     const newRole = document.getElementById('editRole').value;
 
-    // Automatically assign ALL estates if Admin, otherwise read checked boxes
     let newEstates = [];
     if (newRole === "admin") {
         newEstates = [...estateList];
@@ -677,6 +631,7 @@ async function saveUserEdit() {
     if (typeof fetchUserProfiles === 'function') fetchUserProfiles();
     fetchActivityLogs();
 }
+
 async function addNewEstate() {
     const nameInput = document.getElementById('newEstateName');
     const newName = nameInput.value.trim();
@@ -881,7 +836,7 @@ function switchTab(tabId) {
 // ASYNC INITIALIZATION SEQUENCE
 window.onload = async function() {
     initKeyInTables();
-    await fetchEstates();        // Load estate locations first
-    await fetchUserProfiles();   // Load user profiles second
+    await fetchEstates();        
+    await fetchUserProfiles();   
     applyUserPermissions();
 };
