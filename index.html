@@ -1,199 +1,199 @@
-:root {
-    --primary: #1e3a8a;
-    --primary-light: #3b82f6;
-    --accent: #10b981;
-    --bg: #f8fafc;
-    --card-bg: #ffffff;
-    --text: #1e293b;
-    --border: #cbd5e1;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Rainfall & FFB Reporting System - Masih Jaya Group</title>
+    
+    <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- External CSS Styling -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
+<div class="container">
+    <header>
+        <h1>MASIH JAYA GROUP</h1>
+        <p>Daily Rainfall & FFB Reporting System (Complete Key-In & Summary)</p>
+    </header>
 
-body {
-    background-color: var(--bg);
-    color: var(--text);
-    padding: 20px;
-}
+    <div class="meta-card">
+        <div class="form-group">
+            <label>Select Estate</label>
+            <select id="ladangSelect" onchange="onEstateOrMonthChange()">
+                <option value="STY">STY</option>
+                <option value="Klagan PH1">Klagan PH1</option>
+                <option value="Kars PH1/2/4">Kars PH1/2/4</option>
+                <option value="Kars PH3">Kars PH3</option>
+                <option value="Sg Millian 1">Sg Millian 1</option>
+                <option value="Sg Millian 2">Sg Millian 2</option>
+                <option value="Sg Millian 3">Sg Millian 3</option>
+                <option value="Labuk">Labuk</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Month / Year</label>
+            <input type="month" id="bulanTahun" value="2026-09" onchange="onEstateOrMonthChange()">
+        </div>
+        <div class="form-group">
+            <label>Prepared By</label>
+            <input type="text" id="prepBy" placeholder="Preparer Name">
+        </div>
+        <div class="form-group">
+            <label>Approved By</label>
+            <input type="text" id="appBy" placeholder="Approver Name">
+        </div>
+    </div>
 
-.container {
-    max-width: 1600px;
-    margin: 0 auto;
-}
+    <!-- NAVIGATION TABS -->
+    <div class="tabs">
+        <button class="tab-btn active" id="btn-tab1" onclick="switchTab('tab1')">1. RAINFALL + MILL</button>
+        <button class="tab-btn" id="btn-tab2" onclick="switchTab('tab2')">2. RAINFALL BY PHASE</button>
+        <button class="tab-btn" id="btn-tab3" onclick="switchTab('tab3')">3. FFB BY MILL</button>
+        <button class="tab-btn" id="btn-tab4" onclick="switchTab('tab4')">4. FFB BY PHASE</button>
+        <button class="tab-btn summary-tab-btn" id="btn-tabSummary" onclick="switchTab('tabSummary')">📊 OVERALL RAINFALL SUMMARY (ALL ESTATES)</button>
+    </div>
 
-header {
-    background: linear-gradient(135deg, #1e293b, #0f172a);
-    color: white;
-    padding: 20px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-}
+    <!-- TAB 1: RAINFALL + MILL -->
+    <div id="tab1" class="tab-content active">
+        <h2 style="margin-bottom: 12px; font-size: 16px;">1. DAILY RAINFALL & FFB RECORD BY MILL</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="3" style="width: 40px;">DATE</th>
+                    <th colspan="2" class="section-hdr">RAINFALL (MM)</th>
+                    <th rowspan="3" style="width: 90px;">PREV MONTH RAINFALL</th>
+                    <th colspan="4" class="section-hdr">FFB (TONNES)</th>
+                    <th colspan="2" class="section-hdr">GRAND TOTAL FFB</th>
+                    <th rowspan="3" style="width: 90px;">PREV MONTH FFB</th>
+                </tr>
+                <tr>
+                    <th style="width: 80px;">TODAY</th>
+                    <th style="width: 80px;">TODATE</th>
+                    <th style="width: 80px;"><input type="text" value="Mill 1" style="font-weight:bold; text-align:center;"></th>
+                    <th style="width: 80px;"><input type="text" value="Mill 2" style="font-weight:bold; text-align:center;"></th>
+                    <th style="width: 80px;"><input type="text" value="Mill 3" style="font-weight:bold; text-align:center;"></th>
+                    <th style="width: 80px;"><input type="text" value="Mill 4" style="font-weight:bold; text-align:center;"></th>
+                    <th style="width: 80px;">TODAY</th>
+                    <th style="width: 80px;">TODATE</th>
+                </tr>
+                <tr>
+                    <th>TODAY</th><th>TODATE</th><th>TODAY</th><th>TODAY</th><th>TODAY</th><th>TODAY</th><th>TODAY</th><th>TODATE</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-s1"></tbody>
+        </table>
+    </div>
 
-header h1 {
-    font-size: 24px;
-    font-weight: 700;
-    margin-bottom: 5px;
-}
+    <!-- TAB 2: RAINFALL BY PHASE -->
+    <div id="tab2" class="tab-content">
+        <h2 style="margin-bottom: 12px; font-size: 16px;">2. DAILY RAINFALL RECORD BY PHASE</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2" style="width: 40px;">DATE</th>
+                    <th colspan="3" class="section-hdr"><input type="text" value="PHASE 1" style="font-weight:bold; text-align:center;"></th>
+                    <th colspan="3" class="section-hdr"><input type="text" value="PHASE 2" style="font-weight:bold; text-align:center;"></th>
+                    <th colspan="3" class="section-hdr"><input type="text" value="PHASE 3" style="font-weight:bold; text-align:center;"></th>
+                    <th colspan="3" class="section-hdr"><input type="text" value="PHASE 4" style="font-weight:bold; text-align:center;"></th>
+                </tr>
+                <tr>
+                    <th>TODAY</th><th>TODATE</th><th>PREV MONTH</th>
+                    <th>TODAY</th><th>TODATE</th><th>PREV MONTH</th>
+                    <th>TODAY</th><th>TODATE</th><th>PREV MONTH</th>
+                    <th>TODAY</th><th>TODATE</th><th>PREV MONTH</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-s2"></tbody>
+        </table>
+    </div>
 
-.meta-card {
-    background: var(--card-bg);
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 15px;
-}
+    <!-- TAB 3: FFB BY MILL -->
+    <div id="tab3" class="tab-content">
+        <h2 style="margin-bottom: 12px; font-size: 16px;">3. DAILY FFB RECORD BY MILL</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2" style="width: 40px;">DATE</th>
+                    <th colspan="6" class="section-hdr">MILLS</th>
+                    <th colspan="2" class="section-hdr">GRAND TOTAL</th>
+                    <th rowspan="2" style="width: 100px;">PREV MONTH</th>
+                </tr>
+                <tr>
+                    <th><input type="text" value="Mill A" style="font-weight:bold; text-align:center;"></th>
+                    <th><input type="text" value="Mill B" style="font-weight:bold; text-align:center;"></th>
+                    <th><input type="text" value="Mill C" style="font-weight:bold; text-align:center;"></th>
+                    <th><input type="text" value="Mill D" style="font-weight:bold; text-align:center;"></th>
+                    <th><input type="text" value="Mill E" style="font-weight:bold; text-align:center;"></th>
+                    <th><input type="text" value="Mill F" style="font-weight:bold; text-align:center;"></th>
+                    <th>TODAY</th><th>TODATE</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-s3"></tbody>
+        </table>
+    </div>
 
-.form-group {
-    display: flex;
-    flex-direction: column;
-}
+    <!-- TAB 4: FFB BY PHASE -->
+    <div id="tab4" class="tab-content">
+        <h2 style="margin-bottom: 12px; font-size: 16px;">4. DAILY FFB RECORD BY PHASE</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2" style="width: 40px;">DATE</th>
+                    <th colspan="12" class="section-hdr">PHASES / BLOCKS</th>
+                    <th colspan="2" class="section-hdr">GRAND TOTAL</th>
+                    <th rowspan="2" style="width: 90px;">PREV MONTH</th>
+                </tr>
+                <tr id="s4-phase-headers"></tr>
+            </thead>
+            <tbody id="tbody-s4"></tbody>
+        </table>
+    </div>
 
-.form-group label {
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    color: #64748b;
-    margin-bottom: 6px;
-}
+    <!-- SUMMARY TAB -->
+    <div id="tabSummary" class="tab-content">
+        <div style="text-align: center; margin-bottom: 15px;">
+            <h2 style="font-size: 18px;" id="sumReportTitle">RAINFALL REPORT SEPT 2026</h2>
+        </div>
+        
+        <table>
+            <thead>
+                <tr id="hdr-aug">
+                    <th class="header-aug" style="width: 50px;">AUG</th>
+                    <th rowspan="4" style="width: 40px;">Date</th>
+                </tr>
+                <tr id="hdr-pfb">
+                    <th class="header-pfb">PFB</th>
+                </tr>
+                <tr id="hdr-estates">
+                    <th class="header-rain">Rain</th>
+                </tr>
+                <tr id="hdr-sub">
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-summary"></tbody>
+            <tfoot>
+                <tr class="total-footer" id="row-totals">
+                    <td>Total</td>
+                    <td>-</td>
+                </tr>
+                <tr class="total-footer" id="row-days">
+                    <td>Days</td>
+                    <td>-</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
 
-.form-group input, .form-group select {
-    padding: 8px 12px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 14px;
-    outline: none;
-}
+    <div class="actions-bar">
+        <button class="btn btn-primary" onclick="saveToCloud()">Save to Cloud</button>
+        <button class="btn btn-secondary" onclick="window.print()">Print / Save PDF</button>
+    </div>
+</div>
 
-.tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 15px;
-    border-bottom: 2px solid var(--border);
-    padding-bottom: 2px;
-    overflow-x: auto;
-}
-
-.tab-btn {
-    padding: 10px 18px;
-    background: #e2e8f0;
-    border: none;
-    border-radius: 8px 8px 0 0;
-    font-weight: 600;
-    font-size: 13px;
-    color: #475569;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.tab-btn.active {
-    background: var(--primary);
-    color: white;
-}
-
-.tab-btn.summary-tab-btn {
-    background: #047857;
-    color: white;
-}
-
-.tab-btn.summary-tab-btn.active {
-    background: #065f46;
-}
-
-.tab-content {
-    display: none;
-    background: var(--card-bg);
-    padding: 20px;
-    border-radius: 0 0 10px 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    overflow-x: auto;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 11px;
-    text-align: center;
-}
-
-th, td {
-    border: 1px solid #94a3b8;
-    padding: 4px 2px;
-}
-
-th {
-    background-color: #f1f5f9;
-    color: #0f172a;
-    font-weight: 700;
-}
-
-.section-hdr { background-color: #cbd5e1; font-weight: bold; }
-.header-aug { background-color: #e2e8f0; font-weight: bold; }
-.header-pfb { background-color: #bfdbfe; font-weight: bold; }
-.header-rain { background-color: #bae6fd; font-weight: bold; }
-.header-estate { background-color: #1e3a8a; color: white !important; font-weight: bold; }
-
-table input[type="number"] {
-    width: 100%;
-    padding: 3px;
-    border: 1px solid transparent;
-    background: transparent;
-    text-align: right;
-    font-size: 11px;
-}
-
-table input[type="number"]:focus {
-    border-color: var(--primary-light);
-    background: #ffffff;
-    outline: none;
-}
-
-.readonly-cell {
-    background-color: #f8fafc;
-    font-weight: 600;
-    color: #0f172a;
-    text-align: right;
-    padding-right: 4px;
-}
-
-.total-footer td {
-    font-weight: bold;
-    background-color: #e2e8f0;
-}
-
-.actions-bar {
-    margin-top: 20px;
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-}
-
-.btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-.btn-primary { background-color: var(--primary); color: white; }
-.btn-secondary { background-color: #64748b; color: white; }
-
-@media print {
-    .tabs, .actions-bar, header p { display: none !important; }
-    body { background: white; padding: 0; }
-    .tab-content { display: block !important; box-shadow: none; padding: 0; page-break-after: always; }
-    input { border: none !important; }
-}
+<script src="script.js"></script>
+</body>
+</html>
