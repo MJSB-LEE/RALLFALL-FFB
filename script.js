@@ -576,6 +576,7 @@ async function saveUserEdit() {
     fetchActivityLogs();
 }
 
+// 1. ADD NEW USER
 async function addNewUser() {
     const uFull = document.getElementById('newUserFull').value.trim();
     const uEmail = document.getElementById('newUserEmail').value.trim();
@@ -583,8 +584,11 @@ async function addNewUser() {
     const uPass = document.getElementById('newUserPass').value.trim();
     const uRole = document.getElementById('newUserRole').value;
     
+    // Automatically assign ALL estates if Admin, otherwise read checked boxes
     let uEstates = [];
-    if (uRole !== "admin") {
+    if (uRole === "admin") {
+        uEstates = [...estateList];
+    } else {
         const checkedBoxes = document.querySelectorAll('.new-estate-chk:checked');
         uEstates = Array.from(checkedBoxes).map(chk => chk.value);
     }
@@ -608,12 +612,12 @@ async function addNewUser() {
         await supabaseClient.from('activity_logs').insert([{
             username: currentUser ? currentUser.username : 'ADMIN',
             action: 'CREATE_USER',
-            details: `Created user '${uName}' (${uRole}) with estates: ${uEstates.join(', ') || 'ALL'}`,
-            estate: uEstates.length > 0 ? uEstates[0] : 'SYSTEM',
+            details: `Created user '${uName}' (${uRole}) with estates: ${uRole === 'admin' ? 'ALL' : uEstates.join(', ')}`,
+            estate: 'SYSTEM',
             timestamp: new Date().toISOString()
         }]);
 
-        alert(`User "${uName}" created successfully with ${uEstates.length} assigned estate(s)!`);
+        alert(`User "${uName}" created successfully as ${uRole.toUpperCase()} with ${uEstates.length} assigned estate(s)!`);
         
         document.getElementById('newUserFull').value = '';
         document.getElementById('newUserEmail').value = '';
@@ -627,6 +631,52 @@ async function addNewUser() {
     }
 }
 
+// 2. SAVE USER EDIT
+async function saveUserEdit() {
+    const idx = document.getElementById('editIndex').value;
+    let targetUser = userAccounts[idx];
+
+    const newFull = document.getElementById('editFull').value.trim();
+    const newEmail = document.getElementById('editEmail').value.trim();
+    const newPass = document.getElementById('editPass').value.trim();
+    const newRole = document.getElementById('editRole').value;
+
+    // Automatically assign ALL estates if Admin, otherwise read checked boxes
+    let newEstates = [];
+    if (newRole === "admin") {
+        newEstates = [...estateList];
+    } else {
+        const checkedBoxes = document.querySelectorAll('.edit-estate-chk:checked');
+        newEstates = Array.from(checkedBoxes).map(chk => chk.value);
+    }
+
+    targetUser.full_name = newFull;
+    targetUser.email = newEmail;
+    if (newPass) targetUser.password = newPass;
+    targetUser.role = newRole;
+    targetUser.assigned_estates = newEstates;
+
+    if (targetUser.id) {
+        let updateObj = { full_name: newFull, email: newEmail, role: newRole, assigned_estates: newEstates };
+        if (newPass) updateObj.password = newPass;
+
+        const { error } = await supabaseClient.from('user_profiles').update(updateObj).eq('id', targetUser.id);
+        if (error) return alert("Error updating database: " + error.message);
+    }
+
+    await supabaseClient.from('activity_logs').insert([{
+        username: currentUser ? currentUser.username : 'ADMIN',
+        action: 'EDIT_USER',
+        details: `Updated profile for '${targetUser.username}' (${newRole}). Estates: ${newRole === 'admin' ? 'ALL' : newEstates.join(', ')}`,
+        estate: 'SYSTEM',
+        timestamp: new Date().toISOString()
+    }]);
+
+    alert("User profile updated successfully!");
+    closeEditModal();
+    if (typeof fetchUserProfiles === 'function') fetchUserProfiles();
+    fetchActivityLogs();
+}
 async function addNewEstate() {
     const nameInput = document.getElementById('newEstateName');
     const newName = nameInput.value.trim();
