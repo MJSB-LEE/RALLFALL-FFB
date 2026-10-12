@@ -3,8 +3,69 @@ const SUPABASE_URL = 'https://tiwulxrorrmyxtosvzkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_W4-5_riBQWAUBPVtgX8Pcw_WCRET_KF';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// System Configuration & Default Role Setup
+const ADMIN_PASSWORD = "admin123"; // Admin password
+let isAdminMode = false;
+
 let estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk"];
-let lockedEstate = localStorage.getItem('assignedEstate') || "";
+
+let userProfiles = [
+    { name: "STY Manager", estate: "STY" },
+    { name: "Klagan Officer", estate: "Klagan PH1" },
+    { name: "Kars Supervisor", estate: "Kars PH1/2/4" },
+    { name: "Labuk Officer", estate: "Labuk" }
+];
+
+function toggleAdminLogin() {
+    if (isAdminMode) {
+        isAdminMode = false;
+        alert("Logged out of Admin Mode.");
+    } else {
+        let pass = prompt("Enter Admin Password:");
+        if (pass === ADMIN_PASSWORD) {
+            isAdminMode = true;
+            alert("Admin Access Granted! Full permission unlocked.");
+        } else if (pass !== null) {
+            alert("Invalid Password!");
+        }
+    }
+    applyUserPermissions();
+}
+
+function applyUserPermissions() {
+    const badge = document.getElementById('userBadge');
+    const ladangSelect = document.getElementById('ladangSelect');
+    const settingsBtn = document.getElementById('btn-tabSettings');
+
+    if (isAdminMode) {
+        badge.innerText = "ROLE: ADMIN (FULL ACCESS)";
+        badge.style.background = "#ef4444"; // Red badge for Admin
+        ladangSelect.disabled = false;
+        settingsBtn.style.display = "inline-block";
+    } else {
+        badge.innerText = "ROLE: ESTATE USER (LOCKED)";
+        badge.style.background = "#3b82f6"; // Blue badge for User
+        ladangSelect.disabled = true; // Lock user to self estate
+        settingsBtn.style.display = "none"; // Hide settings tab from standard users
+        
+        // Return to Tab 1 if sitting on Settings tab when logging out
+        if (document.getElementById('tabSettings').classList.contains('active')) {
+            switchTab('tab1');
+        }
+    }
+
+    renderEstateDropdown();
+    onEstateOrMonthChange();
+}
+
+function onUserProfileChange() {
+    if (!isAdminMode) {
+        let selectedUserIndex = document.getElementById('userSelect').value;
+        let assignedEstate = userProfiles[selectedUserIndex]?.estate || estateList[0];
+        document.getElementById('ladangSelect').value = assignedEstate;
+        onEstateOrMonthChange();
+    }
+}
 
 async function saveToCloud() {
     const estate = document.getElementById('ladangSelect').value;
@@ -12,11 +73,6 @@ async function saveToCloud() {
     
     if (!monthYear) {
         alert("Please select a Month and Year.");
-        return;
-    }
-
-    if (lockedEstate && estate !== lockedEstate) {
-        alert(`Access Denied: You are locked to key in data for "${lockedEstate}" only.`);
         return;
     }
 
@@ -75,7 +131,7 @@ async function saveToCloud() {
     if (error) {
         alert("Error saving data: " + error.message);
     } else {
-        alert("Data saved successfully!");
+        alert(`Data for "${estate}" saved successfully!`);
         loadOverallSummary();
     }
 }
@@ -141,7 +197,6 @@ async function loadOverallSummary() {
     const lastDay = new Date(year, month, 0).getDate();
     const lastDayStr = String(lastDay).padStart(2, '0');
 
-    // Fetch records across all estates for the selected month/year
     const { data, error } = await supabaseClient
         .from('daily_records')
         .select('estate_name, record_date, rainfall_today')
@@ -150,7 +205,6 @@ async function loadOverallSummary() {
 
     if (error) return;
 
-    // Map data by estate and day
     let matrix = {};
     estateList.forEach(est => { matrix[est] = {}; });
 
@@ -163,7 +217,6 @@ async function loadOverallSummary() {
         });
     }
 
-    // Build headers
     let estateHdr = '<th>Date</th>';
     let subHdr = '<th>Date</th>';
     estateList.forEach(est => {
@@ -176,7 +229,6 @@ async function loadOverallSummary() {
     document.getElementById('hdr-estates').innerHTML = estateHdr;
     document.getElementById('hdr-sub').innerHTML = subHdr;
 
-    // Build Rows for each day of the month
     let tbody = '';
     let estateTotals = {};
     let estateDays = {};
@@ -198,7 +250,6 @@ async function loadOverallSummary() {
     }
     document.getElementById('tbody-summary').innerHTML = tbody;
 
-    // Build Totals Footer
     let totHtml = '<td>Total</td>';
     let daysHtml = '<td>Days</td>';
     estateList.forEach(est => {
@@ -238,46 +289,104 @@ function clearForm() {
     }
 }
 
-function lockUserEstate() {
-    const sel = document.getElementById('userLockEstateSelect').value;
-    lockedEstate = sel;
-    localStorage.setItem('assignedEstate', sel);
-
-    applyEstateLock();
-    alert(sel ? `User locked to "${sel}".` : "Unlocked. Full Admin access enabled.");
-}
-
-function applyEstateLock() {
-    const select = document.getElementById('ladangSelect');
-    if (lockedEstate) {
-        select.value = lockedEstate;
-        select.disabled = true; // Prevents changing estate dropdown
-    } else {
-        select.disabled = false;
-    }
-}
-
 function renderEstateDropdown() {
-    const select = document.getElementById('ladangSelect');
-    const lockSelect = document.getElementById('userLockEstateSelect');
-    
-    select.innerHTML = '';
-    lockSelect.innerHTML = '<option value="">-- ALL ESTATES (ADMIN MODE) --</option>';
+    const estateSelect = document.getElementById('ladangSelect');
+    const newUserEstateSelect = document.getElementById('newUserEstate');
+
+    estateSelect.innerHTML = '';
+    if (newUserEstateSelect) newUserEstateSelect.innerHTML = '';
 
     estateList.forEach(est => {
         let opt1 = document.createElement('option');
         opt1.value = est;
         opt1.innerText = est;
-        select.appendChild(opt1);
+        estateSelect.appendChild(opt1);
 
-        let opt2 = document.createElement('option');
-        opt2.value = est;
-        opt2.innerText = est;
-        if (est === lockedEstate) opt2.selected = true;
-        lockSelect.appendChild(opt2);
+        if (newUserEstateSelect) {
+            let opt2 = document.createElement('option');
+            opt2.value = est;
+            opt2.innerText = est;
+            newUserEstateSelect.appendChild(opt2);
+        }
     });
 
-    applyEstateLock();
+    renderUserDropdown();
+}
+
+function renderUserDropdown() {
+    const userSelect = document.getElementById('userSelect');
+    userSelect.innerHTML = '';
+
+    userProfiles.forEach((usr, idx) => {
+        let opt = document.createElement('option');
+        opt.value = idx;
+        opt.innerText = `${usr.name} (${usr.estate})`;
+        userSelect.appendChild(opt);
+    });
+
+    onUserProfileChange();
+}
+
+function renderSettingsUI() {
+    const userListUi = document.getElementById('userSettingsList');
+    if (userListUi) {
+        userListUi.innerHTML = '';
+        userProfiles.forEach((usr, idx) => {
+            userListUi.innerHTML += `<li style="padding: 6px; background: white; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                <span><b>${usr.name}</b> ➔ ${usr.estate}</span>
+                <button onclick="removeUser(${idx})" style="background:#ef4444; color:white; border:none; padding: 2px 6px; border-radius:3px; cursor:pointer;">Delete</button>
+            </li>`;
+        });
+    }
+
+    const estListUi = document.getElementById('estateSettingsList');
+    if (estListUi) {
+        estListUi.innerHTML = '';
+        estateList.forEach((est, idx) => {
+            estListUi.innerHTML += `<li style="padding: 6px; background: white; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                <span>${est}</span>
+                <button onclick="removeEstate(${idx})" style="background:#ef4444; color:white; border:none; padding: 2px 6px; border-radius:3px; cursor:pointer;">Delete</button>
+            </li>`;
+        });
+    }
+}
+
+function addNewUser() {
+    const nameInput = document.getElementById('newUserName');
+    const estateSelect = document.getElementById('newUserEstate');
+
+    if (!nameInput.value.trim()) return alert("Enter user name");
+
+    userProfiles.push({ name: nameInput.value.trim(), estate: estateSelect.value });
+    nameInput.value = '';
+
+    renderUserDropdown();
+    renderSettingsUI();
+}
+
+function removeUser(idx) {
+    userProfiles.splice(idx, 1);
+    renderUserDropdown();
+    renderSettingsUI();
+}
+
+function addNewEstate() {
+    const nameInput = document.getElementById('newEstateName');
+    if (!nameInput.value.trim()) return alert("Enter estate name");
+
+    estateList.push(nameInput.value.trim());
+    nameInput.value = '';
+
+    renderEstateDropdown();
+    renderSettingsUI();
+    loadOverallSummary();
+}
+
+function removeEstate(idx) {
+    estateList.splice(idx, 1);
+    renderEstateDropdown();
+    renderSettingsUI();
+    loadOverallSummary();
 }
 
 function onEstateOrMonthChange() {
@@ -288,127 +397,4 @@ function onEstateOrMonthChange() {
 
 function initKeyInTables() {
     let s1 = '';
-    for (let d = 1; d <= 31; d++) {
-        s1 += `<tr>
-            <td><b>${d}</b></td>
-            <td><input type="number" step="any" id="s1_rf_${d}" oninput="calcS1();"></td>
-            <td class="readonly-cell" id="s1_rf_todate_${d}"></td>
-            <td><input type="number" step="any" id="s1_rf_pm_${d}"></td>
-            <td><input type="number" step="any" id="s1_ffb1_${d}" oninput="calcS1()"></td>
-            <td><input type="number" step="any" id="s1_ffb2_${d}" oninput="calcS1()"></td>
-            <td><input type="number" step="any" id="s1_ffb3_${d}" oninput="calcS1()"></td>
-            <td><input type="number" step="any" id="s1_ffb4_${d}" oninput="calcS1()"></td>
-            <td class="readonly-cell" id="s1_gt_today_${d}"></td>
-            <td class="readonly-cell" id="s1_gt_todate_${d}"></td>
-            <td><input type="number" step="any" id="s1_ffb_pm_${d}"></td>
-        </tr>`;
-    }
-    document.getElementById('tbody-s1').innerHTML = s1;
-
-    let s2 = '';
-    for (let d = 1; d <= 31; d++) {
-        s2 += `<tr>
-            <td><b>${d}</b></td>
-            ${[1,2,3,4].map(p => `
-                <td><input type="number" step="any" id="s2_p${p}_t_${d}" oninput="calcS2();"></td>
-                <td class="readonly-cell" id="s2_p${p}_td_${d}"></td>
-                <td><input type="number" step="any" id="s2_p${p}_pm_${d}"></td>
-            `).join('')}
-        </tr>`;
-    }
-    document.getElementById('tbody-s2').innerHTML = s2;
-
-    let s3 = '';
-    for (let d = 1; d <= 31; d++) {
-        s3 += `<tr>
-            <td><b>${d}</b></td>
-            ${[1,2,3,4,5,6].map(m => `<td><input type="number" step="any" id="s3_m${m}_${d}"></td>`).join('')}
-            <td class="readonly-cell" id="s3_gt_today_${d}"></td>
-            <td class="readonly-cell" id="s3_gt_todate_${d}"></td>
-            <td><input type="number" step="any" id="s3_pm_${d}"></td>
-        </tr>`;
-    }
-    document.getElementById('tbody-s3').innerHTML = s3;
-
-    let s4Hdr = '';
-    for (let p = 1; p <= 12; p++) {
-        s4Hdr += `<th style="width: 60px;"><input type="text" value="P${p}" style="font-weight:bold; text-align:center;"></th>`;
-    }
-    s4Hdr += `<th>TODAY</th><th>TODATE</th>`;
-    document.getElementById('s4-phase-headers').innerHTML = s4Hdr;
-
-    let s4 = '';
-    for (let d = 1; d <= 31; d++) {
-        s4 += `<tr>
-            <td><b>${d}</b></td>
-            ${Array.from({length:12}, (_, i) => `<td><input type="number" step="any" id="s4_p${i+1}_${d}"></td>`).join('')}
-            <td class="readonly-cell" id="s4_gt_today_${d}"></td>
-            <td class="readonly-cell" id="s4_gt_todate_${d}"></td>
-            <td><input type="number" step="any" id="s4_pm_${d}"></td>
-        </tr>`;
-    }
-    document.getElementById('tbody-s4').innerHTML = s4;
-}
-
-function calcS1() {
-    let cumRf = 0, cumFfb = 0;
-    for (let d = 1; d <= 31; d++) {
-        let rfVal = parseFloat(document.getElementById(`s1_rf_${d}`)?.value) || 0;
-        cumRf += rfVal;
-        if (document.getElementById(`s1_rf_todate_${d}`)) {
-            document.getElementById(`s1_rf_todate_${d}`).innerText = cumRf > 0 ? cumRf.toFixed(2) : '';
-        }
-
-        let f1 = parseFloat(document.getElementById(`s1_ffb1_${d}`)?.value) || 0;
-        let f2 = parseFloat(document.getElementById(`s1_ffb2_${d}`)?.value) || 0;
-        let f3 = parseFloat(document.getElementById(`s1_ffb3_${d}`)?.value) || 0;
-        let f4 = parseFloat(document.getElementById(`s1_ffb4_${d}`)?.value) || 0;
-        let sumToday = f1 + f2 + f3 + f4;
-        cumFfb += sumToday;
-
-        if (document.getElementById(`s1_gt_today_${d}`)) {
-            document.getElementById(`s1_gt_today_${d}`).innerText = sumToday > 0 ? sumToday.toFixed(2) : '';
-        }
-        if (document.getElementById(`s1_gt_todate_${d}`)) {
-            document.getElementById(`s1_gt_todate_${d}`).innerText = cumFfb > 0 ? cumFfb.toFixed(2) : '';
-        }
-    }
-}
-
-function calcS2() {
-    for (let p = 1; p <= 4; p++) {
-        let cum = 0;
-        for (let d = 1; d <= 31; d++) {
-            let val = parseFloat(document.getElementById(`s2_p${p}_t_${d}`)?.value) || 0;
-            cum += val;
-            if (document.getElementById(`s2_p${p}_td_${d}`)) {
-                document.getElementById(`s2_p${p}_td_${d}`).innerText = cum > 0 ? cum.toFixed(2) : '';
-            }
-        }
-    }
-}
-
-function updateSummaryHeader() {
-    let val = document.getElementById('bulanTahun').value;
-    if (val) {
-        let d = new Date(val + "-01");
-        let mName = d.toLocaleString('en', { month: 'short' }).toUpperCase();
-        let y = d.getFullYear();
-        document.getElementById('sumReportTitle').innerText = `RAINFALL REPORT MONTH OF ${mName} ${y}`;
-    }
-}
-
-function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    document.getElementById(`btn-${tabId}`).classList.add('active');
-}
-
-window.onload = function() {
-    renderEstateDropdown();
-    initKeyInTables();
-    updateSummaryHeader();
-    loadFromCloud();
-    loadOverallSummary();
-};
+    for (let d = 1; d
