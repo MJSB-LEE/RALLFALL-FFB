@@ -1,5 +1,6 @@
+// Supabase Configuration
 const SUPABASE_URL = 'https://tiwulxrorrmyxtosvzkw.supabase.co';
-const SUPABASE_KEY = 'YOUR-ANON-PUBLIC-KEY'; // Insert your copied anon key here
+const SUPABASE_KEY = 'YOUR-ANON-PUBLIC-KEY'; // Ensure your copied anon public key is pasted here
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const estateList = [
