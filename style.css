@@ -107,6 +107,15 @@ header h1 {
     background: #065f46;
 }
 
+.tab-btn.settings-tab-btn {
+    background: #475569;
+    color: white;
+}
+
+.tab-btn.settings-tab-btn.active {
+    background: #334155;
+}
+
 .tab-content {
     display: none;
     background: var(--card-bg);
