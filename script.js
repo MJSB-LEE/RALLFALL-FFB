@@ -36,7 +36,7 @@ async function fetchUserProfiles() {
     renderSettingsUI();
 }
 
-// Fetch QNE Activity & Audit Logs
+// Fetch Activity & Audit Logs
 async function fetchActivityLogs() {
     const tableBody = document.getElementById('activityLogTableBody');
     if (!tableBody) return;
@@ -408,4 +408,422 @@ function renderEstateDropdown(allowedEstatesFilter = null) {
     estateSelect.innerHTML = '';
 
     estateList.forEach(est => {
-        if (!allowedEstatesFilter || (currentUser && currentUser.role === "admin") || allowedEstatesFilter.includes(
+        if (!allowedEstatesFilter || (currentUser && currentUser.role === "admin") || allowedEstatesFilter.includes(est)) {
+            let opt1 = document.createElement('option');
+            opt1.value = est;
+            opt1.innerText = est;
+            estateSelect.appendChild(opt1);
+        }
+    });
+}
+
+function toggleUserEstateDropdown() {
+    const role = document.getElementById('newUserRole').value;
+    const container = document.getElementById('newUserEstateCheckboxes');
+    if (container) container.style.display = role === "admin" ? "none" : "block";
+}
+
+function toggleEditEstateDropdown() {
+    const role = document.getElementById('editRole').value;
+    const container = document.getElementById('editEstateCheckboxes');
+    if (container) container.style.display = role === "admin" ? "none" : "block";
+}
+
+// GUARANTEED CHECKBOX RENDER FOR REGISTRATION
+function renderNewUserEstateCheckboxes() {
+    const container = document.getElementById('newUserEstateCheckboxes');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (!estateList || estateList.length === 0) {
+        container.innerHTML = '<span style="color:#94a3b8; font-size:11px;">Loading estates...</span>';
+        return;
+    }
+
+    estateList.forEach(est => {
+        container.innerHTML += `
+            <label class="checkbox-item">
+                <input type="checkbox" value="${est}" class="new-estate-chk">
+                <span style="font-size: 12px; color: #1e293b;">${est}</span>
+            </label>`;
+    });
+}
+
+function renderSettingsUI() {
+    const userListUi = document.getElementById('userSettingsList');
+    if (userListUi) {
+        userListUi.innerHTML = '';
+        userAccounts.forEach((usr, idx) => {
+            let userAssigned = usr.assigned_estates || (usr.assigned_estate ? [usr.assigned_estate] : []);
+            userListUi.innerHTML += `<li style="padding: 8px; background: #ffffff; margin-bottom: 6px; border-radius: 4px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <b style="font-size: 13px; color: #0f172a;">${usr.full_name || usr.username}</b> <span style="font-size: 12px; color: #64748b;">(${usr.username})</span><br>
+                    <small style="color: #64748b; font-size: 11px;">${usr.email || 'No email'} | <b>${usr.role ? usr.role.toUpperCase() : 'USER'}</b> ${userAssigned.length > 0 ? '➔ ' + userAssigned.join(', ') : ''}</small>
+                </div>
+                <div>
+                    <button class="btn-edit" onclick="openEditUserModal(${idx})">Edit</button>
+                    <button class="btn-delete" onclick="removeUser(${idx})">Delete</button>
+                </div>
+            </li>`;
+        });
+    }
+
+    const estListUi = document.getElementById('estateSettingsList');
+    if (estListUi) {
+        estListUi.innerHTML = '';
+        estateList.forEach((est, idx) => {
+            estListUi.innerHTML += `<li style="padding: 6px 8px; background: #ffffff; margin-bottom: 4px; border-radius: 4px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 12px; font-weight: 600; color: #334155;">${est}</span>
+                <div>
+                    <button class="btn-edit" onclick="editEstateName(${idx})">Edit</button>
+                    <button class="btn-delete" onclick="removeEstate(${idx})">Delete</button>
+                </div>
+            </li>`;
+        });
+    }
+
+    renderNewUserEstateCheckboxes();
+}
+
+// GUARANTEED OPEN EDIT MODAL & POPULATE CHECKBOXES
+function openEditUserModal(idx) {
+    const user = userAccounts[idx];
+    if (!user) return alert("User not found!");
+
+    document.getElementById('editIndex').value = idx;
+    document.getElementById('editFull').value = user.full_name || '';
+    document.getElementById('editEmail').value = user.email || '';
+    document.getElementById('editPass').value = '';
+    document.getElementById('editRole').value = user.role || 'user';
+
+    let userAssigned = user.assigned_estates || (user.assigned_estate ? [user.assigned_estate] : []);
+
+    const editContainer = document.getElementById('editEstateCheckboxes');
+    if (editContainer) {
+        editContainer.innerHTML = '';
+        
+        if (!estateList || estateList.length === 0) {
+            editContainer.innerHTML = '<span style="color:#ef4444; font-size:11px;">No estates found in database.</span>';
+        } else {
+            estateList.forEach(est => {
+                let isChecked = userAssigned.includes(est) ? 'checked' : '';
+                editContainer.innerHTML += `
+                    <label class="checkbox-item">
+                        <input type="checkbox" value="${est}" class="edit-estate-chk" ${isChecked}>
+                        <span style="font-size: 12px; color: #1e293b;">${est}</span>
+                    </label>`;
+            });
+        }
+    }
+
+    toggleEditEstateDropdown();
+    document.getElementById('editUserModal').style.display = 'flex';
+}
+
+function closeEditModal() {
+    document.getElementById('editUserModal').style.display = 'none';
+}
+
+async function saveUserEdit() {
+    const idx = document.getElementById('editIndex').value;
+    let targetUser = userAccounts[idx];
+
+    const newFull = document.getElementById('editFull').value.trim();
+    const newEmail = document.getElementById('editEmail').value.trim();
+    const newPass = document.getElementById('editPass').value.trim();
+    const newRole = document.getElementById('editRole').value;
+
+    let newEstates = [];
+    if (newRole !== "admin") {
+        const checkedBoxes = document.querySelectorAll('.edit-estate-chk:checked');
+        newEstates = Array.from(checkedBoxes).map(chk => chk.value);
+    }
+
+    targetUser.full_name = newFull;
+    targetUser.email = newEmail;
+    if (newPass) targetUser.password = newPass;
+    targetUser.role = newRole;
+    targetUser.assigned_estates = newEstates;
+
+    if (targetUser.id) {
+        let updateObj = { full_name: newFull, email: newEmail, role: newRole, assigned_estates: newEstates };
+        if (newPass) updateObj.password = newPass;
+
+        const { error } = await supabaseClient.from('user_profiles').update(updateObj).eq('id', targetUser.id);
+        if (error) return alert("Error updating database: " + error.message);
+    }
+
+    await supabaseClient.from('activity_logs').insert([{
+        username: currentUser ? currentUser.username : 'ADMIN',
+        action: 'EDIT_USER',
+        details: `Updated profile for '${targetUser.username}' (${newRole}). Estates: ${newEstates.join(', ') || 'ALL'}`,
+        estate: newEstates.length > 0 ? newEstates[0] : 'SYSTEM',
+        timestamp: new Date().toISOString()
+    }]);
+
+    alert("User profile updated successfully!");
+    closeEditModal();
+    if (typeof fetchUserProfiles === 'function') fetchUserProfiles();
+    fetchActivityLogs();
+}
+
+async function addNewUser() {
+    const uFull = document.getElementById('newUserFull').value.trim();
+    const uEmail = document.getElementById('newUserEmail').value.trim();
+    const uName = document.getElementById('newUsername').value.trim();
+    const uPass = document.getElementById('newUserPass').value.trim();
+    const uRole = document.getElementById('newUserRole').value;
+    
+    let uEstates = [];
+    if (uRole !== "admin") {
+        const checkedBoxes = document.querySelectorAll('.new-estate-chk:checked');
+        uEstates = Array.from(checkedBoxes).map(chk => chk.value);
+    }
+
+    if (!uName || !uPass || !uFull) return alert("Fill in Full Name, Username, and Password");
+
+    const newUserObj = { 
+        username: uName, 
+        password: uPass, 
+        full_name: uFull, 
+        email: uEmail, 
+        role: uRole, 
+        assigned_estates: uEstates 
+    };
+
+    const { error } = await supabaseClient.from('user_profiles').insert([newUserObj]);
+
+    if (error) {
+        alert("Error creating user: " + error.message);
+    } else {
+        await supabaseClient.from('activity_logs').insert([{
+            username: currentUser ? currentUser.username : 'ADMIN',
+            action: 'CREATE_USER',
+            details: `Created user '${uName}' (${uRole}) with estates: ${uEstates.join(', ') || 'ALL'}`,
+            estate: uEstates.length > 0 ? uEstates[0] : 'SYSTEM',
+            timestamp: new Date().toISOString()
+        }]);
+
+        alert(`User "${uName}" created successfully with ${uEstates.length} assigned estate(s)!`);
+        
+        document.getElementById('newUserFull').value = '';
+        document.getElementById('newUserEmail').value = '';
+        document.getElementById('newUsername').value = '';
+        document.getElementById('newUserPass').value = '';
+        
+        document.querySelectorAll('.new-estate-chk').forEach(chk => chk.checked = false);
+
+        if (typeof fetchUserProfiles === 'function') fetchUserProfiles();
+        fetchActivityLogs();
+    }
+}
+
+async function addNewEstate() {
+    const nameInput = document.getElementById('newEstateName');
+    const newName = nameInput.value.trim();
+    if (!newName) return alert("Enter estate name");
+
+    const { error } = await supabaseClient.from('estates').insert([{ name: newName }]);
+
+    if (error) {
+        alert("Error adding estate: " + error.message);
+    } else {
+        alert(`Estate "${newName}" added permanently!`);
+        nameInput.value = '';
+        await fetchEstates();
+    }
+}
+
+async function removeEstate(idx) {
+    let targetEstate = estateList[idx];
+    if (!confirmITAction(`Estate Location: "${targetEstate}"`)) return;
+
+    const { error } = await supabaseClient.from('estates').delete().eq('name', targetEstate);
+
+    if (error) {
+        alert("Error deleting estate: " + error.message);
+    } else {
+        alert(`Estate "${targetEstate}" permanently deleted!`);
+        await fetchEstates();
+    }
+}
+
+async function editEstateName(idx) {
+    let oldName = estateList[idx];
+    let newName = prompt(`Edit Estate Location Name:`, oldName);
+
+    if (newName && newName.trim() !== "" && newName !== oldName) {
+        const trimmedName = newName.trim();
+        const { error } = await supabaseClient
+            .from('estates')
+            .update({ name: trimmedName })
+            .eq('name', oldName);
+
+        if (error) {
+            alert("Error updating estate: " + error.message);
+        } else {
+            alert(`Estate renamed to "${trimmedName}" permanently!`);
+            await fetchEstates();
+        }
+    }
+}
+
+async function removeUser(idx) {
+    let targetUser = userAccounts[idx];
+    if (!confirmITAction(`User Account: "${targetUser.username}"`)) return;
+
+    if (targetUser.id) {
+        await supabaseClient.from('user_profiles').delete().eq('id', targetUser.id);
+    }
+    
+    userAccounts.splice(idx, 1);
+    renderSettingsUI();
+}
+
+function onEstateOrMonthChange() {
+    updateSummaryHeader();
+    loadFromCloud();
+    loadOverallSummary();
+}
+
+function initKeyInTables() {
+    let s1 = '';
+    for (let d = 1; d <= 31; d++) {
+        s1 += `<tr>
+            <td><b>${d}</b></td>
+            <td><input type="number" step="any" id="s1_rf_${d}" oninput="calcS1();"></td>
+            <td class="readonly-cell" id="s1_rf_todate_${d}"></td>
+            <td><input type="number" step="any" id="s1_rf_pm_${d}"></td>
+            <td><input type="number" step="any" id="s1_ffb1_${d}" oninput="calcS1()"></td>
+            <td><input type="number" step="any" id="s1_ffb2_${d}" oninput="calcS1()"></td>
+            <td><input type="number" step="any" id="s1_ffb3_${d}" oninput="calcS1()"></td>
+            <td><input type="number" step="any" id="s1_ffb4_${d}" oninput="calcS1()"></td>
+            <td class="readonly-cell" id="s1_gt_today_${d}"></td>
+            <td class="readonly-cell" id="s1_gt_todate_${d}"></td>
+            <td><input type="number" step="any" id="s1_ffb_pm_${d}"></td>
+        </tr>`;
+    }
+    document.getElementById('tbody-s1').innerHTML = s1;
+
+    let s2 = '';
+    for (let d = 1; d <= 31; d++) {
+        s2 += `<tr>
+            <td><b>${d}</b></td>
+            ${[1,2,3,4].map(p => `
+                <td><input type="number" step="any" id="s2_p${p}_t_${d}" oninput="calcS2();"></td>
+                <td class="readonly-cell" id="s2_p${p}_td_${d}"></td>
+                <td><input type="number" step="any" id="s2_p${p}_pm_${d}"></td>
+            `).join('')}
+        </tr>`;
+    }
+    document.getElementById('tbody-s2').innerHTML = s2;
+
+    let s3 = '';
+    for (let d = 1; d <= 31; d++) {
+        s3 += `<tr>
+            <td><b>${d}</b></td>
+            ${[1,2,3,4,5,6].map(m => `<td><input type="number" step="any" id="s3_m${m}_${d}"></td>`).join('')}
+            <td class="readonly-cell" id="s3_gt_today_${d}"></td>
+            <td class="readonly-cell" id="s3_gt_todate_${d}"></td>
+            <td><input type="number" step="any" id="s3_pm_${d}"></td>
+        </tr>`;
+    }
+    document.getElementById('tbody-s3').innerHTML = s3;
+
+    let s4Hdr = '';
+    for (let p = 1; p <= 12; p++) {
+        s4Hdr += `<th style="width: 60px;"><input type="text" value="P${p}" style="font-weight:bold; text-align:center;"></th>`;
+    }
+    s4Hdr += `<th>TODAY</th><th>TODATE</th>`;
+    document.getElementById('s4-phase-headers').innerHTML = s4Hdr;
+
+    let s4 = '';
+    for (let d = 1; d <= 31; d++) {
+        s4 += `<tr>
+            <td><b>${d}</b></td>
+            ${Array.from({length:12}, (_, i) => `<td><input type="number" step="any" id="s4_p${i+1}_${d}"></td>`).join('')}
+            <td class="readonly-cell" id="s4_gt_today_${d}"></td>
+            <td class="readonly-cell" id="s4_gt_todate_${d}"></td>
+            <td><input type="number" step="any" id="s4_pm_${d}"></td>
+        </tr>`;
+    }
+    document.getElementById('tbody-s4').innerHTML = s4;
+}
+
+function calcS1() {
+    let cumRf = 0, cumFfb = 0;
+    for (let d = 1; d <= 31; d++) {
+        let rfVal = parseFloat(document.getElementById(`s1_rf_${d}`)?.value) || 0;
+        cumRf += rfVal;
+        if (document.getElementById(`s1_rf_todate_${d}`)) {
+            document.getElementById(`s1_rf_todate_${d}`).innerText = cumRf > 0 ? cumRf.toFixed(2) : '';
+        }
+
+        let f1 = parseFloat(document.getElementById(`s1_ffb1_${d}`)?.value) || 0;
+        let f2 = parseFloat(document.getElementById(`s1_ffb2_${d}`)?.value) || 0;
+        let f3 = parseFloat(document.getElementById(`s1_ffb3_${d}`)?.value) || 0;
+        let f4 = parseFloat(document.getElementById(`s1_ffb4_${d}`)?.value) || 0;
+        let sumToday = f1 + f2 + f3 + f4;
+        cumFfb += sumToday;
+
+        if (document.getElementById(`s1_gt_today_${d}`)) {
+            document.getElementById(`s1_gt_today_${d}`).innerText = sumToday > 0 ? sumToday.toFixed(2) : '';
+        }
+        if (document.getElementById(`s1_gt_todate_${d}`)) {
+            document.getElementById(`s1_gt_todate_${d}`).innerText = cumFfb > 0 ? cumFfb.toFixed(2) : '';
+        }
+    }
+}
+
+function calcS2() {
+    for (let p = 1; p <= 4; p++) {
+        let cum = 0;
+        for (let d = 1; d <= 31; d++) {
+            let val = parseFloat(document.getElementById(`s2_p${p}_t_${d}`)?.value) || 0;
+            cum += val;
+            if (document.getElementById(`s2_p${p}_td_${d}`)) {
+                document.getElementById(`s2_p${p}_td_${d}`).innerText = cum > 0 ? cum.toFixed(2) : '';
+            }
+        }
+    }
+}
+
+function updateSummaryHeader() {
+    let val = document.getElementById('bulanTahun').value;
+    if (val) {
+        let d = new Date(val + "-01");
+        let mName = d.toLocaleString('en', { month: 'short' }).toUpperCase();
+        let y = d.getFullYear();
+        document.getElementById('sumReportTitle').innerText = `RAINFALL REPORT MONTH OF ${mName} ${y}`;
+    }
+}
+
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    
+    document.getElementById(tabId).classList.add('active');
+    document.getElementById(`btn-${tabId}`).classList.add('active');
+
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {
+        if (tabId === 'tabSummary' || tabId === 'tabSettings') {
+            saveBtn.style.display = 'none';
+        } else {
+            saveBtn.style.display = 'inline-block';
+        }
+    }
+
+    if (tabId === 'tabSettings') {
+        fetchActivityLogs();
+    }
+}
+
+// FIXED ASYNC INITIALIZATION SEQUENCE
+window.onload = async function() {
+    initKeyInTables();
+    await fetchEstates();        // Load estate locations first
+    await fetchUserProfiles();   // Load user profiles second
+    applyUserPermissions();
+};
