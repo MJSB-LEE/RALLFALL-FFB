@@ -58,8 +58,9 @@
             <option value="user">Estate User</option>
             <option value="admin">Administrator</option>
         </select>
-        <label style="font-size: 11px; display: block; text-align: left;">Assigned Estate</label>
-        <select id="editEstate"></select>
+        <label style="font-size: 11px; display: block; text-align: left; color: #64748b;">Assigned Estates (Hold Ctrl / Cmd for multiple)</label>
+        <!-- ADDED multiple ATTRIBUTE HERE FOR EDIT MODAL -->
+        <select id="editEstate" multiple style="height: 100px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px;"></select>
         
         <div style="display: flex; gap: 8px; margin-top: 10px;">
             <button class="btn btn-primary" style="flex: 1;" onclick="saveUserEdit()">Save Changes</button>
@@ -230,7 +231,9 @@
                         <option value="user">Estate User</option>
                         <option value="admin">Administrator</option>
                     </select>
-                    <select id="newUserEstate" style="padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    <label style="font-size: 11px; color: #64748b; margin-top: 2px;">Assigned Estates (Hold Ctrl / Cmd for multiple)</label>
+                    <!-- ADDED multiple ATTRIBUTE HERE FOR REGISTRATION FORM -->
+                    <select id="newUserEstate" multiple style="height: 90px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; background: white;">
                         <!-- Dynamic estates -->
                     </select>
                     <button class="btn btn-primary" onclick="addNewUser()">Add New User Account</button>
