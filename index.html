@@ -1,380 +1,315 @@
-* {
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masih Jaya Group - Rainfall & FFB Ledger System</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Supabase JS Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
 
-body {
-    background-color: #f8fafc;
-    color: #1e293b;
-    margin: 0;
-    padding: 20px;
-}
+    <!-- Login Modal Overlay -->
+    <div id="loginOverlay" class="login-overlay" style="display: flex;">
+        <div class="login-card">
+            <h2>🔐 System Login</h2>
+            <p>Enter your account credentials to access ledger records.</p>
+            <div id="loginError" style="color: #ef4444; font-size: 13px; font-weight: bold; margin-bottom: 10px; display: none;"></div>
+            <input type="text" id="loginUsername" placeholder="Username" style="width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box;">
+            <input type="password" id="loginPassword" placeholder="Password" style="width: 100%; padding: 8px; margin-bottom: 15px; box-sizing: border-box;">
+            <button onclick="handleLogin()" style="width: 100%; padding: 10px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Login</button>
+        </div>
+    </div>
 
-.container {
-    max-width: 1400px;
-    margin: 0 auto;
-}
+    <!-- Main Application Container -->
+    <div class="container">
+        
+        <!-- Header Controls Bar -->
+        <div class="header-card">
+            <!-- Branding Banner -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding-bottom: 12px; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="background: #2563eb; width: 42px; height: 42px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🌴</div>
+                    <div>
+                        <h1 style="margin: 0; font-size: 20px; letter-spacing: 1.5px; font-weight: 800; color: #ffffff; text-transform: uppercase;">MASIH JAYA GROUP</h1>
+                        <span style="font-size: 11px; color: #94a3b8; letter-spacing: 0.5px;">ESTATE RAINFALL & FFB LEDGER SYSTEM</span>
+                    </div>
+                </div>
+                
+                <!-- Status Badge -->
+                <div style="display: flex; align-items: center; gap: 12px; background: rgba(255, 255, 255, 0.05); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <span id="userInfoLabel" style="font-size: 12px; font-weight: 600; color: #e2e8f0;">User: -</span>
+                    <span id="userBadge" style="background: #dc2626; color: white; padding: 2px 10px; border-radius: 12px; font-size: 10px; font-weight: 800; letter-spacing: 0.5px;">ROLE: ADMIN</span>
+                    <button onclick="handleLogout()" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; cursor: pointer;">Logout</button>
+                </div>
+            </div>
 
-.header-card {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    margin-bottom: 20px;
-    color: #ffffff;
-}
+            <!-- Form Inputs Grid -->
+            <div class="header-grid">
+                <div style="display: flex; flex-direction: column;">
+                    <label>ASSIGNED ESTATE</label>
+                    <select id="ladangSelect" onchange="onEstateOrMonthChange()"></select>
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <label>MONTH / YEAR</label>
+                    <input type="month" id="bulanTahun" onchange="onEstateOrMonthChange()">
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <label>PREPARED BY</label>
+                    <input type="text" id="preparedByInput" placeholder="System Administrator">
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <label>APPROVED BY</label>
+                    <input type="text" id="approvedByInput" value="Pending Manager Approval" readonly class="readonly-cell">
+                </div>
+            </div>
 
-.header-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-    margin-bottom: 10px;
-}
+            <!-- Audit Line -->
+            <div style="margin-top: 8px; font-size: 11px; color: #94a3b8; font-style: italic; display: flex; align-items: center; gap: 6px;">
+                <span style="display: inline-block; width: 6px; height: 6px; background: #22c55e; border-radius: 50%;"></span>
+                <span id="auditLogDisplay">Data Record Info: Select Estate and Month to load records</span>
+            </div>
+        </div>
 
-.header-grid label {
-    font-size: 11px;
-    font-weight: 700;
-    color: #cbd5e1;
-    margin-bottom: 5px;
-    letter-spacing: 0.5px;
-}
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <button class="tab-btn active" id="btn-tab1" onclick="switchTab('tab1')">1. RAINFALL + MILL</button>
+            <button class="tab-btn" id="btn-tab2" onclick="switchTab('tab2')">2. RAINFALL BY PHASE</button>
+            <button class="tab-btn" id="btn-tabSummary" onclick="switchTab('tabSummary')">📊 OVERALL SUMMARY</button>
+            <button class="tab-btn" id="btn-tabSettings" onclick="switchTab('tabSettings')" style="display: none;">⚙️ SETTINGS & AUDIT</button>
+        </div>
 
-.header-grid input, 
-.header-grid select {
-    padding: 8px 10px;
-    border-radius: 6px;
-    border: 1px solid #475569;
-    background: #0f172a;
-    color: #ffffff;
-    font-size: 13px;
-    font-weight: 600;
-    width: 100%;
-}
+        <!-- Tab 1: Rainfall + Mill Key-In -->
+        <div id="tab1" class="tab-content active">
+            <div class="print-only print-header-block">
+                <div class="print-company-title">MASIH JAYA SDN BHD</div>
+                <div class="print-meta-grid">
+                    <div>LOCATION: <span class="lblLocation"></span></div>
+                    <div>MONTH: <span class="lblMonth"></span></div>
+                </div>
+            </div>
 
-.header-grid input.readonly-cell {
-    background: #1e293b;
-    border-color: #334155;
-    color: #94a3b8;
-    font-style: italic;
-}
+            <h3 class="no-print">1. Daily Rainfall & FFB Key-In</h3>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;" rowspan="2">Date</th>
+                        <th colspan="3">Rainfall (mm)</th>
+                        <th colspan="3">FFB</th>
+                        <th style="width: 160px;" rowspan="2">Mill Name</th>
+                    </tr>
+                    <tr>
+                        <th style="width: 100px;">To-Day</th>
+                        <th style="width: 100px;">To-Date</th>
+                        <th style="width: 100px;">Prev. Month</th>
+                        <th style="width: 100px;">To-Day</th>
+                        <th style="width: 100px;">To-Date</th>
+                        <th style="width: 100px;">Prev. Month</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-s1"></tbody>
+            </table>
 
-.nav-tabs {
-    display: flex;
-    gap: 8px;
-    border-bottom: 2px solid #e2e8f0;
-    margin-bottom: 20px;
-}
+            <div class="print-only print-footer-block">
+                <div class="print-end-label">END</div>
+                <div class="print-signature-grid">
+                    <div>
+                        PREPARED BY: ___________________________<br>
+                        <span class="lblPreparedBy" style="font-size: 8pt; margin-left: 95px;"></span>
+                    </div>
+                    <div style="text-align: right;">
+                        APPROVED BY: ___________________________<br>
+                        <span class="lblApprovedBy" style="font-size: 8pt; margin-right: 10px;"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-.tab-btn {
-    background: #e2e8f0;
-    color: #475569;
-    border: none;
-    padding: 10px 20px;
-    font-weight: bold;
-    font-size: 13px;
-    border-radius: 6px 6px 0 0;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
+        <!-- Tab 2: Rainfall by Phase Key-In -->
+        <div id="tab2" class="tab-content">
+            <div class="print-only print-header-block">
+                <div class="print-company-title">MASIH JAYA SDN BHD</div>
+                <div class="print-meta-grid">
+                    <div>LOCATION: <span class="lblLocation"></span></div>
+                    <div>MONTH: <span class="lblMonth"></span></div>
+                </div>
+            </div>
 
-.tab-btn:hover {
-    background: #cbd5e1;
-    color: #0f172a;
-}
+            <h3 class="no-print">2. Daily Phase Rainfall Key-In</h3>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;" rowspan="2">Date</th>
+                        <th colspan="3">Phase 1</th>
+                        <th colspan="3">Phase 2</th>
+                        <th colspan="3">Phase 3</th>
+                        <th colspan="3">Phase 4</th>
+                    </tr>
+                    <tr>
+                        <th>To-Day</th><th>To-Date</th><th>Prev. Month</th>
+                        <th>To-Day</th><th>To-Date</th><th>Prev. Month</th>
+                        <th>To-Day</th><th>To-Date</th><th>Prev. Month</th>
+                        <th>To-Day</th><th>To-Date</th><th>Prev. Month</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-s2"></tbody>
+            </table>
 
-.tab-btn.active {
-    background: #2563eb;
-    color: #ffffff;
-}
+            <div class="print-only print-footer-block">
+                <div class="print-end-label">END</div>
+                <div class="print-signature-grid">
+                    <div>
+                        PREPARED BY: ___________________________<br>
+                        <span class="lblPreparedBy" style="font-size: 8pt; margin-left: 95px;"></span>
+                    </div>
+                    <div style="text-align: right;">
+                        APPROVED BY: ___________________________<br>
+                        <span class="lblApprovedBy" style="font-size: 8pt; margin-right: 10px;"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-.tab-content {
-    display: none;
-}
+        <!-- Tab 3: Overall Summary Matrix -->
+        <div id="tabSummary" class="tab-content">
+            <div class="print-only print-header-block">
+                <div class="print-company-title">MASIH JAYA SDN BHD</div>
+                <div class="print-meta-grid">
+                    <div>LOCATION: ALL ESTATES SUMMARY</div>
+                    <div>MONTH: <span class="lblMonth"></span></div>
+                </div>
+            </div>
 
-.tab-content.active {
-    display: block;
-}
+            <h3 id="sumReportTitle" class="no-print">RAINFALL REPORT</h3>
+            <div style="overflow-x: auto;">
+                <table class="report-table">
+                    <thead>
+                        <tr id="hdr-estates"></tr>
+                        <tr id="hdr-sub"></tr>
+                    </thead>
+                    <tbody id="tbody-summary"></tbody>
+                    <tfoot>
+                        <tr id="row-totals" style="font-weight: bold; background: #f1f5f9;"></tr>
+                        <tr id="row-days" style="font-weight: bold; background: #e2e8f0;"></tr>
+                    </tfoot>
+                </table>
+            </div>
 
-.report-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #ffffff;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-}
+            <div class="print-only print-footer-block">
+                <div class="print-end-label">END</div>
+                <div class="print-signature-grid">
+                    <div>
+                        PREPARED BY: ___________________________<br>
+                        <span class="lblPreparedBy" style="font-size: 8pt; margin-left: 95px;"></span>
+                    </div>
+                    <div style="text-align: right;">
+                        APPROVED BY: ___________________________<br>
+                        <span class="lblApprovedBy" style="font-size: 8pt; margin-right: 10px;"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-.report-table th {
-    background: #0f172a;
-    color: #ffffff;
-    padding: 8px;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border: 1px solid #334155;
-    text-align: center;
-}
+        <!-- Tab 4: Settings & System Audit -->
+        <div id="tabSettings" class="tab-content">
+            <h3>Settings & System Administration</h3>
 
-.report-table td {
-    border: 1px solid #e2e8f0;
-    padding: 4px;
-    text-align: center;
-    font-size: 12px;
-}
+            <!-- 1. Mill Suppliers Management Card -->
+            <div class="settings-card">
+                <h4>🏭 Mill Suppliers Management</h4>
+                <div style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center;">
+                    <select id="millEstateSelect" style="padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1; font-weight: 600;"></select>
+                    <input type="text" id="newMillName" placeholder="Enter Mill Name (e.g. Sankira)" style="padding: 6px; flex: 1; border-radius: 4px; border: 1px solid #cbd5e1;">
+                    <button onclick="addNewMill()" style="background: #059669; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: bold;">Add Mill</button>
+                </div>
+                <ul id="millSettingsList" style="list-style: none; padding: 0; margin: 0;"></ul>
+            </div>
 
-.report-table tr:nth-child(even) {
-    background-color: #f8fafc;
-}
+            <!-- 2. Estate Location Management Card -->
+            <div class="settings-card">
+                <h4>📍 Estate Locations Management</h4>
+                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                    <input type="text" id="newEstateName" placeholder="New Estate Name" style="padding: 6px; flex: 1; border-radius: 4px; border: 1px solid #cbd5e1;">
+                    <button onclick="addNewEstate()" style="background: #2563eb; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: bold;">Add Estate</button>
+                </div>
+                <ul id="estateSettingsList" style="list-style: none; padding: 0; margin: 0;"></ul>
+            </div>
 
-.report-table tr:hover {
-    background-color: #f1f5f9;
-}
+            <!-- 3. User Accounts Management Card -->
+            <div class="settings-card">
+                <h4>👥 User Profile Accounts</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <input type="text" id="newUserFull" placeholder="Full Name" style="padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                    <input type="email" id="newUserEmail" placeholder="Email" style="padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                    <input type="text" id="newUsername" placeholder="Username" style="padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                    <input type="password" id="newUserPass" placeholder="Password" style="padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                    <select id="newUserRole" onchange="toggleUserEstateDropdown()" style="padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <label style="font-size: 12px; font-weight: bold; color: #475569;">Assign Estate Access:</label>
+                <div id="newUserEstateCheckboxes" style="margin-bottom: 12px; max-height: 100px; overflow-y: auto; border: 1px solid #e2e8f0; padding: 6px; border-radius: 4px;"></div>
+                <button onclick="addNewUser()" style="background: #059669; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%;">Create New User Account</button>
+                
+                <h5 style="margin-top: 15px; margin-bottom: 8px;">Existing System Users:</h5>
+                <ul id="userSettingsList" style="list-style: none; padding: 0; margin: 0;"></ul>
+            </div>
 
-.report-table input[type="number"],
-.report-table select {
-    width: 100%;
-    padding: 4px;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    text-align: center;
-    font-size: 12px;
-}
+            <!-- 4. System Audit Activity Logs Card -->
+            <div class="settings-card">
+                <h4>📜 System Activity & Audit Logs</h4>
+                <table class="report-table" style="width: 100%; font-size: 12px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 140px;">Timestamp</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Estate</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activityLogTableBody"></tbody>
+                </table>
+            </div>
+        </div>
 
-.report-table input:focus,
-.report-table select:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
-}
+        <!-- Floating Action Buttons -->
+        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+            <button id="saveBtn" onclick="saveToCloud()" style="background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer;">Save Data</button>
+            <button id="submitBtn" onclick="submitMonthlyReport()" style="background: #059669; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer;">Submit & Lock Report</button>
+            <button id="approveBtn" onclick="approveMonthlyReport()" style="background: #d97706; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; display: none;">Approve Report (Manager)</button>
+            <button onclick="printActiveTab()" style="background: #475569; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer;">🖨️ Print Current Tab</button>
+        </div>
 
-.readonly-cell {
-    background-color: #f1f5f9;
-    color: #475569;
-    font-weight: 600;
-}
+    </div>
 
-.settings-card {
-    background: #ffffff;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #cbd5e1;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    margin-bottom: 20px;
-}
+    <!-- Edit User Modal Dialog -->
+    <div id="editUserModal" class="login-overlay" style="display: none;">
+        <div class="login-card" style="width: 400px;">
+            <h3>✏️ Edit User Profile</h3>
+            <input type="hidden" id="editIndex">
+            <label style="font-size:12px;">Full Name:</label>
+            <input type="text" id="editFull" style="width: 100%; padding: 6px; margin-bottom: 8px; box-sizing: border-box;">
+            <label style="font-size:12px;">Email:</label>
+            <input type="email" id="editEmail" style="width: 100%; padding: 6px; margin-bottom: 8px; box-sizing: border-box;">
+            <label style="font-size:12px;">New Password (leave blank to keep current):</label>
+            <input type="password" id="editPass" style="width: 100%; padding: 6px; margin-bottom: 8px; box-sizing: border-box;">
+            <label style="font-size:12px;">Role:</label>
+            <select id="editRole" onchange="toggleEditEstateDropdown()" style="width: 100%; padding: 6px; margin-bottom: 8px; box-sizing: border-box;">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+            </select>
+            <label style="font-size:12px;">Assigned Estates:</label>
+            <div id="editEstateCheckboxes" style="max-height: 100px; overflow-y: auto; border: 1px solid #cbd5e1; padding: 6px; margin-bottom: 12px;"></div>
+            <div style="display: flex; gap: 8px;">
+                <button onclick="saveUserEdit()" style="flex: 1; padding: 8px; background: #059669; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Save Changes</button>
+                <button onclick="closeEditModal()" style="flex: 1; padding: 8px; background: #64748b; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Cancel</button>
+            </div>
+        </div>
+    </div>
 
-.settings-card h4 {
-    margin-top: 0;
-    color: #0f172a;
-    font-size: 15px;
-}
-
-.btn-edit {
-    background: #2563eb;
-    color: #ffffff;
-    border: none;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-weight: bold;
-    font-size: 11px;
-    cursor: pointer;
-}
-
-.btn-delete {
-    background: #dc2626;
-    color: #ffffff;
-    border: none;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-weight: bold;
-    font-size: 11px;
-    cursor: pointer;
-}
-
-.btn-edit:hover { background: #1d4ed8; }
-.btn-delete:hover { background: #b91c1c; }
-
-.login-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(4px);
-    z-index: 9999;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.login-card {
-    background: #ffffff;
-    padding: 30px;
-    border-radius: 10px;
-    width: 360px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-.login-card h2, .login-card h3 {
-    margin-top: 0;
-    color: #0f172a;
-}
-
-.print-only {
-    display: none;
-}
-
-/* ==========================================================================
-   STRICT 1-PAGE A4 LANDSCAPE PRINT SETTINGS
-   ========================================================================== */
-@media print {
-    @page {
-        size: A4 landscape;
-        margin: 4mm 6mm;
-    }
-
-    html, body {
-        height: 100%;
-        width: 100%;
-        margin: 0 !important;
-        padding: 0 !important;
-        background: #ffffff !important;
-        color: #000000 !important;
-        overflow: hidden !important;
-        font-family: Arial, Helvetica, sans-serif !important;
-    }
-
-    /* Prevent multi-page generation */
-    .container {
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    /* Hide Web Navigation & UI elements */
-    .header-card, 
-    .nav-tabs, 
-    #loginOverlay, 
-    #editUserModal, 
-    .settings-card, 
-    button, 
-    .btn-delete, 
-    .btn-edit,
-    .login-overlay,
-    .no-print,
-    div[style*="justify-content: flex-end"] {
-        display: none !important;
-    }
-
-    div.tab-content {
-        display: none !important;
-    }
-
-    div.tab-content.active {
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: space-between !important;
-        height: 98vh !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-        page-break-after: avoid !important;
-        page-break-before: avoid !important;
-        page-break-inside: avoid !important;
-    }
-
-    .print-only {
-        display: block !important;
-    }
-
-    /* Compact Header */
-    .print-header-block {
-        margin-bottom: 4px !important;
-    }
-
-    .print-company-title {
-        text-align: center;
-        font-size: 13pt;
-        font-weight: bold;
-        letter-spacing: 0.5px;
-        margin-bottom: 4px;
-        text-transform: uppercase;
-        border-bottom: 1.5px solid #000;
-        padding-bottom: 2px;
-    }
-
-    .print-meta-grid {
-        display: flex;
-        justify-content: space-between;
-        font-size: 8.5pt;
-        font-weight: bold;
-        padding: 0 4px;
-    }
-
-    /* Compact Table Fit to A4 Height */
-    .report-table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-        box-shadow: none !important;
-        font-size: 6.5pt !important;
-        margin-bottom: 0 !important;
-    }
-
-    .report-table tr {
-        page-break-inside: avoid !important;
-    }
-
-    .report-table th {
-        background-color: #f1f5f9 !important;
-        color: #000000 !important;
-        border: 1px solid #000000 !important;
-        padding: 1px 2px !important;
-        font-weight: bold !important;
-        height: 14px !important;
-    }
-
-    .report-table td {
-        border: 1px solid #000000 !important;
-        padding: 0px 2px !important;
-        text-align: center !important;
-        height: 12px !important;
-    }
-
-    input, select {
-        border: none !important;
-        background: transparent !important;
-        appearance: none !important;
-        -webkit-appearance: none !important;
-        font-weight: bold !important;
-        text-align: center !important;
-        box-shadow: none !important;
-        color: #000000 !important;
-        font-size: 6.5pt !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        height: 100% !important;
-    }
-
-    /* Signature Section at the bottom */
-    .print-footer-block {
-        margin-top: 4px !important;
-        page-break-inside: avoid !important;
-    }
-
-    .print-end-label {
-        text-align: center;
-        font-size: 7pt;
-        font-weight: bold;
-        border-top: 1px dashed #000;
-        padding-top: 2px;
-        margin-bottom: 12px;
-    }
-
-    .print-signature-grid {
-        display: flex;
-        justify-content: space-between;
-        font-size: 8pt;
-        padding: 0 10px;
-    }
-}
+    <script src="script.js"></script>
+</body>
+</html>
