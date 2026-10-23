@@ -19,7 +19,7 @@ let estateMills = [];
 let userAccounts = [];
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
 
-// Tab Switcher
+// Tab Switcher Function
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -62,7 +62,7 @@ async function fetchMills() {
     if (activeEstate) updateMillDropdownsForEstate(activeEstate);
 }
 
-// Render Mill List in Settings Page
+// Render Mill Settings UI
 function renderMillSettingsUI() {
     const millEstateSelect = document.getElementById('millEstateSelect');
     if (millEstateSelect) {
@@ -103,7 +103,7 @@ function renderMillSettingsUI() {
     }
 }
 
-// Add New Mill
+// Add New Mill Supplier
 async function addNewMill() {
     const estateName = document.getElementById('millEstateSelect').value;
     const millNameInput = document.getElementById('newMillName');
@@ -122,7 +122,7 @@ async function addNewMill() {
     }
 }
 
-// Edit Mill
+// Edit Mill Supplier
 async function editMill(millId, oldName) {
     let newName = prompt(`Edit Mill Supplier Name:`, oldName);
     if (newName && newName.trim() !== "" && newName !== oldName) {
@@ -140,7 +140,7 @@ async function editMill(millId, oldName) {
     }
 }
 
-// Remove Mill
+// Delete Mill Supplier
 async function removeMill(millId) {
     if (!confirmITAction("Mill Supplier")) return;
 
@@ -153,7 +153,7 @@ async function removeMill(millId) {
     }
 }
 
-// Update Mill Dropdowns
+// Update Mill Dropdowns per Estate
 function updateMillDropdownsForEstate(estateName) {
     const allowedMills = estateMills.filter(m => m.estate_name.toLowerCase() === estateName.toLowerCase()).map(m => m.mill_name);
 
@@ -366,7 +366,7 @@ function setFormLockState(isLocked, statusText = '') {
     }
 }
 
-// Tab-Aware Save Function
+// Robust Save Function
 async function saveToCloud() {
     const activeTabElem = document.querySelector('.tab-content.active');
     const activeTabId = activeTabElem ? activeTabElem.id : '';
@@ -376,15 +376,16 @@ async function saveToCloud() {
         return;
     }
 
-    const estate = document.getElementById('ladangSelect').value;
-    const monthYear = document.getElementById('bulanTahun').value;
+    const estate = document.getElementById('ladangSelect')?.value;
+    const monthYear = document.getElementById('bulanTahun')?.value;
     
-    if (!monthYear) return alert("Please select a Month and Year.");
+    if (!monthYear || !estate) return alert("Please select an Estate and Month/Year.");
 
     const [year, month] = monthYear.split('-').map(Number);
     const daysInMonth = new Date(year, month, 0).getDate();
     const timestampNow = new Date().toISOString();
-    const activeUserName = currentUser ? (currentUser.full_name || currentUser.username) : "Unknown User";
+    const activeUserName = currentUser ? (currentUser.full_name || currentUser.username) : "System Administrator";
+    const prepByVal = document.getElementById('preparedByInput')?.value || activeUserName;
 
     let updates = [];
 
@@ -396,7 +397,7 @@ async function saveToCloud() {
             updated_by: activeUserName,
             updated_at: timestampNow,
             status: 'draft',
-            prepared_by: document.getElementById('preparedByInput').value
+            prepared_by: prepByVal
         };
 
         if (activeTabId === 'tab1') {
@@ -418,7 +419,8 @@ async function saveToCloud() {
         .upsert(updates, { onConflict: 'estate_name,record_date' });
 
     if (error) {
-        alert("Error saving data: " + error.message);
+        console.error("Save Error:", error);
+        alert("❌ Save Failed: " + error.message);
     } else {
         await supabaseClient.from('activity_logs').insert([{
             username: currentUser ? currentUser.username : 'ADMIN',
@@ -428,21 +430,23 @@ async function saveToCloud() {
             timestamp: new Date().toISOString()
         }]);
 
-        alert(`Data for "${estate}" saved successfully!`);
-        loadFromCloud();
-        loadOverallSummary();
+        alert(`✅ Data for "${estate}" saved successfully!`);
+        await loadFromCloud();
+        await loadOverallSummary();
         fetchActivityLogs();
     }
 }
 
 async function submitMonthlyReport() {
-    const estate = document.getElementById('ladangSelect').value;
-    const monthYear = document.getElementById('bulanTahun').value;
+    const estate = document.getElementById('ladangSelect')?.value;
+    const monthYear = document.getElementById('bulanTahun')?.value;
     if (!monthYear || !estate) return alert("Select Estate and Month first.");
+
+    await saveToCloud();
 
     if (!confirm(`Are you sure you want to SUBMIT and LOCK records for ${estate} (${monthYear})? You will not be able to edit further.`)) return;
 
-    const prepName = document.getElementById('preparedByInput').value;
+    const prepName = document.getElementById('preparedByInput')?.value || (currentUser ? currentUser.username : 'Admin');
     const [year, month] = monthYear.split('-').map(Number);
     const lastDay = new Date(year, month, 0).getDate();
 
@@ -457,23 +461,23 @@ async function submitMonthlyReport() {
         alert("Submission Error: " + error.message);
     } else {
         await supabaseClient.from('activity_logs').insert([{
-            username: currentUser.username,
+            username: currentUser ? currentUser.username : 'ADMIN',
             action: 'SUBMIT_REPORT',
             details: `Submitted monthly report for ${estate} (${monthYear})`,
             estate: estate,
             timestamp: new Date().toISOString()
         }]);
 
-        alert("Report submitted successfully and locked!");
-        loadFromCloud();
+        alert("🔒 Report submitted successfully and locked!");
+        await loadFromCloud();
     }
 }
 
 async function approveMonthlyReport() {
     if (currentUser?.role !== "admin") return alert("Only Administrators / Managers can approve reports.");
 
-    const estate = document.getElementById('ladangSelect').value;
-    const monthYear = document.getElementById('bulanTahun').value;
+    const estate = document.getElementById('ladangSelect')?.value;
+    const monthYear = document.getElementById('bulanTahun')?.value;
     if (!monthYear || !estate) return alert("Select Estate and Month first.");
 
     let allowedEstates = currentUser.assigned_estates || [];
@@ -511,8 +515,8 @@ async function approveMonthlyReport() {
 async function loadFromCloud() {
     clearForm();
 
-    const estate = document.getElementById('ladangSelect').value;
-    const monthYear = document.getElementById('bulanTahun').value;
+    const estate = document.getElementById('ladangSelect')?.value;
+    const monthYear = document.getElementById('bulanTahun')?.value;
 
     if (!monthYear || !estate || !supabaseClient) return;
 
@@ -635,7 +639,7 @@ async function loadFromCloud() {
 }
 
 async function loadOverallSummary() {
-    const monthYear = document.getElementById('bulanTahun').value;
+    const monthYear = document.getElementById('bulanTahun')?.value;
     if (!monthYear || !supabaseClient) return;
 
     const [year, month] = monthYear.split('-').map(Number);
@@ -1112,7 +1116,6 @@ function updateSummaryHeader() {
     }
 }
 
-// Print Active Tab Only
 function printActiveTab() {
     const activeTab = document.querySelector('.tab-content.active');
     
@@ -1129,18 +1132,14 @@ function printActiveTab() {
     window.print();
 }
 
-// Event listener for Settings Mill Estate filter
 document.addEventListener('change', (e) => {
     if (e.target && e.target.id === 'millEstateSelect') {
         renderMillSettingsUI();
     }
 });
 
-// Initialization on window load
 window.onload = async function() {
     initKeyInTables();
-    
-    // Explicitly set active tab to prevent layout collapse
     switchTab('tab1');
 
     await fetchEstates();        
