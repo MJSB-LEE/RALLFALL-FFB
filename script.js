@@ -281,7 +281,6 @@ async function submitMonthlyReport() {
     if (!confirm(`Are you sure you want to SUBMIT and LOCK records for ${estate} (${monthYear})? You will not be able to edit further.`)) return;
 
     const prepName = document.getElementById('preparedByInput').value;
-
     const [year, month] = monthYear.split('-').map(Number);
     const lastDay = new Date(year, month, 0).getDate();
 
@@ -316,7 +315,6 @@ async function approveMonthlyReport() {
     if (!monthYear || !estate) return alert("Select Estate and Month first.");
 
     const appName = `${currentUser.full_name || currentUser.username} (Manager)`;
-
     const [year, month] = monthYear.split('-').map(Number);
     const lastDay = new Date(year, month, 0).getDate();
 
@@ -355,22 +353,69 @@ async function loadFromCloud() {
     const lastDay = new Date(year, month, 0).getDate();
     const lastDayStr = String(lastDay).padStart(2, '0');
 
-    const { data, error } = await supabaseClient
+    // 1. Calculate Previous Month String (e.g., '2026-08' for '2026-09')
+    let prevYear = year;
+    let prevMonth = month - 1;
+    if (prevMonth === 0) {
+        prevMonth = 12;
+        prevYear -= 1;
+    }
+    const prevMonthStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+    const prevLastDay = new Date(prevYear, prevMonth, 0).getDate();
+
+    // 2. Fetch Current Month Records
+    const { data: currentData, error: currentError } = await supabaseClient
         .from('daily_records')
         .select('*')
         .eq('estate_name', estate)
         .gte('record_date', `${monthYear}-01`)
         .lte('record_date', `${monthYear}-${lastDayStr}`);
 
-    if (error || !data) return;
+    // 3. Fetch Previous Month Records to calculate last month's historical totals
+    const { data: prevData } = await supabaseClient
+        .from('daily_records')
+        .select('*')
+        .eq('estate_name', estate)
+        .gte('record_date', `${prevMonthStr}-01`)
+        .lte('record_date', `${prevMonthStr}-${String(prevLastDay).padStart(2, '0')}`);
 
-    if (data.length > 0) {
-        let lastRecord = data[data.length - 1];
+    let prevRfTotal = 0;
+    let prevFfbTotal = 0;
+    let prevPhaseTotals = { 1: 0, 2: 0, 3: 0, 4: 0 };
+
+    if (prevData && prevData.length > 0) {
+        prevData.forEach(r => {
+            prevRfTotal += (r.rainfall_today || 0);
+            prevFfbTotal += (r.ffb1 || 0) + (r.ffb2 || 0) + (r.ffb3 || 0) + (r.ffb4 || 0);
+            prevPhaseTotals[1] += (r.rf_phase1 || 0);
+            prevPhaseTotals[2] += (r.rf_phase2 || 0);
+            prevPhaseTotals[3] += (r.rf_phase3 || 0);
+            prevPhaseTotals[4] += (r.rf_phase4 || 0);
+        });
+    }
+
+    // Populate Read-Only Previous Month Summary values across the table rows
+    for (let d = 1; d <= 31; d++) {
+        if (document.getElementById(`s1_rf_pm_${d}`)) {
+            document.getElementById(`s1_rf_pm_${d}`).value = prevRfTotal > 0 ? prevRfTotal.toFixed(2) : '';
+        }
+        if (document.getElementById(`s1_ffb_pm_${d}`)) {
+            document.getElementById(`s1_ffb_pm_${d}`).value = prevFfbTotal > 0 ? prevFfbTotal.toFixed(2) : '';
+        }
+        for (let p = 1; p <= 4; p++) {
+            if (document.getElementById(`s2_p${p}_pm_${d}`)) {
+                document.getElementById(`s2_p${p}_pm_${d}`).value = prevPhaseTotals[p] > 0 ? prevPhaseTotals[p].toFixed(2) : '';
+            }
+        }
+    }
+
+    // Populate Current Month Data into input fields
+    if (currentData && currentData.length > 0) {
+        let lastRecord = currentData[currentData.length - 1];
         let editBy = lastRecord.updated_by || 'Unknown';
         let editTime = lastRecord.updated_at ? new Date(lastRecord.updated_at).toLocaleString() : 'N/A';
         document.getElementById('auditLogDisplay').innerText = `Last Modified By: ${editBy} on ${editTime}`;
 
-        // Set Prepared By and Approved By fields
         if (lastRecord.prepared_by) {
             document.getElementById('preparedByInput').value = lastRecord.prepared_by;
         }
@@ -380,32 +425,31 @@ async function loadFromCloud() {
             document.getElementById('approvedByInput').value = "Pending Manager Approval";
         }
 
-        // Lock form if status is submitted or approved
         if (lastRecord.status === 'submitted' || lastRecord.status === 'approved') {
             setFormLockState(true, lastRecord.status);
         } else {
             setFormLockState(false);
         }
+
+        currentData.forEach(row => {
+            let day = parseInt(row.record_date.split('-')[2], 10);
+
+            if (document.getElementById(`s1_rf_${day}`)) document.getElementById(`s1_rf_${day}`).value = row.rainfall_today || '';
+            if (document.getElementById(`s1_ffb1_${day}`)) document.getElementById(`s1_ffb1_${day}`).value = row.ffb1 || '';
+            if (document.getElementById(`s1_ffb2_${day}`)) document.getElementById(`s1_ffb2_${day}`).value = row.ffb2 || '';
+            if (document.getElementById(`s1_ffb3_${day}`)) document.getElementById(`s1_ffb3_${day}`).value = row.ffb3 || '';
+            if (document.getElementById(`s1_ffb4_${day}`)) document.getElementById(`s1_ffb4_${day}`).value = row.ffb4 || '';
+
+            if (document.getElementById(`s2_p1_t_${day}`)) document.getElementById(`s2_p1_t_${day}`).value = row.rf_phase1 || '';
+            if (document.getElementById(`s2_p2_t_${day}`)) document.getElementById(`s2_p2_t_${day}`).value = row.rf_phase2 || '';
+            if (document.getElementById(`s2_p3_t_${day}`)) document.getElementById(`s2_p3_t_${day}`).value = row.rf_phase3 || '';
+            if (document.getElementById(`s2_p4_t_${day}`)) document.getElementById(`s2_p4_t_${day}`).value = row.rf_phase4 || '';
+        });
     } else {
         document.getElementById('auditLogDisplay').innerText = `Data Record Info: No records for ${monthYear}`;
         document.getElementById('approvedByInput').value = "Pending Manager Approval";
         setFormLockState(false);
     }
-
-    data.forEach(row => {
-        let day = parseInt(row.record_date.split('-')[2], 10);
-
-        if (document.getElementById(`s1_rf_${day}`)) document.getElementById(`s1_rf_${day}`).value = row.rainfall_today || '';
-        if (document.getElementById(`s1_ffb1_${day}`)) document.getElementById(`s1_ffb1_${day}`).value = row.ffb1 || '';
-        if (document.getElementById(`s1_ffb2_${day}`)) document.getElementById(`s1_ffb2_${day}`).value = row.ffb2 || '';
-        if (document.getElementById(`s1_ffb3_${day}`)) document.getElementById(`s1_ffb3_${day}`).value = row.ffb3 || '';
-        if (document.getElementById(`s1_ffb4_${day}`)) document.getElementById(`s1_ffb4_${day}`).value = row.ffb4 || '';
-
-        if (document.getElementById(`s2_p1_t_${day}`)) document.getElementById(`s2_p1_t_${day}`).value = row.rf_phase1 || '';
-        if (document.getElementById(`s2_p2_t_${day}`)) document.getElementById(`s2_p2_t_${day}`).value = row.rf_phase2 || '';
-        if (document.getElementById(`s2_p3_t_${day}`)) document.getElementById(`s2_p3_t_${day}`).value = row.rf_phase3 || '';
-        if (document.getElementById(`s2_p4_t_${day}`)) document.getElementById(`s2_p4_t_${day}`).value = row.rf_phase4 || '';
-    });
 
     calcS1();
     calcS2();
