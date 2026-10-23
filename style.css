@@ -240,7 +240,7 @@ body {
 }
 
 /* ==========================================================================
-   7. Landscape Print Optimization Rules
+   7. Strict Landscape Print Rules (Active Tab Only)
    ========================================================================== */
 @media print {
     @page {
@@ -251,10 +251,11 @@ body {
     body {
         background: #ffffff !important;
         color: #000000 !important;
+        margin: 0 !important;
         padding: 0 !important;
     }
 
-    /* Hide non-printable components */
+    /* Hide Controls, Headers, Overlays, and Settings */
     .header-card, 
     .nav-tabs, 
     #loginOverlay, 
@@ -262,31 +263,41 @@ body {
     .settings-card, 
     button, 
     .btn-delete, 
-    .btn-edit {
+    .btn-edit,
+    .login-overlay {
         display: none !important;
     }
 
-    /* Print only the active tab */
+    /* Hide ALL tab contents by default */
     .tab-content {
         display: none !important;
     }
 
+    /* Show ONLY the active tab */
     .tab-content.active {
         display: block !important;
+        width: 100% !important;
     }
 
     .report-table {
         width: 100% !important;
         border-collapse: collapse !important;
         box-shadow: none !important;
-        font-size: 9pt !important;
+        font-size: 8.5pt !important;
+        page-break-inside: auto !important;
+    }
+
+    .report-table tr {
+        page-break-inside: avoid !important;
+        page-break-after: auto !important;
     }
 
     .report-table th {
-        background: #f1f5f9 !important;
+        background-color: #f1f5f9 !important;
         color: #000000 !important;
         border: 1px solid #000000 !important;
         padding: 4px !important;
+        font-weight: bold !important;
     }
 
     .report-table td {
@@ -302,5 +313,6 @@ body {
         -webkit-appearance: none !important;
         font-weight: bold !important;
         text-align: center !important;
+        box-shadow: none !important;
     }
 }
