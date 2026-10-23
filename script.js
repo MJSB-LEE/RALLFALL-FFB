@@ -12,9 +12,43 @@ try {
 const IT_DELETE_PASSWORD = "ITREF2026"; 
 
 let estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk"];
-let millList = ["Tungku", "Golden E", "Sankira"];
+
+// Mill Supplier mapping per estate location
+const estateMillMap = {
+    "TUNGKU": ["Tungku Mill", "Golden E Mill"],
+    "STY": ["STY Mill", "Sankira Mill"],
+    "Klagan PH1": ["Klagan Mill", "Golden E Mill"],
+    "Kars PH1/2/4": ["Kars Mill 1", "Kars Mill 2"],
+    "Kars PH3": ["Kars Mill 3", "Sankira Mill"],
+    "Sg Millian 1": ["Millian Supplier A", "Millian Supplier B"],
+    "Sg Millian 2": ["Millian Supplier B", "Golden E Mill"],
+    "Sg Millian 3": ["Millian Supplier C"],
+    "Labuk": ["Labuk Mill 1", "Labuk Mill 2"]
+};
+
 let userAccounts = [];
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+
+// Update dynamic mill dropdown choices per estate
+function updateMillDropdownsForEstate(estateName) {
+    const allowedMills = estateMillMap[estateName] || ["Tungku Mill", "Golden E Mill", "Sankira Mill"];
+
+    let millOptionsHtml = '<option value="">-- Select Mill --</option>';
+    allowedMills.forEach(m => {
+        millOptionsHtml += `<option value="${m}">${m}</option>`;
+    });
+
+    for (let d = 1; d <= 31; d++) {
+        const selectElem = document.getElementById(`s1_mill_${d}`);
+        if (selectElem) {
+            const currentValue = selectElem.value;
+            selectElem.innerHTML = millOptionsHtml;
+            if (allowedMills.includes(currentValue)) {
+                selectElem.value = currentValue;
+            }
+        }
+    }
+}
 
 // Fetch Permanent Estates from Supabase
 async function fetchEstates() {
@@ -345,6 +379,8 @@ async function loadFromCloud() {
 
     if (!monthYear || !estate || !supabaseClient) return;
 
+    updateMillDropdownsForEstate(estate);
+
     const [year, month] = monthYear.split('-').map(Number);
     const lastDay = new Date(year, month, 0).getDate();
     const lastDayStr = String(lastDay).padStart(2, '0');
@@ -385,7 +421,7 @@ async function loadFromCloud() {
         });
     }
 
-    // Populate Previous Month columns day-by-day according to matching date
+    // Populate Previous Month columns strictly DAY-BY-DAY
     for (let d = 1; d <= 31; d++) {
         let pRow = prevDataMap[d];
 
@@ -863,11 +899,6 @@ function onEstateOrMonthChange() {
 }
 
 function initKeyInTables() {
-    let millOptionsHtml = '<option value="">-- Select Mill --</option>';
-    millList.forEach(m => {
-        millOptionsHtml += `<option value="${m}">${m}</option>`;
-    });
-
     let s1 = '';
     for (let d = 1; d <= 31; d++) {
         s1 += `<tr>
@@ -878,7 +909,7 @@ function initKeyInTables() {
             <td><input type="number" step="any" id="s1_ffb1_${d}" oninput="calcS1()"></td>
             <td class="readonly-cell" id="s1_gt_todate_${d}"></td>
             <td><input type="number" step="any" id="s1_ffb_pm_${d}" readonly class="readonly-cell"></td>
-            <td><select id="s1_mill_${d}">${millOptionsHtml}</select></td>
+            <td><select id="s1_mill_${d}"><option value="">-- Select Mill --</option></select></td>
         </tr>`;
     }
     document.getElementById('tbody-s1').innerHTML = s1;
