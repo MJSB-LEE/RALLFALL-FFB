@@ -1116,28 +1116,29 @@ function updateSummaryHeader() {
     }
 }
 
-// Print Active Tab Function
+// Clean Landscape Print Function
 function printActiveTab() {
     const activeTab = document.querySelector('.tab-content.active');
     
-    if (!activeTab) {
-        alert("Please select Tab 1, 2, or Overall Summary first.");
+    if (!activeTab || activeTab.id === 'tabSettings') {
+        alert("⚠️ Select an input tab or overall summary to print.");
         return;
     }
 
-    if (activeTab.id === 'tabSettings') {
-        alert("⚠️ Printing Settings & System Audit logs is disabled.");
-        return;
-    }
-
-    // Dynamic Header/Footer Updates
     const estVal = document.getElementById('ladangSelect')?.value || '-';
     const monthVal = document.getElementById('bulanTahun')?.value || '-';
     const prepVal = document.getElementById('preparedByInput')?.value || '-';
     const appVal = document.getElementById('approvedByInput')?.value || 'Pending Manager Approval';
 
+    let formattedMonth = monthVal;
+    if (monthVal && monthVal.includes('-')) {
+        const [y, m] = monthVal.split('-');
+        const dateObj = new Date(y, parseInt(m, 10) - 1, 1);
+        formattedMonth = `${dateObj.toLocaleString('en', { month: 'long' }).toUpperCase()} ${y}`;
+    }
+
     document.querySelectorAll('.lblLocation').forEach(el => el.innerText = estVal);
-    document.querySelectorAll('.lblMonth').forEach(el => el.innerText = monthVal);
+    document.querySelectorAll('.lblMonth').forEach(el => el.innerText = formattedMonth);
     document.querySelectorAll('.lblPreparedBy').forEach(el => el.innerText = prepVal);
     document.querySelectorAll('.lblApprovedBy').forEach(el => el.innerText = appVal);
 
