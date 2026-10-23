@@ -30,7 +30,7 @@ async function fetchMills() {
     if (activeEstate) updateMillDropdownsForEstate(activeEstate);
 }
 
-// Render Mill List in Settings Page with Edit and Delete Buttons
+// Render Mill List in Settings Page with Edit and Delete
 function renderMillSettingsUI() {
     const millEstateSelect = document.getElementById('millEstateSelect');
     if (millEstateSelect) {
@@ -439,7 +439,6 @@ async function approveMonthlyReport() {
     const monthYear = document.getElementById('bulanTahun').value;
     if (!monthYear || !estate) return alert("Select Estate and Month first.");
 
-    // Manager estate assignment restriction check
     let allowedEstates = currentUser.assigned_estates || [];
     if (currentUser.role !== "admin" && !allowedEstates.includes(estate)) {
         return alert(`Access Denied: You are only allowed to approve records for your assigned estate (${allowedEstates.join(', ')}).`);
@@ -486,6 +485,19 @@ async function loadFromCloud() {
     const lastDay = new Date(year, month, 0).getDate();
     const lastDayStr = String(lastDay).padStart(2, '0');
 
+    // Dynamically show/hide Day 31 row based on days in selected month
+    for (let d = 1; d <= 31; d++) {
+        const rowS1 = document.getElementById(`s1_rf_${d}`)?.closest('tr');
+        const rowS2 = document.getElementById(`s2_p1_t_${d}`)?.closest('tr');
+        if (d > lastDay) {
+            if (rowS1) rowS1.style.display = 'none';
+            if (rowS2) rowS2.style.display = 'none';
+        } else {
+            if (rowS1) rowS1.style.display = '';
+            if (rowS2) rowS2.style.display = '';
+        }
+    }
+
     let prevYear = year;
     let prevMonth = month - 1;
     if (prevMonth === 0) {
@@ -519,7 +531,7 @@ async function loadFromCloud() {
         });
     }
 
-    for (let d = 1; d <= 31; d++) {
+    for (let d = 1; d <= lastDay; d++) {
         let pRow = prevDataMap[d];
 
         const rfPmElem = document.getElementById(`s1_rf_pm_${d}`);
@@ -592,13 +604,12 @@ async function loadOverallSummary() {
 
     const [year, month] = monthYear.split('-').map(Number);
     const lastDay = new Date(year, month, 0).getDate();
-    const lastDayStr = String(lastDay).padStart(2, '0');
 
     const { data, error } = await supabaseClient
         .from('daily_records')
         .select('estate_name, record_date, rainfall_today')
         .gte('record_date', `${monthYear}-01`)
-        .lte('record_date', `${monthYear}-${lastDayStr}`);
+        .lte('record_date', `${monthYear}-${String(lastDay).padStart(2, '0')}`);
 
     if (error) return;
 
@@ -609,7 +620,7 @@ async function loadOverallSummary() {
         data.forEach(r => {
             let day = parseInt(r.record_date.split('-')[2], 10);
             if (matrix[r.estate_name]) {
-                matrix[r.estate_name][day] = r.rainfall_today || 0;
+                matrix[r.estate_name][day] = parseFloat(r.rainfall_today) || 0;
             }
         });
     }
@@ -1089,7 +1100,24 @@ function switchTab(tabId) {
     }
 }
 
-// Event listener for Settings Mill Estate dropdown filter
+// Print Active Tab Only
+function printActiveTab() {
+    const activeTab = document.querySelector('.tab-content.active');
+    
+    if (!activeTab) {
+        alert("Please select a tab first.");
+        return;
+    }
+
+    if (activeTab.id === 'tabSettings') {
+        alert("⚠️ Printing Settings & Audit logs is disabled. Please switch to Tab 1, 2, or Overall Summary.");
+        return;
+    }
+
+    window.print();
+}
+
+// Event listener for Settings Mill Estate filter
 document.addEventListener('change', (e) => {
     if (e.target && e.target.id === 'millEstateSelect') {
         renderMillSettingsUI();
