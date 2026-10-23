@@ -64,7 +64,7 @@
             <button class="tab-btn" id="btn-tabSettings" onclick="switchTab('tabSettings')">⚙️ SETTINGS & AUDIT</button>
         </div>
 
-<!-- Tab 1: Rainfall + Mill -->
+<!-- Tab 1: Rainfall + Mill Table -->
 <div id="tab1" class="tab-content active">
     <h3>1. Daily Rainfall & FFB Key-In</h3>
     <table class="report-table">
@@ -86,6 +86,22 @@
         </thead>
         <tbody id="tbody-s1"></tbody>
     </table>
+</div>
+
+<!-- Inside Settings Tab: Add Mill Management UI -->
+<div id="tabSettings" class="tab-content">
+    <h3>Settings & System Administration</h3>
+    
+    <!-- Mill Suppliers Section -->
+    <div class="settings-card" style="background: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 20px;">
+        <h4 style="margin-top: 0;">🏭 Mill Suppliers Management</h4>
+        <div style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center;">
+            <select id="millEstateSelect" style="padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1;"></select>
+            <input type="text" id="newMillName" placeholder="Enter Mill Name (e.g. Sankira)" style="padding: 6px; flex: 1; border-radius: 4px; border: 1px solid #cbd5e1;">
+            <button onclick="addNewMill()" style="background: #059669; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Add Mill</button>
+        </div>
+        <ul id="millSettingsList" style="list-style: none; padding: 0; margin: 0;"></ul>
+    </div>
 </div>
         <!-- Tab 2: Rainfall by Phase -->
         <div id="tab2" class="tab-content">
