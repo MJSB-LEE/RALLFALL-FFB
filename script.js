@@ -11,27 +11,94 @@ try {
 
 const IT_DELETE_PASSWORD = "ITREF2026"; 
 
-let estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk"];
-
-// Mill Supplier mapping per estate location
-const estateMillMap = {
-    "TUNGKU": ["Tungku Mill", "Golden E Mill"],
-    "STY": ["STY Mill", "Sankira Mill"],
-    "Klagan PH1": ["Klagan Mill", "Golden E Mill"],
-    "Kars PH1/2/4": ["Kars Mill 1", "Kars Mill 2"],
-    "Kars PH3": ["Kars Mill 3", "Sankira Mill"],
-    "Sg Millian 1": ["Millian Supplier A", "Millian Supplier B"],
-    "Sg Millian 2": ["Millian Supplier B", "Golden E Mill"],
-    "Sg Millian 3": ["Millian Supplier C"],
-    "Labuk": ["Labuk Mill 1", "Labuk Mill 2"]
-};
+let estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk", "TUNGKU"];
+let estateMills = []; // Array of { id, estate_name, mill_name } from Supabase
 
 let userAccounts = [];
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
 
-// Update dynamic mill dropdown choices per estate
+// Fetch Mill Suppliers from Supabase
+async function fetchMills() {
+    if (!supabaseClient) return;
+    const { data, error } = await supabaseClient.from('estate_mills').select('*').order('id', { ascending: true });
+    if (!error && data) {
+        estateMills = data;
+    }
+    renderMillSettingsUI();
+    
+    const activeEstate = document.getElementById('ladangSelect')?.value;
+    if (activeEstate) updateMillDropdownsForEstate(activeEstate);
+}
+
+// Render Mill List in Settings Page
+function renderMillSettingsUI() {
+    const millEstateSelect = document.getElementById('millEstateSelect');
+    if (millEstateSelect) {
+        millEstateSelect.innerHTML = '';
+        estateList.forEach(est => {
+            let opt = document.createElement('option');
+            opt.value = est;
+            opt.innerText = est;
+            millEstateSelect.appendChild(opt);
+        });
+    }
+
+    const selectedEstate = millEstateSelect?.value || estateList[0];
+    const millListUi = document.getElementById('millSettingsList');
+    
+    if (millListUi) {
+        millListUi.innerHTML = '';
+        const filteredMills = estateMills.filter(m => m.estate_name === selectedEstate);
+        
+        if (filteredMills.length === 0) {
+            millListUi.innerHTML = `<li style="color: #94a3b8; font-size: 12px; padding: 6px;">No mills configured for ${selectedEstate} yet.</li>`;
+            return;
+        }
+
+        filteredMills.forEach(m => {
+            millListUi.innerHTML += `<li style="padding: 8px 12px; background: #f8fafc; margin-bottom: 6px; border-radius: 4px; border: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 13px; font-weight: 600; color: #334155;">${m.mill_name} <small style="color:#64748b;">(${m.estate_name})</small></span>
+                <button class="btn-delete" onclick="removeMill(${m.id})">Delete</button>
+            </li>`;
+        });
+    }
+}
+
+// Add New Mill Supplier from Settings
+async function addNewMill() {
+    const estateName = document.getElementById('millEstateSelect').value;
+    const millNameInput = document.getElementById('newMillName');
+    const millName = millNameInput.value.trim();
+
+    if (!millName) return alert("Please enter a mill name.");
+
+    const { error } = await supabaseClient.from('estate_mills').insert([{ estate_name: estateName, mill_name: millName }]);
+
+    if (error) {
+        alert("Error adding mill: " + error.message);
+    } else {
+        alert(`Mill "${millName}" added for ${estateName}!`);
+        millNameInput.value = '';
+        await fetchMills();
+    }
+}
+
+// Remove Mill Supplier from Settings
+async function removeMill(millId) {
+    if (!confirmITAction("Mill Supplier")) return;
+
+    const { error } = await supabaseClient.from('estate_mills').delete().eq('id', millId);
+
+    if (error) {
+        alert("Error deleting mill: " + error.message);
+    } else {
+        await fetchMills();
+    }
+}
+
+// Dynamically update mill options in key-in table per estate
 function updateMillDropdownsForEstate(estateName) {
-    const allowedMills = estateMillMap[estateName] || ["Tungku Mill", "Golden E Mill", "Sankira Mill"];
+    const allowedMills = estateMills.filter(m => m.estate_name.toLowerCase() === estateName.toLowerCase()).map(m => m.mill_name);
 
     let millOptionsHtml = '<option value="">-- Select Mill --</option>';
     allowedMills.forEach(m => {
@@ -57,7 +124,7 @@ async function fetchEstates() {
     if (!error && data && data.length > 0) {
         estateList = data.map(e => e.name);
     } else {
-        estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk"];
+        estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk", "TUNGKU"];
     }
     
     renderEstateDropdown();
@@ -679,6 +746,7 @@ function renderSettingsUI() {
     }
 
     renderNewUserEstateCheckboxes();
+    renderMillSettingsUI();
 }
 
 function openEditUserModal(idx) {
@@ -991,14 +1059,23 @@ function switchTab(tabId) {
 
     if (tabId === 'tabSettings') {
         fetchActivityLogs();
+        renderMillSettingsUI();
     }
 }
+
+// Attach event listener for Settings Mill Estate Filter
+document.addEventListener('change', (e) => {
+    if (e.target && e.target.id === 'millEstateSelect') {
+        renderMillSettingsUI();
+    }
+});
 
 // Initialization on window load
 window.onload = async function() {
     initKeyInTables();
     await fetchEstates();        
     await fetchUserProfiles();   
+    await fetchMills();
     applyUserPermissions();
     fetchActivityLogs();
 };
