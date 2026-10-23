@@ -64,29 +64,28 @@
             <button class="tab-btn" id="btn-tabSettings" onclick="switchTab('tabSettings')">⚙️ SETTINGS & AUDIT</button>
         </div>
 
-        <!-- Tab 1: Rainfall + Mill -->
-        <div id="tab1" class="tab-content active">
-            <h3>1. Daily Rainfall & FFB Key-In</h3>
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th style="width: 40px;">Day</th>
-                        <th>Rainfall (mm)</th>
-                        <th>RF To Date</th>
-                        <th>RF Prev Month</th>
-                        <th>FFB Mill 1</th>
-                        <th>FFB Mill 2</th>
-                        <th>FFB Mill 3</th>
-                        <th>FFB Mill 4</th>
-                        <th>Grand Total Today</th>
-                        <th>Grand Total To Date</th>
-                        <th>FFB Prev Month</th>
-                    </tr>
-                </thead>
-                <tbody id="tbody-s1"></tbody>
-            </table>
-        </div>
-
+<!-- Tab 1: Rainfall + Mill -->
+<div id="tab1" class="tab-content active">
+    <h3>1. Daily Rainfall & FFB Key-In</h3>
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th style="width: 40px;" rowspan="2">Date</th>
+                <th colspan="2">Rainfall (mm)</th>
+                <th rowspan="2">Prev. Month</th>
+                <th colspan="2">FFB</th>
+                <th rowspan="2">Prev. Month</th>
+            </tr>
+            <tr>
+                <th>To-Day</th>
+                <th>To-Date</th>
+                <th>To-Day</th>
+                <th>To-Date</th>
+            </tr>
+        </thead>
+        <tbody id="tbody-s1"></tbody>
+    </table>
+</div>
         <!-- Tab 2: Rainfall by Phase -->
         <div id="tab2" class="tab-content">
             <h3>2. Daily Rainfall by Phase Key-In</h3>
