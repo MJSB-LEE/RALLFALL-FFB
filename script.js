@@ -30,7 +30,7 @@ async function fetchMills() {
     if (activeEstate) updateMillDropdownsForEstate(activeEstate);
 }
 
-// Render Mill List in Settings Page
+// Render Mill List in Settings Page with Edit and Delete Buttons
 function renderMillSettingsUI() {
     const millEstateSelect = document.getElementById('millEstateSelect');
     if (millEstateSelect) {
@@ -62,13 +62,16 @@ function renderMillSettingsUI() {
         filteredMills.forEach(m => {
             millListUi.innerHTML += `<li style="padding: 8px 12px; background: #f8fafc; margin-bottom: 6px; border-radius: 4px; border: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-size: 13px; font-weight: 600; color: #334155;">${m.mill_name} <small style="color:#64748b;">(${m.estate_name})</small></span>
-                <button class="btn-delete" onclick="removeMill(${m.id})">Delete</button>
+                <div>
+                    <button class="btn-edit" onclick="editMill(${m.id}, '${m.mill_name}')" style="background:#2563eb; color:white; border:none; padding:4px 8px; border-radius:4px; margin-right:4px; cursor:pointer;">Edit</button>
+                    <button class="btn-delete" onclick="removeMill(${m.id})" style="background:#dc2626; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Delete</button>
+                </div>
             </li>`;
         });
     }
 }
 
-// Add New Mill Supplier from Settings
+// Add New Mill Supplier
 async function addNewMill() {
     const estateName = document.getElementById('millEstateSelect').value;
     const millNameInput = document.getElementById('newMillName');
@@ -84,6 +87,24 @@ async function addNewMill() {
         alert(`Mill "${millName}" added for ${estateName}!`);
         millNameInput.value = '';
         await fetchMills();
+    }
+}
+
+// Edit Existing Mill Supplier
+async function editMill(millId, oldName) {
+    let newName = prompt(`Edit Mill Supplier Name:`, oldName);
+    if (newName && newName.trim() !== "" && newName !== oldName) {
+        const { error } = await supabaseClient
+            .from('estate_mills')
+            .update({ mill_name: newName.trim() })
+            .eq('id', millId);
+
+        if (error) {
+            alert("Error updating mill: " + error.message);
+        } else {
+            alert("Mill supplier updated successfully!");
+            await fetchMills();
+        }
     }
 }
 
@@ -279,6 +300,11 @@ function applyUserPermissions() {
 }
 
 function setFormLockState(isLocked, statusText = '') {
+    // Admin Override: Admin can edit anytime
+    if (currentUser?.role === 'admin') {
+        isLocked = false;
+    }
+
     const inputs = document.querySelectorAll('#tbody-s1 input, #tbody-s1 select, #tbody-s2 input');
     inputs.forEach(input => {
         if (!input.classList.contains('readonly-cell')) {
@@ -305,6 +331,7 @@ function setFormLockState(isLocked, statusText = '') {
     }
 }
 
+// Tab-Aware Save Function: Saves only data related to active tab
 async function saveToCloud() {
     const activeTab = document.querySelector('.tab-content.active')?.id;
     if (activeTab === 'tabSummary' || activeTab === 'tabSettings') {
@@ -325,31 +352,28 @@ async function saveToCloud() {
     let updates = [];
 
     for (let d = 1; d <= daysInMonth; d++) {
-        let rf = parseFloat(document.getElementById(`s1_rf_${d}`)?.value) || 0;
-        let f1 = parseFloat(document.getElementById(`s1_ffb1_${d}`)?.value) || 0;
-        let selectedMill = document.getElementById(`s1_mill_${d}`)?.value || '';
-
-        let rf_p1 = parseFloat(document.getElementById(`s2_p1_t_${d}`)?.value) || 0;
-        let rf_p2 = parseFloat(document.getElementById(`s2_p2_t_${d}`)?.value) || 0;
-        let rf_p3 = parseFloat(document.getElementById(`s2_p3_t_${d}`)?.value) || 0;
-        let rf_p4 = parseFloat(document.getElementById(`s2_p4_t_${d}`)?.value) || 0;
-
         let dayStr = String(d).padStart(2, '0');
-        updates.push({
+        let updateData = {
             estate_name: estate,
             record_date: `${monthYear}-${dayStr}`,
-            rainfall_today: rf,
-            ffb1: f1,
-            mill_name: selectedMill,
-            rf_phase1: rf_p1,
-            rf_phase2: rf_p2,
-            rf_phase3: rf_p3,
-            rf_phase4: rf_p4,
             updated_by: activeUserName,
             updated_at: timestampNow,
             status: 'draft',
             prepared_by: document.getElementById('preparedByInput').value
-        });
+        };
+
+        if (activeTab === 'tab1') {
+            updateData.rainfall_today = parseFloat(document.getElementById(`s1_rf_${d}`)?.value) || 0;
+            updateData.ffb1 = parseFloat(document.getElementById(`s1_ffb1_${d}`)?.value) || 0;
+            updateData.mill_name = document.getElementById(`s1_mill_${d}`)?.value || '';
+        } else if (activeTab === 'tab2') {
+            updateData.rf_phase1 = parseFloat(document.getElementById(`s2_p1_t_${d}`)?.value) || 0;
+            updateData.rf_phase2 = parseFloat(document.getElementById(`s2_p2_t_${d}`)?.value) || 0;
+            updateData.rf_phase3 = parseFloat(document.getElementById(`s2_p3_t_${d}`)?.value) || 0;
+            updateData.rf_phase4 = parseFloat(document.getElementById(`s2_p4_t_${d}`)?.value) || 0;
+        }
+
+        updates.push(updateData);
     }
 
     const { error } = await supabaseClient
@@ -367,7 +391,7 @@ async function saveToCloud() {
             timestamp: new Date().toISOString()
         }]);
 
-        alert(`Data for "${estate}" saved successfully!`);
+        alert(`Data for "${estate}" (${activeTab.toUpperCase()}) saved successfully!`);
         loadFromCloud();
         loadOverallSummary();
         fetchActivityLogs();
@@ -414,6 +438,12 @@ async function approveMonthlyReport() {
     const estate = document.getElementById('ladangSelect').value;
     const monthYear = document.getElementById('bulanTahun').value;
     if (!monthYear || !estate) return alert("Select Estate and Month first.");
+
+    // Manager estate assignment restriction check
+    let allowedEstates = currentUser.assigned_estates || [];
+    if (currentUser.role !== "admin" && !allowedEstates.includes(estate)) {
+        return alert(`Access Denied: You are only allowed to approve records for your assigned estate (${allowedEstates.join(', ')}).`);
+    }
 
     const appName = `${currentUser.full_name || currentUser.username} (Manager)`;
     const [year, month] = monthYear.split('-').map(Number);
