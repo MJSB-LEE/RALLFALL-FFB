@@ -1116,19 +1116,18 @@ function updateSummaryHeader() {
     }
 }
 
-// Clean Landscape Print Function
+// 1-Page A4 Landscape Print Function
 function printActiveTab() {
     const activeTab = document.querySelector('.tab-content.active');
     
     if (!activeTab || activeTab.id === 'tabSettings') {
-        alert("⚠️ Select an input tab or overall summary to print.");
+        alert("⚠️ Printing is disabled on Settings & System Audit.");
         return;
     }
 
     const estVal = document.getElementById('ladangSelect')?.value || '-';
     const monthVal = document.getElementById('bulanTahun')?.value || '-';
     const prepVal = document.getElementById('preparedByInput')?.value || '-';
-    const appVal = document.getElementById('approvedByInput')?.value || 'Pending Manager Approval';
 
     let formattedMonth = monthVal;
     if (monthVal && monthVal.includes('-')) {
@@ -1140,7 +1139,6 @@ function printActiveTab() {
     document.querySelectorAll('.lblLocation').forEach(el => el.innerText = estVal);
     document.querySelectorAll('.lblMonth').forEach(el => el.innerText = formattedMonth);
     document.querySelectorAll('.lblPreparedBy').forEach(el => el.innerText = prepVal);
-    document.querySelectorAll('.lblApprovedBy').forEach(el => el.innerText = appVal);
 
     setTimeout(() => {
         window.print();
