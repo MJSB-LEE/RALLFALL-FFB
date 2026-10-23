@@ -12,6 +12,7 @@ try {
 const IT_DELETE_PASSWORD = "ITREF2026"; 
 
 let estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk"];
+let millList = ["Tungku", "Golden E", "Sankira"];
 let userAccounts = [];
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
 
@@ -173,7 +174,7 @@ function applyUserPermissions() {
 }
 
 function setFormLockState(isLocked, statusText = '') {
-    const inputs = document.querySelectorAll('#tbody-s1 input, #tbody-s2 input');
+    const inputs = document.querySelectorAll('#tbody-s1 input, #tbody-s1 select, #tbody-s2 input');
     inputs.forEach(input => {
         if (!input.classList.contains('readonly-cell')) {
             input.disabled = isLocked;
@@ -221,6 +222,7 @@ async function saveToCloud() {
     for (let d = 1; d <= daysInMonth; d++) {
         let rf = parseFloat(document.getElementById(`s1_rf_${d}`)?.value) || 0;
         let f1 = parseFloat(document.getElementById(`s1_ffb1_${d}`)?.value) || 0;
+        let selectedMill = document.getElementById(`s1_mill_${d}`)?.value || '';
 
         let rf_p1 = parseFloat(document.getElementById(`s2_p1_t_${d}`)?.value) || 0;
         let rf_p2 = parseFloat(document.getElementById(`s2_p2_t_${d}`)?.value) || 0;
@@ -233,6 +235,7 @@ async function saveToCloud() {
             record_date: `${monthYear}-${dayStr}`,
             rainfall_today: rf,
             ffb1: f1,
+            mill_name: selectedMill,
             rf_phase1: rf_p1,
             rf_phase2: rf_p2,
             rf_phase3: rf_p3,
@@ -437,6 +440,7 @@ async function loadFromCloud() {
 
             if (document.getElementById(`s1_rf_${day}`)) document.getElementById(`s1_rf_${day}`).value = row.rainfall_today || '';
             if (document.getElementById(`s1_ffb1_${day}`)) document.getElementById(`s1_ffb1_${day}`).value = row.ffb1 || '';
+            if (document.getElementById(`s1_mill_${day}`)) document.getElementById(`s1_mill_${day}`).value = row.mill_name || '';
 
             if (document.getElementById(`s2_p1_t_${day}`)) document.getElementById(`s2_p1_t_${day}`).value = row.rf_phase1 || '';
             if (document.getElementById(`s2_p2_t_${day}`)) document.getElementById(`s2_p2_t_${day}`).value = row.rf_phase2 || '';
@@ -531,6 +535,7 @@ function clearForm() {
     for (let d = 1; d <= 31; d++) {
         if (document.getElementById(`s1_rf_${d}`)) document.getElementById(`s1_rf_${d}`).value = '';
         if (document.getElementById(`s1_ffb1_${d}`)) document.getElementById(`s1_ffb1_${d}`).value = '';
+        if (document.getElementById(`s1_mill_${d}`)) document.getElementById(`s1_mill_${d}`).value = '';
 
         if (document.getElementById(`s2_p1_t_${d}`)) document.getElementById(`s2_p1_t_${d}`).value = '';
         if (document.getElementById(`s2_p2_t_${d}`)) document.getElementById(`s2_p2_t_${d}`).value = '';
@@ -858,6 +863,11 @@ function onEstateOrMonthChange() {
 }
 
 function initKeyInTables() {
+    let millOptionsHtml = '<option value="">-- Select Mill --</option>';
+    millList.forEach(m => {
+        millOptionsHtml += `<option value="${m}">${m}</option>`;
+    });
+
     let s1 = '';
     for (let d = 1; d <= 31; d++) {
         s1 += `<tr>
@@ -868,6 +878,7 @@ function initKeyInTables() {
             <td><input type="number" step="any" id="s1_ffb1_${d}" oninput="calcS1()"></td>
             <td class="readonly-cell" id="s1_gt_todate_${d}"></td>
             <td><input type="number" step="any" id="s1_ffb_pm_${d}" readonly class="readonly-cell"></td>
+            <td><select id="s1_mill_${d}">${millOptionsHtml}</select></td>
         </tr>`;
     }
     document.getElementById('tbody-s1').innerHTML = s1;
