@@ -172,7 +172,6 @@ function applyUserPermissions() {
     onEstateOrMonthChange();
 }
 
-// Function to Lock / Unlock inputs when report is Submitted / Approved
 function setFormLockState(isLocked, statusText = '') {
     const inputs = document.querySelectorAll('#tbody-s1 input, #tbody-s2 input');
     inputs.forEach(input => {
@@ -222,9 +221,6 @@ async function saveToCloud() {
     for (let d = 1; d <= daysInMonth; d++) {
         let rf = parseFloat(document.getElementById(`s1_rf_${d}`)?.value) || 0;
         let f1 = parseFloat(document.getElementById(`s1_ffb1_${d}`)?.value) || 0;
-        let f2 = parseFloat(document.getElementById(`s1_ffb2_${d}`)?.value) || 0;
-        let f3 = parseFloat(document.getElementById(`s1_ffb3_${d}`)?.value) || 0;
-        let f4 = parseFloat(document.getElementById(`s1_ffb4_${d}`)?.value) || 0;
 
         let rf_p1 = parseFloat(document.getElementById(`s2_p1_t_${d}`)?.value) || 0;
         let rf_p2 = parseFloat(document.getElementById(`s2_p2_t_${d}`)?.value) || 0;
@@ -237,9 +233,6 @@ async function saveToCloud() {
             record_date: `${monthYear}-${dayStr}`,
             rainfall_today: rf,
             ffb1: f1,
-            ffb2: f2,
-            ffb3: f3,
-            ffb4: f4,
             rf_phase1: rf_p1,
             rf_phase2: rf_p2,
             rf_phase3: rf_p3,
@@ -353,7 +346,7 @@ async function loadFromCloud() {
     const lastDay = new Date(year, month, 0).getDate();
     const lastDayStr = String(lastDay).padStart(2, '0');
 
-    // 1. Calculate Previous Month String (e.g., '2026-09' when selecting '2026-10')
+    // 1. Calculate Previous Month String
     let prevYear = year;
     let prevMonth = month - 1;
     if (prevMonth === 0) {
@@ -381,7 +374,6 @@ async function loadFromCloud() {
 
     if (prevErr) console.error("Previous Month Query Error:", prevErr);
 
-    // Map previous month records strictly by Day Number (1 to 31)
     let prevDataMap = {};
     if (prevData && prevData.length > 0) {
         prevData.forEach(r => {
@@ -390,22 +382,22 @@ async function loadFromCloud() {
         });
     }
 
-    // Populate Previous Month columns strictly DAY-BY-DAY according to matching date
+    // Populate Previous Month columns strictly DAY-BY-DAY
     for (let d = 1; d <= 31; d++) {
         let pRow = prevDataMap[d];
 
-        // S1: Previous Month Daily Rainfall (rainfall_today)
+        // S1: Previous Month Daily Rainfall
         const rfPmElem = document.getElementById(`s1_rf_pm_${d}`);
         if (rfPmElem) {
             let rfVal = pRow && pRow.rainfall_today !== null ? parseFloat(pRow.rainfall_today) : 0;
             rfPmElem.value = rfVal > 0 ? rfVal.toFixed(2) : '';
         }
 
-        // S1: Previous Month Daily Total FFB (ffb1 + ffb2 + ffb3 + ffb4)
+        // S1: Previous Month Daily FFB
         const ffbPmElem = document.getElementById(`s1_ffb_pm_${d}`);
         if (ffbPmElem) {
-            let ffbSum = pRow ? ((parseFloat(pRow.ffb1) || 0) + (parseFloat(pRow.ffb2) || 0) + (parseFloat(pRow.ffb3) || 0) + (parseFloat(pRow.ffb4) || 0)) : 0;
-            ffbPmElem.value = ffbSum > 0 ? ffbSum.toFixed(2) : '';
+            let ffbVal = pRow && pRow.ffb1 !== null ? parseFloat(pRow.ffb1) : 0;
+            ffbPmElem.value = ffbVal > 0 ? ffbVal.toFixed(2) : '';
         }
 
         // S2: Previous Month Daily Phase Rainfall
@@ -418,7 +410,7 @@ async function loadFromCloud() {
         }
     }
 
-    // 4. Populate Current Month Data into input fields
+    // 4. Populate Current Month Data
     if (currentData && currentData.length > 0) {
         let lastRecord = currentData[currentData.length - 1];
         let editBy = lastRecord.updated_by || 'Unknown';
@@ -445,9 +437,6 @@ async function loadFromCloud() {
 
             if (document.getElementById(`s1_rf_${day}`)) document.getElementById(`s1_rf_${day}`).value = row.rainfall_today || '';
             if (document.getElementById(`s1_ffb1_${day}`)) document.getElementById(`s1_ffb1_${day}`).value = row.ffb1 || '';
-            if (document.getElementById(`s1_ffb2_${day}`)) document.getElementById(`s1_ffb2_${day}`).value = row.ffb2 || '';
-            if (document.getElementById(`s1_ffb3_${day}`)) document.getElementById(`s1_ffb3_${day}`).value = row.ffb3 || '';
-            if (document.getElementById(`s1_ffb4_${day}`)) document.getElementById(`s1_ffb4_${day}`).value = row.ffb4 || '';
 
             if (document.getElementById(`s2_p1_t_${day}`)) document.getElementById(`s2_p1_t_${day}`).value = row.rf_phase1 || '';
             if (document.getElementById(`s2_p2_t_${day}`)) document.getElementById(`s2_p2_t_${day}`).value = row.rf_phase2 || '';
@@ -542,9 +531,6 @@ function clearForm() {
     for (let d = 1; d <= 31; d++) {
         if (document.getElementById(`s1_rf_${d}`)) document.getElementById(`s1_rf_${d}`).value = '';
         if (document.getElementById(`s1_ffb1_${d}`)) document.getElementById(`s1_ffb1_${d}`).value = '';
-        if (document.getElementById(`s1_ffb2_${d}`)) document.getElementById(`s1_ffb2_${d}`).value = '';
-        if (document.getElementById(`s1_ffb3_${d}`)) document.getElementById(`s1_ffb3_${d}`).value = '';
-        if (document.getElementById(`s1_ffb4_${d}`)) document.getElementById(`s1_ffb4_${d}`).value = '';
 
         if (document.getElementById(`s2_p1_t_${d}`)) document.getElementById(`s2_p1_t_${d}`).value = '';
         if (document.getElementById(`s2_p2_t_${d}`)) document.getElementById(`s2_p2_t_${d}`).value = '';
@@ -880,10 +866,6 @@ function initKeyInTables() {
             <td class="readonly-cell" id="s1_rf_todate_${d}"></td>
             <td><input type="number" step="any" id="s1_rf_pm_${d}" readonly class="readonly-cell"></td>
             <td><input type="number" step="any" id="s1_ffb1_${d}" oninput="calcS1()"></td>
-            <td><input type="number" step="any" id="s1_ffb2_${d}" oninput="calcS1()"></td>
-            <td><input type="number" step="any" id="s1_ffb3_${d}" oninput="calcS1()"></td>
-            <td><input type="number" step="any" id="s1_ffb4_${d}" oninput="calcS1()"></td>
-            <td class="readonly-cell" id="s1_gt_today_${d}"></td>
             <td class="readonly-cell" id="s1_gt_todate_${d}"></td>
             <td><input type="number" step="any" id="s1_ffb_pm_${d}" readonly class="readonly-cell"></td>
         </tr>`;
@@ -913,16 +895,9 @@ function calcS1() {
             document.getElementById(`s1_rf_todate_${d}`).innerText = cumRf > 0 ? cumRf.toFixed(2) : '';
         }
 
-        let f1 = parseFloat(document.getElementById(`s1_ffb1_${d}`)?.value) || 0;
-        let f2 = parseFloat(document.getElementById(`s1_ffb2_${d}`)?.value) || 0;
-        let f3 = parseFloat(document.getElementById(`s1_ffb3_${d}`)?.value) || 0;
-        let f4 = parseFloat(document.getElementById(`s1_ffb4_${d}`)?.value) || 0;
-        let sumToday = f1 + f2 + f3 + f4;
-        cumFfb += sumToday;
+        let ffbVal = parseFloat(document.getElementById(`s1_ffb1_${d}`)?.value) || 0;
+        cumFfb += ffbVal;
 
-        if (document.getElementById(`s1_gt_today_${d}`)) {
-            document.getElementById(`s1_gt_today_${d}`).innerText = sumToday > 0 ? sumToday.toFixed(2) : '';
-        }
         if (document.getElementById(`s1_gt_todate_${d}`)) {
             document.getElementById(`s1_gt_todate_${d}`).innerText = cumFfb > 0 ? cumFfb.toFixed(2) : '';
         }
