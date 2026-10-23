@@ -19,7 +19,7 @@ let estateMills = [];
 let userAccounts = [];
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
 
-// Switch Tab Function
+// Tab Switcher
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -62,7 +62,7 @@ async function fetchMills() {
     if (activeEstate) updateMillDropdownsForEstate(activeEstate);
 }
 
-// Render Mill List in Settings Page with Edit and Delete
+// Render Mill List in Settings Page
 function renderMillSettingsUI() {
     const millEstateSelect = document.getElementById('millEstateSelect');
     if (millEstateSelect) {
@@ -103,7 +103,7 @@ function renderMillSettingsUI() {
     }
 }
 
-// Add New Mill Supplier
+// Add New Mill
 async function addNewMill() {
     const estateName = document.getElementById('millEstateSelect').value;
     const millNameInput = document.getElementById('newMillName');
@@ -122,7 +122,7 @@ async function addNewMill() {
     }
 }
 
-// Edit Existing Mill Supplier
+// Edit Mill
 async function editMill(millId, oldName) {
     let newName = prompt(`Edit Mill Supplier Name:`, oldName);
     if (newName && newName.trim() !== "" && newName !== oldName) {
@@ -140,7 +140,7 @@ async function editMill(millId, oldName) {
     }
 }
 
-// Remove Mill Supplier
+// Remove Mill
 async function removeMill(millId) {
     if (!confirmITAction("Mill Supplier")) return;
 
@@ -153,7 +153,7 @@ async function removeMill(millId) {
     }
 }
 
-// Dynamically update mill options in key-in table per estate
+// Update Mill Dropdowns
 function updateMillDropdownsForEstate(estateName) {
     const allowedMills = estateMills.filter(m => m.estate_name.toLowerCase() === estateName.toLowerCase()).map(m => m.mill_name);
 
@@ -174,7 +174,7 @@ function updateMillDropdownsForEstate(estateName) {
     }
 }
 
-// Fetch Permanent Estates from Supabase
+// Fetch Estates
 async function fetchEstates() {
     if (!supabaseClient) return;
     const { data, error } = await supabaseClient.from('estates').select('name').order('id', { ascending: true });
@@ -190,7 +190,7 @@ async function fetchEstates() {
     loadOverallSummary();
 }
 
-// Fetch User Profiles from Supabase
+// Fetch User Profiles
 async function fetchUserProfiles() {
     if (!supabaseClient) return;
     const { data, error } = await supabaseClient.from('user_profiles').select('*');
@@ -205,7 +205,7 @@ async function fetchUserProfiles() {
     renderSettingsUI();
 }
 
-// Fetch Activity & Audit Logs
+// Fetch Activity Logs
 async function fetchActivityLogs() {
     const tableBody = document.getElementById('activityLogTableBody');
     if (!tableBody || !supabaseClient) return;
@@ -423,12 +423,12 @@ async function saveToCloud() {
         await supabaseClient.from('activity_logs').insert([{
             username: currentUser ? currentUser.username : 'ADMIN',
             action: 'SAVE_DATA',
-            details: `Saved Data via ${activeTabId.toUpperCase()} for ${monthYear}`,
+            details: `Saved Data via ${(activeTabId || 'TAB').toUpperCase()} for ${monthYear}`,
             estate: estate,
             timestamp: new Date().toISOString()
         }]);
 
-        alert(`Data for "${estate}" (${activeTabId.toUpperCase()}) saved successfully!`);
+        alert(`Data for "${estate}" saved successfully!`);
         loadFromCloud();
         loadOverallSummary();
         fetchActivityLogs();
@@ -1112,7 +1112,7 @@ function updateSummaryHeader() {
     }
 }
 
-// Print Active Tab Only Function
+// Print Active Tab Only
 function printActiveTab() {
     const activeTab = document.querySelector('.tab-content.active');
     
@@ -1140,10 +1140,8 @@ document.addEventListener('change', (e) => {
 window.onload = async function() {
     initKeyInTables();
     
-    // Ensure default active tab is assigned
-    if (!document.querySelector('.tab-content.active')) {
-        switchTab('tab1');
-    }
+    // Explicitly set active tab to prevent layout collapse
+    switchTab('tab1');
 
     await fetchEstates();        
     await fetchUserProfiles();   
