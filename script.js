@@ -12,7 +12,7 @@ try {
 const IT_DELETE_PASSWORD = "ITREF2026"; 
 
 let estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk", "TUNGKU"];
-let estateMills = []; // Array of { id, estate_name, mill_name } from Supabase
+let estateMills = []; 
 
 let userAccounts = [];
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
@@ -34,6 +34,7 @@ async function fetchMills() {
 function renderMillSettingsUI() {
     const millEstateSelect = document.getElementById('millEstateSelect');
     if (millEstateSelect) {
+        const currentSelected = millEstateSelect.value;
         millEstateSelect.innerHTML = '';
         estateList.forEach(est => {
             let opt = document.createElement('option');
@@ -41,6 +42,9 @@ function renderMillSettingsUI() {
             opt.innerText = est;
             millEstateSelect.appendChild(opt);
         });
+        if (currentSelected && estateList.includes(currentSelected)) {
+            millEstateSelect.value = currentSelected;
+        }
     }
 
     const selectedEstate = millEstateSelect?.value || estateList[0];
@@ -51,7 +55,7 @@ function renderMillSettingsUI() {
         const filteredMills = estateMills.filter(m => m.estate_name === selectedEstate);
         
         if (filteredMills.length === 0) {
-            millListUi.innerHTML = `<li style="color: #94a3b8; font-size: 12px; padding: 6px;">No mills configured for ${selectedEstate} yet.</li>`;
+            millListUi.innerHTML = `<li style="color: #94a3b8; font-size: 12px; padding: 6px;">No mills configured for "${selectedEstate}" yet.</li>`;
             return;
         }
 
@@ -1053,7 +1057,7 @@ function switchTab(tabId) {
             submitBtn.style.display = 'none';
         } else {
             saveBtn.style.display = 'inline-block';
-            submitBtn.style.display = 'inline-block';
+            saveBtn.style.display = 'inline-block';
         }
     }
 
@@ -1063,7 +1067,7 @@ function switchTab(tabId) {
     }
 }
 
-// Attach event listener for Settings Mill Estate Filter
+// Event listener for Settings Mill Estate dropdown filter
 document.addEventListener('change', (e) => {
     if (e.target && e.target.id === 'millEstateSelect') {
         renderMillSettingsUI();
