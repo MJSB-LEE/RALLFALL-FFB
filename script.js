@@ -1,7 +1,13 @@
 // Supabase Configuration
 const SUPABASE_URL = 'https://tiwulxrorrmyxtosvzkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_W4-5_riBQWAUBPVtgX8Pcw_WCRET_KF';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let supabaseClient;
+try {
+    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+} catch (e) {
+    console.error("Failed to initialize Supabase client:", e);
+}
 
 const IT_DELETE_PASSWORD = "ITREF2026"; 
 
@@ -11,6 +17,7 @@ let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
 
 // Fetch Permanent Estates from Supabase
 async function fetchEstates() {
+    if (!supabaseClient) return;
     const { data, error } = await supabaseClient.from('estates').select('name').order('id', { ascending: true });
     if (!error && data && data.length > 0) {
         estateList = data.map(e => e.name);
@@ -26,6 +33,7 @@ async function fetchEstates() {
 
 // Fetch User Profiles from Supabase
 async function fetchUserProfiles() {
+    if (!supabaseClient) return;
     const { data, error } = await supabaseClient.from('user_profiles').select('*');
     if (!error && data && data.length > 0) {
         userAccounts = data;
@@ -38,10 +46,10 @@ async function fetchUserProfiles() {
     renderSettingsUI();
 }
 
-// Fetch Activity & Audit Logs (FIXED: Sorts by id to avoid 400 Bad Request column errors)
+// Fetch Activity & Audit Logs
 async function fetchActivityLogs() {
     const tableBody = document.getElementById('activityLogTableBody');
-    if (!tableBody) return;
+    if (!tableBody || !supabaseClient) return;
 
     const { data, error } = await supabaseClient
         .from('activity_logs')
@@ -50,7 +58,6 @@ async function fetchActivityLogs() {
         .limit(30);
 
     if (error) {
-        console.error("Fetch Activity Error:", error.message);
         tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #ef4444;">Error loading logs: ${error.message}</td></tr>`;
         return;
     }
@@ -90,16 +97,15 @@ async function handleLogin() {
         errorElem.style.display = "none";
         document.getElementById('loginOverlay').style.display = "none";
         
-        // Record Login Event in Audit Log
-        const { error: logErr } = await supabaseClient.from('activity_logs').insert([{
-            username: currentUser.username,
-            action: 'LOGIN',
-            details: `User '${currentUser.username}' logged into system`,
-            estate: currentUser.role === 'admin' ? 'ALL ESTATES' : (currentUser.assigned_estates?.[0] || 'SYSTEM'),
-            timestamp: new Date().toISOString()
-        }]);
-
-        if (logErr) console.error("Login Activity Log Error:", logErr.message);
+        if (supabaseClient) {
+            await supabaseClient.from('activity_logs').insert([{
+                username: currentUser.username,
+                action: 'LOGIN',
+                details: `User '${currentUser.username}' logged into system`,
+                estate: currentUser.role === 'admin' ? 'ALL ESTATES' : (currentUser.assigned_estates?.[0] || 'SYSTEM'),
+                timestamp: new Date().toISOString()
+            }]);
+        }
 
         applyUserPermissions();
         renderSettingsUI();
@@ -130,8 +136,13 @@ function applyUserPermissions() {
     const userLabel = document.getElementById('userInfoLabel');
     const ladangSelect = document.getElementById('ladangSelect');
     const settingsBtn = document.getElementById('btn-tabSettings');
+    const approveBtn = document.getElementById('approveBtn');
+    const prepInput = document.getElementById('preparedByInput');
 
     userLabel.innerText = `User: ${currentUser.full_name || currentUser.username} (${currentUser.username})`;
+    if (prepInput) {
+        prepInput.value = `${currentUser.full_name || currentUser.username} (${currentUser.username})`;
+    }
 
     let allowedEstates = currentUser.assigned_estates || [];
     if (!Array.isArray(allowedEstates) && currentUser.assigned_estate) {
@@ -145,11 +156,13 @@ function applyUserPermissions() {
         badge.style.background = "#dc2626";
         ladangSelect.disabled = false;
         settingsBtn.style.display = "inline-block";
+        if (approveBtn) approveBtn.style.display = "inline-block";
     } else {
         badge.innerText = `ROLE: USER (${allowedEstates.length} Location${allowedEstates.length > 1 ? 's' : ''})`;
         badge.style.background = "#2563eb";
         ladangSelect.disabled = allowedEstates.length <= 1; 
         settingsBtn.style.display = "none";
+        if (approveBtn) approveBtn.style.display = "none";
         
         if (document.getElementById('tabSettings').classList.contains('active')) {
             switchTab('tab1');
@@ -159,11 +172,38 @@ function applyUserPermissions() {
     onEstateOrMonthChange();
 }
 
+// Function to Lock / Unlock inputs when report is Submitted / Approved
+function setFormLockState(isLocked, statusText = '') {
+    const inputs = document.querySelectorAll('#tbody-s1 input, #tbody-s2 input');
+    inputs.forEach(input => {
+        if (!input.classList.contains('readonly-cell')) {
+            input.disabled = isLocked;
+        }
+    });
+
+    const saveBtn = document.getElementById('saveBtn');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (saveBtn && submitBtn) {
+        if (isLocked) {
+            saveBtn.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.style.background = '#94a3b8';
+            submitBtn.innerText = `🔒 Locked (${statusText.toUpperCase()})`;
+        } else {
+            saveBtn.style.display = 'inline-block';
+            saveBtn.disabled = false;
+            submitBtn.disabled = false;
+            submitBtn.style.background = '#059669';
+            submitBtn.innerText = 'Submit & Lock Report';
+        }
+    }
+}
+
 async function saveToCloud() {
     const activeTab = document.querySelector('.tab-content.active')?.id;
-    
     if (activeTab === 'tabSummary' || activeTab === 'tabSettings') {
-        alert("⚠️ Save operation is only available on Input Tabs (Tabs 1 to 4).");
+        alert("⚠️ Save operation is only available on Input Tabs (Tabs 1 & 2).");
         return;
     }
 
@@ -191,36 +231,23 @@ async function saveToCloud() {
         let rf_p3 = parseFloat(document.getElementById(`s2_p3_t_${d}`)?.value) || 0;
         let rf_p4 = parseFloat(document.getElementById(`s2_p4_t_${d}`)?.value) || 0;
 
-        let m1 = parseFloat(document.getElementById(`s3_m1_${d}`)?.value) || 0;
-        let m2 = parseFloat(document.getElementById(`s3_m2_${d}`)?.value) || 0;
-        let m3 = parseFloat(document.getElementById(`s3_m3_${d}`)?.value) || 0;
-        let m4 = parseFloat(document.getElementById(`s3_m4_${d}`)?.value) || 0;
-        let m5 = parseFloat(document.getElementById(`s3_m5_${d}`)?.value) || 0;
-        let m6 = parseFloat(document.getElementById(`s3_m6_${d}`)?.value) || 0;
-
-        let ffb_phases = {};
-        for (let p = 1; p <= 12; p++) {
-            ffb_phases[`ffb_phase${p}`] = parseFloat(document.getElementById(`s4_p${p}_${d}`)?.value) || 0;
-        }
-
         let dayStr = String(d).padStart(2, '0');
         updates.push({
             estate_name: estate,
             record_date: `${monthYear}-${dayStr}`,
             rainfall_today: rf,
-            ffb1: f1 || m1,
-            ffb2: f2 || m2,
-            ffb3: f3 || m3,
-            ffb4: f4 || m4,
-            ffb5: m5,
-            ffb6: m6,
+            ffb1: f1,
+            ffb2: f2,
+            ffb3: f3,
+            ffb4: f4,
             rf_phase1: rf_p1,
             rf_phase2: rf_p2,
             rf_phase3: rf_p3,
             rf_phase4: rf_p4,
             updated_by: activeUserName,
             updated_at: timestampNow,
-            ...ffb_phases
+            status: 'draft',
+            prepared_by: document.getElementById('preparedByInput').value
         });
     }
 
@@ -239,10 +266,80 @@ async function saveToCloud() {
             timestamp: new Date().toISOString()
         }]);
 
-        alert(`Data for "${estate}" saved successfully by ${activeUserName}!`);
+        alert(`Data for "${estate}" saved successfully!`);
         loadFromCloud();
         loadOverallSummary();
         fetchActivityLogs();
+    }
+}
+
+async function submitMonthlyReport() {
+    const estate = document.getElementById('ladangSelect').value;
+    const monthYear = document.getElementById('bulanTahun').value;
+    if (!monthYear || !estate) return alert("Select Estate and Month first.");
+
+    if (!confirm(`Are you sure you want to SUBMIT and LOCK records for ${estate} (${monthYear})? You will not be able to edit further.`)) return;
+
+    const prepName = document.getElementById('preparedByInput').value;
+
+    const [year, month] = monthYear.split('-').map(Number);
+    const lastDay = new Date(year, month, 0).getDate();
+
+    const { error } = await supabaseClient
+        .from('daily_records')
+        .update({ status: 'submitted', prepared_by: prepName })
+        .eq('estate_name', estate)
+        .gte('record_date', `${monthYear}-01`)
+        .lte('record_date', `${monthYear}-${String(lastDay).padStart(2, '0')}`);
+
+    if (error) {
+        alert("Submission Error: " + error.message);
+    } else {
+        await supabaseClient.from('activity_logs').insert([{
+            username: currentUser.username,
+            action: 'SUBMIT_REPORT',
+            details: `Submitted monthly report for ${estate} (${monthYear})`,
+            estate: estate,
+            timestamp: new Date().toISOString()
+        }]);
+
+        alert("Report submitted successfully and locked!");
+        loadFromCloud();
+    }
+}
+
+async function approveMonthlyReport() {
+    if (currentUser?.role !== "admin") return alert("Only Administrators / Managers can approve reports.");
+
+    const estate = document.getElementById('ladangSelect').value;
+    const monthYear = document.getElementById('bulanTahun').value;
+    if (!monthYear || !estate) return alert("Select Estate and Month first.");
+
+    const appName = `${currentUser.full_name || currentUser.username} (Manager)`;
+
+    const [year, month] = monthYear.split('-').map(Number);
+    const lastDay = new Date(year, month, 0).getDate();
+
+    const { error } = await supabaseClient
+        .from('daily_records')
+        .update({ status: 'approved', approved_by: appName })
+        .eq('estate_name', estate)
+        .gte('record_date', `${monthYear}-01`)
+        .lte('record_date', `${monthYear}-${String(lastDay).padStart(2, '0')}`);
+
+    if (error) {
+        alert("Approval Error: " + error.message);
+    } else {
+        await supabaseClient.from('activity_logs').insert([{
+            username: currentUser.username,
+            action: 'APPROVE_REPORT',
+            details: `Approved monthly report for ${estate} (${monthYear})`,
+            estate: estate,
+            timestamp: new Date().toISOString()
+        }]);
+
+        alert("Report officially approved!");
+        loadFromCloud();
     }
 }
 
@@ -252,7 +349,7 @@ async function loadFromCloud() {
     const estate = document.getElementById('ladangSelect').value;
     const monthYear = document.getElementById('bulanTahun').value;
 
-    if (!monthYear || !estate) return;
+    if (!monthYear || !estate || !supabaseClient) return;
 
     const [year, month] = monthYear.split('-').map(Number);
     const lastDay = new Date(year, month, 0).getDate();
@@ -272,8 +369,27 @@ async function loadFromCloud() {
         let editBy = lastRecord.updated_by || 'Unknown';
         let editTime = lastRecord.updated_at ? new Date(lastRecord.updated_at).toLocaleString() : 'N/A';
         document.getElementById('auditLogDisplay').innerText = `Last Modified By: ${editBy} on ${editTime}`;
+
+        // Set Prepared By and Approved By fields
+        if (lastRecord.prepared_by) {
+            document.getElementById('preparedByInput').value = lastRecord.prepared_by;
+        }
+        if (lastRecord.approved_by) {
+            document.getElementById('approvedByInput').value = lastRecord.approved_by;
+        } else {
+            document.getElementById('approvedByInput').value = "Pending Manager Approval";
+        }
+
+        // Lock form if status is submitted or approved
+        if (lastRecord.status === 'submitted' || lastRecord.status === 'approved') {
+            setFormLockState(true, lastRecord.status);
+        } else {
+            setFormLockState(false);
+        }
     } else {
         document.getElementById('auditLogDisplay').innerText = `Data Record Info: No records for ${monthYear}`;
+        document.getElementById('approvedByInput').value = "Pending Manager Approval";
+        setFormLockState(false);
     }
 
     data.forEach(row => {
@@ -289,19 +405,6 @@ async function loadFromCloud() {
         if (document.getElementById(`s2_p2_t_${day}`)) document.getElementById(`s2_p2_t_${day}`).value = row.rf_phase2 || '';
         if (document.getElementById(`s2_p3_t_${day}`)) document.getElementById(`s2_p3_t_${day}`).value = row.rf_phase3 || '';
         if (document.getElementById(`s2_p4_t_${day}`)) document.getElementById(`s2_p4_t_${day}`).value = row.rf_phase4 || '';
-
-        if (document.getElementById(`s3_m1_${day}`)) document.getElementById(`s3_m1_${day}`).value = row.ffb1 || '';
-        if (document.getElementById(`s3_m2_${day}`)) document.getElementById(`s3_m2_${day}`).value = row.ffb2 || '';
-        if (document.getElementById(`s3_m3_${day}`)) document.getElementById(`s3_m3_${day}`).value = row.ffb3 || '';
-        if (document.getElementById(`s3_m4_${day}`)) document.getElementById(`s3_m4_${day}`).value = row.ffb4 || '';
-        if (document.getElementById(`s3_m5_${day}`)) document.getElementById(`s3_m5_${day}`).value = row.ffb5 || '';
-        if (document.getElementById(`s3_m6_${day}`)) document.getElementById(`s3_m6_${day}`).value = row.ffb6 || '';
-
-        for (let p = 1; p <= 12; p++) {
-            if (document.getElementById(`s4_p${p}_${day}`)) {
-                document.getElementById(`s4_p${p}_${day}`).value = row[`ffb_phase${p}`] || '';
-            }
-        }
     });
 
     calcS1();
@@ -310,7 +413,7 @@ async function loadFromCloud() {
 
 async function loadOverallSummary() {
     const monthYear = document.getElementById('bulanTahun').value;
-    if (!monthYear) return;
+    if (!monthYear || !supabaseClient) return;
 
     const [year, month] = monthYear.split('-').map(Number);
     const lastDay = new Date(year, month, 0).getDate();
@@ -394,17 +497,6 @@ function clearForm() {
         if (document.getElementById(`s2_p2_t_${d}`)) document.getElementById(`s2_p2_t_${d}`).value = '';
         if (document.getElementById(`s2_p3_t_${d}`)) document.getElementById(`s2_p3_t_${d}`).value = '';
         if (document.getElementById(`s2_p4_t_${d}`)) document.getElementById(`s2_p4_t_${d}`).value = '';
-
-        if (document.getElementById(`s3_m1_${d}`)) document.getElementById(`s3_m1_${d}`).value = '';
-        if (document.getElementById(`s3_m2_${d}`)) document.getElementById(`s3_m2_${d}`).value = '';
-        if (document.getElementById(`s3_m3_${d}`)) document.getElementById(`s3_m3_${d}`).value = '';
-        if (document.getElementById(`s3_m4_${d}`)) document.getElementById(`s3_m4_${d}`).value = '';
-        if (document.getElementById(`s3_m5_${d}`)) document.getElementById(`s3_m5_${d}`).value = '';
-        if (document.getElementById(`s3_m6_${d}`)) document.getElementById(`s3_m6_${d}`).value = '';
-
-        for (let p = 1; p <= 12; p++) {
-            if (document.getElementById(`s4_p${p}_${d}`)) document.getElementById(`s4_p${p}_${d}`).value = '';
-        }
     }
 }
 
@@ -462,7 +554,7 @@ function renderNewUserEstateCheckboxes() {
 
     estateList.forEach(est => {
         container.innerHTML += `
-            <label class="checkbox-item">
+            <label class="checkbox-item" style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
                 <input type="checkbox" value="${est}" class="new-estate-chk">
                 <span style="font-size: 12px; color: #1e293b;">${est}</span>
             </label>`;
@@ -527,7 +619,7 @@ function openEditUserModal(idx) {
         estateList.forEach(est => {
             let isChecked = userAssigned.includes(est) ? 'checked' : '';
             editContainer.innerHTML += `
-                <label class="checkbox-item">
+                <label class="checkbox-item" style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
                     <input type="checkbox" value="${est}" class="edit-estate-chk" ${isChecked}>
                     <span style="font-size: 12px; color: #1e293b;">${est}</span>
                 </label>`;
@@ -545,7 +637,6 @@ function closeEditModal() {
     if (modalElem) modalElem.style.display = 'none';
 }
 
-// ADD NEW USER (WITH AUDIT LOGGING)
 async function addNewUser() {
     const uFull = document.getElementById('newUserFull').value.trim();
     const uEmail = document.getElementById('newUserEmail').value.trim();
@@ -588,8 +679,7 @@ async function addNewUser() {
             timestamp: new Date().toISOString()
         }]);
 
-        alert(`User "${uName}" created successfully as ${uRole.toUpperCase()}!`);
-        
+        alert(`User "${uName}" created successfully!`);
         document.getElementById('newUserFull').value = '';
         document.getElementById('newUserEmail').value = '';
         document.getElementById('newUsername').value = '';
@@ -601,7 +691,6 @@ async function addNewUser() {
     }
 }
 
-// SAVE USER EDIT (WITH AUDIT LOGGING)
 async function saveUserEdit() {
     const idx = document.getElementById('editIndex').value;
     let targetUser = userAccounts[idx];
@@ -700,7 +789,6 @@ async function editEstateName(idx) {
     }
 }
 
-// REMOVE USER (WITH AUDIT LOGGING)
 async function removeUser(idx) {
     let targetUser = userAccounts[idx];
     if (!confirmITAction(`User Account: "${targetUser.username}"`)) return;
@@ -737,14 +825,14 @@ function initKeyInTables() {
             <td><b>${d}</b></td>
             <td><input type="number" step="any" id="s1_rf_${d}" oninput="calcS1();"></td>
             <td class="readonly-cell" id="s1_rf_todate_${d}"></td>
-            <td><input type="number" step="any" id="s1_rf_pm_${d}"></td>
+            <td><input type="number" step="any" id="s1_rf_pm_${d}" readonly class="readonly-cell"></td>
             <td><input type="number" step="any" id="s1_ffb1_${d}" oninput="calcS1()"></td>
             <td><input type="number" step="any" id="s1_ffb2_${d}" oninput="calcS1()"></td>
             <td><input type="number" step="any" id="s1_ffb3_${d}" oninput="calcS1()"></td>
             <td><input type="number" step="any" id="s1_ffb4_${d}" oninput="calcS1()"></td>
             <td class="readonly-cell" id="s1_gt_today_${d}"></td>
             <td class="readonly-cell" id="s1_gt_todate_${d}"></td>
-            <td><input type="number" step="any" id="s1_ffb_pm_${d}"></td>
+            <td><input type="number" step="any" id="s1_ffb_pm_${d}" readonly class="readonly-cell"></td>
         </tr>`;
     }
     document.getElementById('tbody-s1').innerHTML = s1;
@@ -756,42 +844,11 @@ function initKeyInTables() {
             ${[1,2,3,4].map(p => `
                 <td><input type="number" step="any" id="s2_p${p}_t_${d}" oninput="calcS2();"></td>
                 <td class="readonly-cell" id="s2_p${p}_td_${d}"></td>
-                <td><input type="number" step="any" id="s2_p${p}_pm_${d}"></td>
+                <td><input type="number" step="any" id="s2_p${p}_pm_${d}" readonly class="readonly-cell"></td>
             `).join('')}
         </tr>`;
     }
     document.getElementById('tbody-s2').innerHTML = s2;
-
-    let s3 = '';
-    for (let d = 1; d <= 31; d++) {
-        s3 += `<tr>
-            <td><b>${d}</b></td>
-            ${[1,2,3,4,5,6].map(m => `<td><input type="number" step="any" id="s3_m${m}_${d}"></td>`).join('')}
-            <td class="readonly-cell" id="s3_gt_today_${d}"></td>
-            <td class="readonly-cell" id="s3_gt_todate_${d}"></td>
-            <td><input type="number" step="any" id="s3_pm_${d}"></td>
-        </tr>`;
-    }
-    document.getElementById('tbody-s3').innerHTML = s3;
-
-    let s4Hdr = '';
-    for (let p = 1; p <= 12; p++) {
-        s4Hdr += `<th style="width: 60px;"><input type="text" value="P${p}" style="font-weight:bold; text-align:center;"></th>`;
-    }
-    s4Hdr += `<th>TODAY</th><th>TODATE</th>`;
-    document.getElementById('s4-phase-headers').innerHTML = s4Hdr;
-
-    let s4 = '';
-    for (let d = 1; d <= 31; d++) {
-        s4 += `<tr>
-            <td><b>${d}</b></td>
-            ${Array.from({length:12}, (_, i) => `<td><input type="number" step="any" id="s4_p${i+1}_${d}"></td>`).join('')}
-            <td class="readonly-cell" id="s4_gt_today_${d}"></td>
-            <td class="readonly-cell" id="s4_gt_todate_${d}"></td>
-            <td><input type="number" step="any" id="s4_pm_${d}"></td>
-        </tr>`;
-    }
-    document.getElementById('tbody-s4').innerHTML = s4;
 }
 
 function calcS1() {
@@ -850,11 +907,15 @@ function switchTab(tabId) {
     document.getElementById(`btn-${tabId}`).classList.add('active');
 
     const saveBtn = document.getElementById('saveBtn');
-    if (saveBtn) {
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (saveBtn && submitBtn) {
         if (tabId === 'tabSummary' || tabId === 'tabSettings') {
             saveBtn.style.display = 'none';
+            submitBtn.style.display = 'none';
         } else {
             saveBtn.style.display = 'inline-block';
+            submitBtn.style.display = 'inline-block';
         }
     }
 
@@ -863,7 +924,7 @@ function switchTab(tabId) {
     }
 }
 
-// ASYNC INITIALIZATION SEQUENCE
+// Initialization on window load
 window.onload = async function() {
     initKeyInTables();
     await fetchEstates();        
