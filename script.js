@@ -1101,22 +1101,25 @@ function switchTab(tabId) {
 }
 
 // Print Active Tab Only
+// Tab-Isolated Print Function
 function printActiveTab() {
     const activeTab = document.querySelector('.tab-content.active');
     
     if (!activeTab) {
-        alert("Please select a tab first.");
+        alert("Please select Tab 1, 2, or Overall Summary first.");
         return;
     }
 
     if (activeTab.id === 'tabSettings') {
-        alert("⚠️ Printing Settings & Audit logs is disabled. Please switch to Tab 1, 2, or Overall Summary.");
+        alert("⚠️ Printing Settings & System Audit logs is disabled. Please switch to Tab 1, 2, or Overall Summary.");
         return;
     }
 
-    window.print();
+    // Force DOM repaint before calling window.print
+    setTimeout(() => {
+        window.print();
+    }, 100);
 }
-
 // Event listener for Settings Mill Estate filter
 document.addEventListener('change', (e) => {
     if (e.target && e.target.id === 'millEstateSelect') {
