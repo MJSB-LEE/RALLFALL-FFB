@@ -226,25 +226,28 @@ body {
 }
 
 /* ==========================================================================
-   Strict Single Page A4 Landscape Print Layout
+   Strict Single-Page A4 Landscape Print Layout (No Browser Headers/Footers)
    ========================================================================== */
 @media print {
+    /* Removes browser default headers/footers (GitHub URL, page numbers, date/time) */
     @page {
         size: A4 landscape;
-        margin: 4mm 6mm;
+        margin: 0;
     }
 
     html, body {
-        width: 100% !important;
-        height: 100% !important;
+        width: 297mm !important;
+        height: 210mm !important;
         margin: 0 !important;
-        padding: 0 !important;
+        padding: 6mm 8mm !important;
         background: #ffffff !important;
         color: #000000 !important;
-        font-family: Arial, sans-serif !important;
+        font-family: Arial, Helvetica, sans-serif !important;
         overflow: hidden !important;
+        box-sizing: border-box !important;
     }
 
+    /* Hide Web Application Interface Elements */
     .header-card, 
     .nav-tabs, 
     #loginOverlay, 
@@ -260,10 +263,12 @@ body {
         display: none !important;
     }
 
+    /* Hide Inactive Tabs */
     div.tab-content {
         display: none !important;
     }
 
+    /* Display Active Tab Panel */
     div.tab-content.active {
         display: block !important;
         width: 100% !important;
@@ -273,29 +278,41 @@ body {
         display: block !important;
     }
 
+    /* Professional Executive Header Block */
     .print-header-block {
         margin-bottom: 6px;
     }
 
     .print-company-title {
         text-align: center;
-        font-size: 13pt;
-        font-weight: bold;
-        letter-spacing: 1px;
-        margin-bottom: 4px;
+        font-size: 15pt;
+        font-weight: 800;
+        letter-spacing: 1.5px;
+        margin-bottom: 2px;
         text-transform: uppercase;
-        border-bottom: 2px solid #000;
-        padding-bottom: 2px;
+    }
+
+    .print-sub-title {
+        text-align: center;
+        font-size: 10pt;
+        font-weight: bold;
+        letter-spacing: 0.8px;
+        margin-bottom: 6px;
+        color: #1e293b;
+        border-bottom: 2px solid #000000;
+        padding-bottom: 3px;
     }
 
     .print-meta-grid {
         display: flex;
         justify-content: space-between;
-        font-size: 9pt;
+        font-size: 8.5pt;
         font-weight: bold;
-        padding: 0 4px;
+        padding: 0 2px;
+        margin-bottom: 4px;
     }
 
+    /* Compact Data Table Rules to Ensure Single Page Fit */
     .report-table {
         width: 100% !important;
         border-collapse: collapse !important;
@@ -314,11 +331,12 @@ body {
         border: 1px solid #000000 !important;
         padding: 2px 1px !important;
         font-weight: bold !important;
+        text-transform: uppercase !important;
     }
 
     .report-table td {
         border: 1px solid #000000 !important;
-        padding: 1.5px 1px !important;
+        padding: 1.2px 1px !important;
         text-align: center !important;
         line-height: 1 !important;
     }
@@ -337,24 +355,45 @@ body {
         height: auto !important;
     }
 
+    /* Printable Signature Block */
     .print-footer-block {
-        margin-top: 6px;
+        margin-top: 4px;
         page-break-inside: avoid !important;
     }
 
     .print-end-label {
         text-align: center;
-        font-size: 8pt;
+        font-size: 7.5pt;
         font-weight: bold;
-        border-top: 1px dashed #000;
+        border-top: 1px dashed #000000;
         padding-top: 2px;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
     }
 
     .print-signature-grid {
         display: flex;
-        justify-content: flex-start;
-        font-size: 9pt;
-        padding: 0 5px;
+        justify-content: space-between;
+        font-size: 8.5pt;
+        padding: 0 4px;
+    }
+
+    .sig-box {
+        width: 40%;
+    }
+
+    .sig-line {
+        border-bottom: 1px solid #000000;
+        margin-top: 22px;
+        margin-bottom: 3px;
+        width: 200px;
+    }
+
+    .sig-line.ml-auto {
+        margin-left: auto;
+    }
+
+    .text-right {
+        text-align: right;
     }
 }
