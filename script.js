@@ -366,7 +366,7 @@ function setFormLockState(isLocked, statusText = '') {
     }
 }
 
-// Robust Save Function
+// Save Function
 async function saveToCloud() {
     const activeTabElem = document.querySelector('.tab-content.active');
     const activeTabId = activeTabElem ? activeTabElem.id : '';
@@ -1116,20 +1116,34 @@ function updateSummaryHeader() {
     }
 }
 
+// Print Active Tab Function
 function printActiveTab() {
     const activeTab = document.querySelector('.tab-content.active');
     
     if (!activeTab) {
-        alert("Please select a tab first.");
+        alert("Please select Tab 1, 2, or Overall Summary first.");
         return;
     }
 
     if (activeTab.id === 'tabSettings') {
-        alert("⚠️ Printing Settings & System Audit logs is disabled. Please switch to Tab 1, 2, or Overall Summary.");
+        alert("⚠️ Printing Settings & System Audit logs is disabled.");
         return;
     }
 
-    window.print();
+    // Dynamic Header/Footer Updates
+    const estVal = document.getElementById('ladangSelect')?.value || '-';
+    const monthVal = document.getElementById('bulanTahun')?.value || '-';
+    const prepVal = document.getElementById('preparedByInput')?.value || '-';
+    const appVal = document.getElementById('approvedByInput')?.value || 'Pending Manager Approval';
+
+    document.querySelectorAll('.lblLocation').forEach(el => el.innerText = estVal);
+    document.querySelectorAll('.lblMonth').forEach(el => el.innerText = monthVal);
+    document.querySelectorAll('.lblPreparedBy').forEach(el => el.innerText = prepVal);
+    document.querySelectorAll('.lblApprovedBy').forEach(el => el.innerText = appVal);
+
+    setTimeout(() => {
+        window.print();
+    }, 100);
 }
 
 document.addEventListener('change', (e) => {
