@@ -363,7 +363,7 @@ async function loadFromCloud() {
     const prevMonthStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
     const prevLastDay = new Date(prevYear, prevMonth, 0).getDate();
 
-    // 2. Query Current Month Records (Case-insensitive matching for estate_name)
+    // 2. Query Current Month Records
     const { data: currentData } = await supabaseClient
         .from('daily_records')
         .select('*')
@@ -371,7 +371,7 @@ async function loadFromCloud() {
         .gte('record_date', `${monthYear}-01`)
         .lte('record_date', `${monthYear}-${lastDayStr}`);
 
-    // 3. Query Previous Month Records (Case-insensitive matching)
+    // 3. Query Previous Month Records
     const { data: prevData, error: prevErr } = await supabaseClient
         .from('daily_records')
         .select('*')
@@ -381,7 +381,7 @@ async function loadFromCloud() {
 
     if (prevErr) console.error("Previous Month Query Error:", prevErr);
 
-    // Map previous month records by day (Day 1 to 31)
+    // Map previous month records strictly by Day Number (1 to 31)
     let prevDataMap = {};
     if (prevData && prevData.length > 0) {
         prevData.forEach(r => {
@@ -390,34 +390,35 @@ async function loadFromCloud() {
         });
     }
 
-    // Populate Previous Month columns day-by-day according to matching date
+    // Populate Previous Month columns strictly DAY-BY-DAY according to matching date
     for (let d = 1; d <= 31; d++) {
         let pRow = prevDataMap[d];
 
-        // S1: Previous Month Rainfall & Total FFB for Day d
+        // S1: Previous Month Daily Rainfall (rainfall_today)
         const rfPmElem = document.getElementById(`s1_rf_pm_${d}`);
         if (rfPmElem) {
-            let rfVal = pRow ? (parseFloat(pRow.rainfall_today) || 0) : 0;
+            let rfVal = pRow && pRow.rainfall_today !== null ? parseFloat(pRow.rainfall_today) : 0;
             rfPmElem.value = rfVal > 0 ? rfVal.toFixed(2) : '';
         }
 
+        // S1: Previous Month Daily Total FFB (ffb1 + ffb2 + ffb3 + ffb4)
         const ffbPmElem = document.getElementById(`s1_ffb_pm_${d}`);
         if (ffbPmElem) {
             let ffbSum = pRow ? ((parseFloat(pRow.ffb1) || 0) + (parseFloat(pRow.ffb2) || 0) + (parseFloat(pRow.ffb3) || 0) + (parseFloat(pRow.ffb4) || 0)) : 0;
             ffbPmElem.value = ffbSum > 0 ? ffbSum.toFixed(2) : '';
         }
 
-        // S2: Previous Month Phase Rainfall for Day d
+        // S2: Previous Month Daily Phase Rainfall
         for (let p = 1; p <= 4; p++) {
             const phasePmElem = document.getElementById(`s2_p${p}_pm_${d}`);
             if (phasePmElem) {
-                let pVal = pRow ? (parseFloat(pRow[`rf_phase${p}`]) || 0) : 0;
+                let pVal = pRow && pRow[`rf_phase${p}`] !== null ? parseFloat(pRow[`rf_phase${p}`]) : 0;
                 phasePmElem.value = pVal > 0 ? pVal.toFixed(2) : '';
             }
         }
     }
 
-    // 4. Populate Current Month Data into input fields (if present)
+    // 4. Populate Current Month Data into input fields
     if (currentData && currentData.length > 0) {
         let lastRecord = currentData[currentData.length - 1];
         let editBy = lastRecord.updated_by || 'Unknown';
