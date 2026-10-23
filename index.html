@@ -26,8 +26,7 @@
     <div class="container">
         
         <!-- Header Controls Bar -->
-        <div class="header-card" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); margin-bottom: 20px; color: white;">
-            
+        <div class="header-card">
             <!-- Branding Banner -->
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding-bottom: 12px; margin-bottom: 16px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -47,22 +46,22 @@
             </div>
 
             <!-- Form Inputs Grid -->
-            <div class="header-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 10px;">
+            <div class="header-grid">
                 <div style="display: flex; flex-direction: column;">
-                    <label style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 5px; letter-spacing: 0.5px;">ASSIGNED ESTATE</label>
-                    <select id="ladangSelect" onchange="onEstateOrMonthChange()" style="padding: 8px 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #ffffff; font-size: 13px; font-weight: 600;"></select>
+                    <label>ASSIGNED ESTATE</label>
+                    <select id="ladangSelect" onchange="onEstateOrMonthChange()"></select>
                 </div>
                 <div style="display: flex; flex-direction: column;">
-                    <label style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 5px; letter-spacing: 0.5px;">MONTH / YEAR</label>
-                    <input type="month" id="bulanTahun" onchange="onEstateOrMonthChange()" style="padding: 7px 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #ffffff; font-size: 13px; font-weight: 600;">
+                    <label>MONTH / YEAR</label>
+                    <input type="month" id="bulanTahun" onchange="onEstateOrMonthChange()">
                 </div>
                 <div style="display: flex; flex-direction: column;">
-                    <label style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 5px; letter-spacing: 0.5px;">PREPARED BY</label>
-                    <input type="text" id="preparedByInput" placeholder="System Administrator" style="padding: 8px 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #ffffff; font-size: 13px;">
+                    <label>PREPARED BY</label>
+                    <input type="text" id="preparedByInput" placeholder="System Administrator">
                 </div>
                 <div style="display: flex; flex-direction: column;">
-                    <label style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 5px; letter-spacing: 0.5px;">APPROVED BY</label>
-                    <input type="text" id="approvedByInput" value="Pending Manager Approval" readonly class="readonly-cell" style="padding: 8px 10px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: #94a3b8; font-size: 13px; font-style: italic;">
+                    <label>APPROVED BY</label>
+                    <input type="text" id="approvedByInput" value="Pending Manager Approval" readonly class="readonly-cell">
                 </div>
             </div>
 
@@ -86,8 +85,8 @@
             <div class="print-only print-header-block">
                 <div class="print-company-title">MASIH JAYA SDN BHD</div>
                 <div class="print-meta-grid">
-                    <div><b>LOCATION:</b> <span class="lblLocation"></span></div>
-                    <div><b>MONTH:</b> <span class="lblMonth"></span></div>
+                    <div>LOCATION: <span class="lblLocation"></span></div>
+                    <div>MONTH: <span class="lblMonth"></span></div>
                 </div>
             </div>
 
@@ -116,11 +115,11 @@
                 <div class="print-end-label">END</div>
                 <div class="print-signature-grid">
                     <div>
-                        <b>PREPARED BY:</b> ___________________________<br>
+                        PREPARED BY: ___________________________<br>
                         <span class="lblPreparedBy" style="font-size: 8pt; margin-left: 95px;"></span>
                     </div>
                     <div style="text-align: right;">
-                        <b>APPROVED BY:</b> ___________________________<br>
+                        APPROVED BY: ___________________________<br>
                         <span class="lblApprovedBy" style="font-size: 8pt; margin-right: 10px;"></span>
                     </div>
                 </div>
@@ -132,8 +131,8 @@
             <div class="print-only print-header-block">
                 <div class="print-company-title">MASIH JAYA SDN BHD</div>
                 <div class="print-meta-grid">
-                    <div><b>LOCATION:</b> <span class="lblLocation"></span></div>
-                    <div><b>MONTH:</b> <span class="lblMonth"></span></div>
+                    <div>LOCATION: <span class="lblLocation"></span></div>
+                    <div>MONTH: <span class="lblMonth"></span></div>
                 </div>
             </div>
 
@@ -161,11 +160,11 @@
                 <div class="print-end-label">END</div>
                 <div class="print-signature-grid">
                     <div>
-                        <b>PREPARED BY:</b> ___________________________<br>
+                        PREPARED BY: ___________________________<br>
                         <span class="lblPreparedBy" style="font-size: 8pt; margin-left: 95px;"></span>
                     </div>
                     <div style="text-align: right;">
-                        <b>APPROVED BY:</b> ___________________________<br>
+                        APPROVED BY: ___________________________<br>
                         <span class="lblApprovedBy" style="font-size: 8pt; margin-right: 10px;"></span>
                     </div>
                 </div>
@@ -177,8 +176,8 @@
             <div class="print-only print-header-block">
                 <div class="print-company-title">MASIH JAYA SDN BHD</div>
                 <div class="print-meta-grid">
-                    <div><b>LOCATION:</b> OVERALL ESTATES</div>
-                    <div><b>MONTH:</b> <span class="lblMonth"></span></div>
+                    <div>LOCATION: ALL ESTATES SUMMARY</div>
+                    <div>MONTH: <span class="lblMonth"></span></div>
                 </div>
             </div>
 
@@ -201,11 +200,11 @@
                 <div class="print-end-label">END</div>
                 <div class="print-signature-grid">
                     <div>
-                        <b>PREPARED BY:</b> ___________________________<br>
+                        PREPARED BY: ___________________________<br>
                         <span class="lblPreparedBy" style="font-size: 8pt; margin-left: 95px;"></span>
                     </div>
                     <div style="text-align: right;">
-                        <b>APPROVED BY:</b> ___________________________<br>
+                        APPROVED BY: ___________________________<br>
                         <span class="lblApprovedBy" style="font-size: 8pt; margin-right: 10px;"></span>
                     </div>
                 </div>
