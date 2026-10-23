@@ -353,7 +353,7 @@ async function loadFromCloud() {
     const lastDay = new Date(year, month, 0).getDate();
     const lastDayStr = String(lastDay).padStart(2, '0');
 
-    // 1. Calculate Previous Month String (e.g., '2026-09' for '2026-10')
+    // 1. Calculate Previous Month String (e.g., '2026-09' when selecting '2026-10')
     let prevYear = year;
     let prevMonth = month - 1;
     if (prevMonth === 0) {
@@ -385,29 +385,36 @@ async function loadFromCloud() {
 
     if (prevData && prevData.length > 0) {
         prevData.forEach(r => {
-            prevRfTotal += (r.rainfall_today || 0);
-            prevFfbTotal += (r.ffb1 || 0) + (r.ffb2 || 0) + (r.ffb3 || 0) + (r.ffb4 || 0);
-            prevPhaseTotals[1] += (r.rf_phase1 || 0);
-            prevPhaseTotals[2] += (r.rf_phase2 || 0);
-            prevPhaseTotals[3] += (r.rf_phase3 || 0);
-            prevPhaseTotals[4] += (r.rf_phase4 || 0);
+            prevRfTotal += (parseFloat(r.rainfall_today) || 0);
+            prevFfbTotal += (parseFloat(r.ffb1) || 0) + (parseFloat(r.ffb2) || 0) + (parseFloat(r.ffb3) || 0) + (parseFloat(r.ffb4) || 0);
+            prevPhaseTotals[1] += (parseFloat(r.rf_phase1) || 0);
+            prevPhaseTotals[2] += (parseFloat(r.rf_phase2) || 0);
+            prevPhaseTotals[3] += (parseFloat(r.rf_phase3) || 0);
+            prevPhaseTotals[4] += (parseFloat(r.rf_phase4) || 0);
         });
     }
 
-    // ALWAYS populate Previous Month totals into Day 1 regardless of whether the selected month has data yet
-    if (document.getElementById(`s1_rf_pm_1`)) {
-        document.getElementById(`s1_rf_pm_1`).value = prevRfTotal > 0 ? prevRfTotal.toFixed(2) : '';
-    }
-    if (document.getElementById(`s1_ffb_pm_1`)) {
-        document.getElementById(`s1_ffb_pm_1`).value = prevFfbTotal > 0 ? prevFfbTotal.toFixed(2) : '';
-    }
-    for (let p = 1; p <= 4; p++) {
-        if (document.getElementById(`s2_p${p}_pm_1`)) {
-            document.getElementById(`s2_p${p}_pm_1`).value = prevPhaseTotals[p] > 0 ? prevPhaseTotals[p].toFixed(2) : '';
+    // 4. Fill Previous Month totals into ALL 31 rows so it stays visible regardless of current month records
+    for (let d = 1; d <= 31; d++) {
+        const rfPmElem = document.getElementById(`s1_rf_pm_${d}`);
+        if (rfPmElem) {
+            rfPmElem.value = prevRfTotal > 0 ? prevRfTotal.toFixed(2) : '';
+        }
+
+        const ffbPmElem = document.getElementById(`s1_ffb_pm_${d}`);
+        if (ffbPmElem) {
+            ffbPmElem.value = prevFfbTotal > 0 ? prevFfbTotal.toFixed(2) : '';
+        }
+
+        for (let p = 1; p <= 4; p++) {
+            const phasePmElem = document.getElementById(`s2_p${p}_pm_${d}`);
+            if (phasePmElem) {
+                phasePmElem.value = prevPhaseTotals[p] > 0 ? prevPhaseTotals[p].toFixed(2) : '';
+            }
         }
     }
 
-    // 4. Populate Current Month Data into input fields
+    // 5. Populate Current Month Data (If present)
     if (currentData && currentData.length > 0) {
         let lastRecord = currentData[currentData.length - 1];
         let editBy = lastRecord.updated_by || 'Unknown';
