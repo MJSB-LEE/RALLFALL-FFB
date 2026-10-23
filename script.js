@@ -456,7 +456,6 @@ async function loadFromCloud() {
     const lastDay = new Date(year, month, 0).getDate();
     const lastDayStr = String(lastDay).padStart(2, '0');
 
-    // 1. Calculate Previous Month String
     let prevYear = year;
     let prevMonth = month - 1;
     if (prevMonth === 0) {
@@ -466,7 +465,6 @@ async function loadFromCloud() {
     const prevMonthStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
     const prevLastDay = new Date(prevYear, prevMonth, 0).getDate();
 
-    // 2. Query Current Month Records
     const { data: currentData } = await supabaseClient
         .from('daily_records')
         .select('*')
@@ -474,7 +472,6 @@ async function loadFromCloud() {
         .gte('record_date', `${monthYear}-01`)
         .lte('record_date', `${monthYear}-${lastDayStr}`);
 
-    // 3. Query Previous Month Records
     const { data: prevData, error: prevErr } = await supabaseClient
         .from('daily_records')
         .select('*')
@@ -492,25 +489,21 @@ async function loadFromCloud() {
         });
     }
 
-    // Populate Previous Month columns strictly DAY-BY-DAY
     for (let d = 1; d <= 31; d++) {
         let pRow = prevDataMap[d];
 
-        // S1: Previous Month Daily Rainfall
         const rfPmElem = document.getElementById(`s1_rf_pm_${d}`);
         if (rfPmElem) {
             let rfVal = pRow && pRow.rainfall_today !== null ? parseFloat(pRow.rainfall_today) : 0;
             rfPmElem.value = rfVal > 0 ? rfVal.toFixed(2) : '';
         }
 
-        // S1: Previous Month Daily FFB
         const ffbPmElem = document.getElementById(`s1_ffb_pm_${d}`);
         if (ffbPmElem) {
             let ffbVal = pRow && pRow.ffb1 !== null ? parseFloat(pRow.ffb1) : 0;
             ffbPmElem.value = ffbVal > 0 ? ffbVal.toFixed(2) : '';
         }
 
-        // S2: Previous Month Daily Phase Rainfall
         for (let p = 1; p <= 4; p++) {
             const phasePmElem = document.getElementById(`s2_p${p}_pm_${d}`);
             if (phasePmElem) {
@@ -520,7 +513,6 @@ async function loadFromCloud() {
         }
     }
 
-    // 4. Populate Current Month Data
     if (currentData && currentData.length > 0) {
         let lastRecord = currentData[currentData.length - 1];
         let editBy = lastRecord.updated_by || 'Unknown';
@@ -1057,7 +1049,7 @@ function switchTab(tabId) {
             submitBtn.style.display = 'none';
         } else {
             saveBtn.style.display = 'inline-block';
-            saveBtn.style.display = 'inline-block';
+            submitBtn.style.display = 'inline-block';
         }
     }
 
