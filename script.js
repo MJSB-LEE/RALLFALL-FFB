@@ -665,14 +665,14 @@ async function loadOverallSummary() {
         });
     }
 
-    let estateHdr = '<th>Date</th>';
-    let subHdr = '<th>Date</th>';
+    let estateHdr = '<th>DATE</th>';
+    let subHdr = '<th>DATE</th>';
     estateList.forEach(est => {
         estateHdr += `<th colspan="2" class="header-estate">${est}</th>`;
-        subHdr += `<th>To Day</th><th>To Date</th>`;
+        subHdr += `<th>TO DAY</th><th>TO DATE</th>`;
     });
-    estateHdr += '<th>Date</th>';
-    subHdr += '<th>Date</th>';
+    estateHdr += '<th>DATE</th>';
+    subHdr += '<th>DATE</th>';
 
     if (document.getElementById('hdr-estates')) document.getElementById('hdr-estates').innerHTML = estateHdr;
     if (document.getElementById('hdr-sub')) document.getElementById('hdr-sub').innerHTML = subHdr;
@@ -698,8 +698,8 @@ async function loadOverallSummary() {
     }
     if (document.getElementById('tbody-summary')) document.getElementById('tbody-summary').innerHTML = tbody;
 
-    let totHtml = '<td>Total</td>';
-    let daysHtml = '<td>Days</td>';
+    let totHtml = '<td>TOTAL</td>';
+    let daysHtml = '<td>DAYS</td>';
     estateList.forEach(est => {
         totHtml += `<td>${estateTotals[est].toFixed(1)}</td><td class="readonly-cell">${estateTotals[est].toFixed(1)}</td>`;
         daysHtml += `<td colspan="2">${estateDays[est]} Days</td>`;
@@ -1116,7 +1116,7 @@ function updateSummaryHeader() {
     }
 }
 
-// 1-Page A4 Landscape Print Function
+// Clean Executive Print Function
 function printActiveTab() {
     const activeTab = document.querySelector('.tab-content.active');
     
@@ -1128,6 +1128,7 @@ function printActiveTab() {
     const estVal = document.getElementById('ladangSelect')?.value || '-';
     const monthVal = document.getElementById('bulanTahun')?.value || '-';
     const prepVal = document.getElementById('preparedByInput')?.value || '-';
+    const appVal = document.getElementById('approvedByInput')?.value || 'Pending Manager Approval';
 
     let formattedMonth = monthVal;
     if (monthVal && monthVal.includes('-')) {
@@ -1139,6 +1140,7 @@ function printActiveTab() {
     document.querySelectorAll('.lblLocation').forEach(el => el.innerText = estVal);
     document.querySelectorAll('.lblMonth').forEach(el => el.innerText = formattedMonth);
     document.querySelectorAll('.lblPreparedBy').forEach(el => el.innerText = prepVal);
+    document.querySelectorAll('.lblApprovedBy').forEach(el => el.innerText = appVal);
 
     setTimeout(() => {
         window.print();
