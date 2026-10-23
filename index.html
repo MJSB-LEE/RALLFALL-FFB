@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rainfall & FFB Ledger System</title>
+    <title>Masih Jaya Group - Rainfall & FFB Ledger System</title>
     <link rel="stylesheet" href="style.css">
     <!-- Supabase JS Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -25,35 +25,51 @@
     <!-- Main Application Container -->
     <div class="container">
         
-        <!-- Header Controls Bar -->
-        <div class="header-card" style="background: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 15px;">
-            <div class="header-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px;">
-                <div style="display: flex; flex-direction: column;">
-                    <label style="font-size: 11px; font-weight: bold; color: #475569; margin-bottom: 4px;">ASSIGNED ESTATE</label>
-                    <select id="ladangSelect" onchange="onEstateOrMonthChange()" style="padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1;"></select>
+        <!-- Header Controls Bar with MASIH JAYA GROUP Branding -->
+        <div class="header-card" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); margin-bottom: 20px; color: white;">
+            
+            <!-- Branding Banner -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding-bottom: 12px; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="background: #2563eb; width: 42px; height: 42px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🌴</div>
+                    <div>
+                        <h1 style="margin: 0; font-size: 20px; letter-spacing: 1.5px; font-weight: 800; color: #ffffff; text-transform: uppercase;">MASIH JAYA GROUP</h1>
+                        <span style="font-size: 11px; color: #94a3b8; letter-spacing: 0.5px;">ESTATE RAINFALL & FFB LEDGER SYSTEM</span>
+                    </div>
                 </div>
-                <div style="display: flex; flex-direction: column;">
-                    <label style="font-size: 11px; font-weight: bold; color: #475569; margin-bottom: 4px;">MONTH / YEAR</label>
-                    <input type="month" id="bulanTahun" onchange="onEstateOrMonthChange()" style="padding: 5px; border-radius: 4px; border: 1px solid #cbd5e1;">
-                </div>
-                <div style="display: flex; flex-direction: column;">
-                    <label style="font-size: 11px; font-weight: bold; color: #475569; margin-bottom: 4px;">PREPARED BY</label>
-                    <input type="text" id="preparedByInput" placeholder="System Administrator" style="padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1;">
-                </div>
-                <div style="display: flex; flex-direction: column;">
-                    <label style="font-size: 11px; font-weight: bold; color: #475569; margin-bottom: 4px;">APPROVED BY</label>
-                    <input type="text" id="approvedByInput" value="Pending Manager Approval" readonly class="readonly-cell" style="padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1; background: #f1f5f9;">
+                
+                <!-- Status Badge -->
+                <div style="display: flex; align-items: center; gap: 12px; background: rgba(255, 255, 255, 0.05); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <span id="userInfoLabel" style="font-size: 12px; font-weight: 600; color: #e2e8f0;">User: -</span>
+                    <span id="userBadge" style="background: #dc2626; color: white; padding: 2px 10px; border-radius: 12px; font-size: 10px; font-weight: 800; letter-spacing: 0.5px;">ROLE: ADMIN</span>
+                    <button onclick="handleLogout()" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s;">Logout</button>
                 </div>
             </div>
 
-            <!-- Top Status Info Bar -->
-            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #e2e8f0;">
-                <span id="auditLogDisplay" style="font-size: 12px; color: #64748b; font-style: italic;">Data Record Info: Select Estate and Month to load records</span>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <span id="userInfoLabel" style="font-size: 12px; font-weight: bold; color: #334155;">User: -</span>
-                    <span id="userBadge" style="background: #2563eb; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">ROLE: USER</span>
-                    <button onclick="handleLogout()" style="background: #e2e8f0; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">Logout</button>
+            <!-- Form Inputs Grid -->
+            <div class="header-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 10px;">
+                <div style="display: flex; flex-direction: column;">
+                    <label style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 5px; letter-spacing: 0.5px;">ASSIGNED ESTATE</label>
+                    <select id="ladangSelect" onchange="onEstateOrMonthChange()" style="padding: 8px 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #ffffff; font-size: 13px; font-weight: 600;"></select>
                 </div>
+                <div style="display: flex; flex-direction: column;">
+                    <label style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 5px; letter-spacing: 0.5px;">MONTH / YEAR</label>
+                    <input type="month" id="bulanTahun" onchange="onEstateOrMonthChange()" style="padding: 7px 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #ffffff; font-size: 13px; font-weight: 600;">
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <label style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 5px; letter-spacing: 0.5px;">PREPARED BY</label>
+                    <input type="text" id="preparedByInput" placeholder="System Administrator" style="padding: 8px 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #ffffff; font-size: 13px;">
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <label style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 5px; letter-spacing: 0.5px;">APPROVED BY</label>
+                    <input type="text" id="approvedByInput" value="Pending Manager Approval" readonly class="readonly-cell" style="padding: 8px 10px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: #94a3b8; font-size: 13px; font-style: italic;">
+                </div>
+            </div>
+
+            <!-- Audit Line -->
+            <div style="margin-top: 8px; font-size: 11px; color: #94a3b8; font-style: italic; display: flex; align-items: center; gap: 6px;">
+                <span style="display: inline-block; width: 6px; height: 6px; background: #22c55e; border-radius: 50%;"></span>
+                <span id="auditLogDisplay">Data Record Info: Select Estate and Month to load records</span>
             </div>
         </div>
 
