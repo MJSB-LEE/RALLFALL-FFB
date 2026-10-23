@@ -226,12 +226,12 @@ body {
 }
 
 /* ==========================================================================
-   Strict Landscape Print Rules
+   Strict Landscape Print Layout (No Website URLs or Headers)
    ========================================================================== */
 @media print {
     @page {
         size: landscape;
-        margin: 8mm;
+        margin: 5mm;
     }
 
     body {
@@ -243,7 +243,6 @@ body {
         font-family: Arial, sans-serif !important;
     }
 
-    /* Hide Controls & Navigation */
     .header-card, 
     .nav-tabs, 
     #loginOverlay, 
@@ -267,13 +266,12 @@ body {
         width: 100% !important;
     }
 
-    /* Show Print Header and Footer */
     .print-only {
         display: block !important;
     }
 
     .print-header-block {
-        margin-bottom: 15px;
+        margin-bottom: 12px;
     }
 
     .print-company-title {
@@ -281,7 +279,7 @@ body {
         font-size: 16pt;
         font-weight: bold;
         letter-spacing: 1px;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
         text-transform: uppercase;
         border-bottom: 2px solid #000;
         padding-bottom: 4px;
@@ -292,15 +290,15 @@ body {
         justify-content: space-between;
         font-size: 10pt;
         font-weight: bold;
+        padding: 0 5px;
     }
 
-    /* Report Table Format */
     .report-table {
         width: 100% !important;
         border-collapse: collapse !important;
         box-shadow: none !important;
         font-size: 8pt !important;
-        margin-bottom: 15px !important;
+        margin-bottom: 12px !important;
     }
 
     .report-table tr {
@@ -332,9 +330,8 @@ body {
         color: #000000 !important;
     }
 
-    /* Print Signature Footer Block */
     .print-footer-block {
-        margin-top: 20px;
+        margin-top: 15px;
         page-break-inside: avoid !important;
     }
 
@@ -344,12 +341,13 @@ body {
         font-weight: bold;
         border-top: 1px dashed #000;
         padding-top: 4px;
-        margin-bottom: 25px;
+        margin-bottom: 20px;
     }
 
     .print-signature-grid {
         display: flex;
         justify-content: space-between;
         font-size: 10pt;
+        padding: 0 10px;
     }
 }
