@@ -4,7 +4,9 @@ const SUPABASE_KEY = 'sb_publishable_W4-5_riBQWAUBPVtgX8Pcw_WCRET_KF';
 
 let supabaseClient;
 try {
-    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    if (typeof supabase !== 'undefined') {
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
 } catch (e) {
     console.error("Failed to initialize Supabase client:", e);
 }
@@ -16,6 +18,36 @@ let estateMills = [];
 
 let userAccounts = [];
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+
+// Switch Tab Function
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    
+    const targetTab = document.getElementById(tabId);
+    const targetBtn = document.getElementById(`btn-${tabId}`);
+
+    if (targetTab) targetTab.classList.add('active');
+    if (targetBtn) targetBtn.classList.add('active');
+
+    const saveBtn = document.getElementById('saveBtn');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (saveBtn && submitBtn) {
+        if (tabId === 'tabSummary' || tabId === 'tabSettings') {
+            saveBtn.style.display = 'none';
+            submitBtn.style.display = 'none';
+        } else {
+            saveBtn.style.display = 'inline-block';
+            submitBtn.style.display = 'inline-block';
+        }
+    }
+
+    if (tabId === 'tabSettings') {
+        fetchActivityLogs();
+        renderMillSettingsUI();
+    }
+}
 
 // Fetch Mill Suppliers from Supabase
 async function fetchMills() {
@@ -108,7 +140,7 @@ async function editMill(millId, oldName) {
     }
 }
 
-// Remove Mill Supplier from Settings
+// Remove Mill Supplier
 async function removeMill(millId) {
     if (!confirmITAction("Mill Supplier")) return;
 
@@ -266,7 +298,7 @@ function applyUserPermissions() {
     const approveBtn = document.getElementById('approveBtn');
     const prepInput = document.getElementById('preparedByInput');
 
-    userLabel.innerText = `User: ${currentUser.full_name || currentUser.username} (${currentUser.username})`;
+    if (userLabel) userLabel.innerText = `User: ${currentUser.full_name || currentUser.username} (${currentUser.username})`;
     if (prepInput) {
         prepInput.value = `${currentUser.full_name || currentUser.username} (${currentUser.username})`;
     }
@@ -279,19 +311,23 @@ function applyUserPermissions() {
     renderEstateDropdown(allowedEstates);
 
     if (currentUser.role === "admin") {
-        badge.innerText = "ROLE: ADMIN";
-        badge.style.background = "#dc2626";
-        ladangSelect.disabled = false;
-        settingsBtn.style.display = "inline-block";
+        if (badge) {
+            badge.innerText = "ROLE: ADMIN";
+            badge.style.background = "#dc2626";
+        }
+        if (ladangSelect) ladangSelect.disabled = false;
+        if (settingsBtn) settingsBtn.style.display = "inline-block";
         if (approveBtn) approveBtn.style.display = "inline-block";
     } else {
-        badge.innerText = `ROLE: USER (${allowedEstates.length} Location${allowedEstates.length > 1 ? 's' : ''})`;
-        badge.style.background = "#2563eb";
-        ladangSelect.disabled = allowedEstates.length <= 1; 
-        settingsBtn.style.display = "none";
+        if (badge) {
+            badge.innerText = `ROLE: USER (${allowedEstates.length} Location${allowedEstates.length > 1 ? 's' : ''})`;
+            badge.style.background = "#2563eb";
+        }
+        if (ladangSelect) ladangSelect.disabled = allowedEstates.length <= 1; 
+        if (settingsBtn) settingsBtn.style.display = "none";
         if (approveBtn) approveBtn.style.display = "none";
         
-        if (document.getElementById('tabSettings').classList.contains('active')) {
+        if (document.getElementById('tabSettings')?.classList.contains('active')) {
             switchTab('tab1');
         }
     }
@@ -300,7 +336,6 @@ function applyUserPermissions() {
 }
 
 function setFormLockState(isLocked, statusText = '') {
-    // Admin Override: Admin can edit anytime
     if (currentUser?.role === 'admin') {
         isLocked = false;
     }
@@ -331,10 +366,12 @@ function setFormLockState(isLocked, statusText = '') {
     }
 }
 
-// Tab-Aware Save Function: Saves only data related to active tab
+// Tab-Aware Save Function
 async function saveToCloud() {
-    const activeTab = document.querySelector('.tab-content.active')?.id;
-    if (activeTab === 'tabSummary' || activeTab === 'tabSettings') {
+    const activeTabElem = document.querySelector('.tab-content.active');
+    const activeTabId = activeTabElem ? activeTabElem.id : '';
+
+    if (activeTabId === 'tabSummary' || activeTabId === 'tabSettings') {
         alert("⚠️ Save operation is only available on Input Tabs (Tabs 1 & 2).");
         return;
     }
@@ -362,11 +399,11 @@ async function saveToCloud() {
             prepared_by: document.getElementById('preparedByInput').value
         };
 
-        if (activeTab === 'tab1') {
+        if (activeTabId === 'tab1') {
             updateData.rainfall_today = parseFloat(document.getElementById(`s1_rf_${d}`)?.value) || 0;
             updateData.ffb1 = parseFloat(document.getElementById(`s1_ffb1_${d}`)?.value) || 0;
             updateData.mill_name = document.getElementById(`s1_mill_${d}`)?.value || '';
-        } else if (activeTab === 'tab2') {
+        } else if (activeTabId === 'tab2') {
             updateData.rf_phase1 = parseFloat(document.getElementById(`s2_p1_t_${d}`)?.value) || 0;
             updateData.rf_phase2 = parseFloat(document.getElementById(`s2_p2_t_${d}`)?.value) || 0;
             updateData.rf_phase3 = parseFloat(document.getElementById(`s2_p3_t_${d}`)?.value) || 0;
@@ -386,12 +423,12 @@ async function saveToCloud() {
         await supabaseClient.from('activity_logs').insert([{
             username: currentUser ? currentUser.username : 'ADMIN',
             action: 'SAVE_DATA',
-            details: `Saved Data via ${activeTab.toUpperCase()} for ${monthYear}`,
+            details: `Saved Data via ${activeTabId.toUpperCase()} for ${monthYear}`,
             estate: estate,
             timestamp: new Date().toISOString()
         }]);
 
-        alert(`Data for "${estate}" (${activeTab.toUpperCase()}) saved successfully!`);
+        alert(`Data for "${estate}" (${activeTabId.toUpperCase()}) saved successfully!`);
         loadFromCloud();
         loadOverallSummary();
         fetchActivityLogs();
@@ -485,7 +522,6 @@ async function loadFromCloud() {
     const lastDay = new Date(year, month, 0).getDate();
     const lastDayStr = String(lastDay).padStart(2, '0');
 
-    // Dynamically show/hide Day 31 row based on days in selected month
     for (let d = 1; d <= 31; d++) {
         const rowS1 = document.getElementById(`s1_rf_${d}`)?.closest('tr');
         const rowS2 = document.getElementById(`s2_p1_t_${d}`)?.closest('tr');
@@ -559,15 +595,14 @@ async function loadFromCloud() {
         let lastRecord = currentData[currentData.length - 1];
         let editBy = lastRecord.updated_by || 'Unknown';
         let editTime = lastRecord.updated_at ? new Date(lastRecord.updated_at).toLocaleString() : 'N/A';
-        document.getElementById('auditLogDisplay').innerText = `Last Modified By: ${editBy} on ${editTime}`;
+        const auditElem = document.getElementById('auditLogDisplay');
+        if (auditElem) auditElem.innerText = `Last Modified By: ${editBy} on ${editTime}`;
 
-        if (lastRecord.prepared_by) {
+        if (lastRecord.prepared_by && document.getElementById('preparedByInput')) {
             document.getElementById('preparedByInput').value = lastRecord.prepared_by;
         }
-        if (lastRecord.approved_by) {
-            document.getElementById('approvedByInput').value = lastRecord.approved_by;
-        } else {
-            document.getElementById('approvedByInput').value = "Pending Manager Approval";
+        if (document.getElementById('approvedByInput')) {
+            document.getElementById('approvedByInput').value = lastRecord.approved_by || "Pending Manager Approval";
         }
 
         if (lastRecord.status === 'submitted' || lastRecord.status === 'approved') {
@@ -589,8 +624,9 @@ async function loadFromCloud() {
             if (document.getElementById(`s2_p4_t_${day}`)) document.getElementById(`s2_p4_t_${day}`).value = row.rf_phase4 || '';
         });
     } else {
-        document.getElementById('auditLogDisplay').innerText = `Data Record Info: No records for ${monthYear}`;
-        document.getElementById('approvedByInput').value = "Pending Manager Approval";
+        const auditElem = document.getElementById('auditLogDisplay');
+        if (auditElem) auditElem.innerText = `Data Record Info: No records for ${monthYear}`;
+        if (document.getElementById('approvedByInput')) document.getElementById('approvedByInput').value = "Pending Manager Approval";
         setFormLockState(false);
     }
 
@@ -634,8 +670,8 @@ async function loadOverallSummary() {
     estateHdr += '<th>Date</th>';
     subHdr += '<th>Date</th>';
 
-    document.getElementById('hdr-estates').innerHTML = estateHdr;
-    document.getElementById('hdr-sub').innerHTML = subHdr;
+    if (document.getElementById('hdr-estates')) document.getElementById('hdr-estates').innerHTML = estateHdr;
+    if (document.getElementById('hdr-sub')) document.getElementById('hdr-sub').innerHTML = subHdr;
 
     let tbody = '';
     let estateTotals = {};
@@ -656,7 +692,7 @@ async function loadOverallSummary() {
         });
         tbody += `<td><b>${d}</b></td></tr>`;
     }
-    document.getElementById('tbody-summary').innerHTML = tbody;
+    if (document.getElementById('tbody-summary')) document.getElementById('tbody-summary').innerHTML = tbody;
 
     let totHtml = '<td>Total</td>';
     let daysHtml = '<td>Days</td>';
@@ -667,8 +703,8 @@ async function loadOverallSummary() {
     totHtml += '<td>-</td>';
     daysHtml += '<td>-</td>';
 
-    document.getElementById('row-totals').innerHTML = totHtml;
-    document.getElementById('row-days').innerHTML = daysHtml;
+    if (document.getElementById('row-totals')) document.getElementById('row-totals').innerHTML = totHtml;
+    if (document.getElementById('row-days')) document.getElementById('row-days').innerHTML = daysHtml;
 }
 
 function clearForm() {
@@ -1017,7 +1053,7 @@ function initKeyInTables() {
             <td><select id="s1_mill_${d}"><option value="">-- Select Mill --</option></select></td>
         </tr>`;
     }
-    document.getElementById('tbody-s1').innerHTML = s1;
+    if (document.getElementById('tbody-s1')) document.getElementById('tbody-s1').innerHTML = s1;
 
     let s2 = '';
     for (let d = 1; d <= 31; d++) {
@@ -1030,7 +1066,7 @@ function initKeyInTables() {
             `).join('')}
         </tr>`;
     }
-    document.getElementById('tbody-s2').innerHTML = s2;
+    if (document.getElementById('tbody-s2')) document.getElementById('tbody-s2').innerHTML = s2;
 }
 
 function calcS1() {
@@ -1065,48 +1101,23 @@ function calcS2() {
 }
 
 function updateSummaryHeader() {
-    let val = document.getElementById('bulanTahun').value;
+    let val = document.getElementById('bulanTahun')?.value;
     if (val) {
         let d = new Date(val + "-01");
         let mName = d.toLocaleString('en', { month: 'short' }).toUpperCase();
         let y = d.getFullYear();
-        document.getElementById('sumReportTitle').innerText = `RAINFALL REPORT MONTH OF ${mName} ${y}`;
-    }
-}
-
-function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    
-    document.getElementById(tabId).classList.add('active');
-    document.getElementById(`btn-${tabId}`).classList.add('active');
-
-    const saveBtn = document.getElementById('saveBtn');
-    const submitBtn = document.getElementById('submitBtn');
-
-    if (saveBtn && submitBtn) {
-        if (tabId === 'tabSummary' || tabId === 'tabSettings') {
-            saveBtn.style.display = 'none';
-            submitBtn.style.display = 'none';
-        } else {
-            saveBtn.style.display = 'inline-block';
-            submitBtn.style.display = 'inline-block';
+        if (document.getElementById('sumReportTitle')) {
+            document.getElementById('sumReportTitle').innerText = `RAINFALL REPORT MONTH OF ${mName} ${y}`;
         }
     }
-
-    if (tabId === 'tabSettings') {
-        fetchActivityLogs();
-        renderMillSettingsUI();
-    }
 }
 
-// Print Active Tab Only
-// Tab-Isolated Print Function
+// Print Active Tab Only Function
 function printActiveTab() {
     const activeTab = document.querySelector('.tab-content.active');
     
     if (!activeTab) {
-        alert("Please select Tab 1, 2, or Overall Summary first.");
+        alert("Please select a tab first.");
         return;
     }
 
@@ -1115,11 +1126,9 @@ function printActiveTab() {
         return;
     }
 
-    // Force DOM repaint before calling window.print
-    setTimeout(() => {
-        window.print();
-    }, 100);
+    window.print();
 }
+
 // Event listener for Settings Mill Estate filter
 document.addEventListener('change', (e) => {
     if (e.target && e.target.id === 'millEstateSelect') {
@@ -1130,6 +1139,12 @@ document.addEventListener('change', (e) => {
 // Initialization on window load
 window.onload = async function() {
     initKeyInTables();
+    
+    // Ensure default active tab is assigned
+    if (!document.querySelector('.tab-content.active')) {
+        switchTab('tab1');
+    }
+
     await fetchEstates();        
     await fetchUserProfiles();   
     await fetchMills();
