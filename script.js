@@ -382,7 +382,7 @@ async function loadFromCloud() {
         });
     }
 
-    // Populate Previous Month columns strictly DAY-BY-DAY
+    // Populate Previous Month columns day-by-day according to matching date
     for (let d = 1; d <= 31; d++) {
         let pRow = prevDataMap[d];
 
