@@ -287,7 +287,7 @@ async function submitMonthlyReport() {
     const { error } = await supabaseClient
         .from('daily_records')
         .update({ status: 'submitted', prepared_by: prepName })
-        .eq('estate_name', estate)
+        .ilike('estate_name', estate)
         .gte('record_date', `${monthYear}-01`)
         .lte('record_date', `${monthYear}-${String(lastDay).padStart(2, '0')}`);
 
@@ -321,7 +321,7 @@ async function approveMonthlyReport() {
     const { error } = await supabaseClient
         .from('daily_records')
         .update({ status: 'approved', approved_by: appName })
-        .eq('estate_name', estate)
+        .ilike('estate_name', estate)
         .gte('record_date', `${monthYear}-01`)
         .lte('record_date', `${monthYear}-${String(lastDay).padStart(2, '0')}`);
 
@@ -363,21 +363,23 @@ async function loadFromCloud() {
     const prevMonthStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
     const prevLastDay = new Date(prevYear, prevMonth, 0).getDate();
 
-    // 2. Query Current Month Records
+    // 2. Query Current Month Records (Case-insensitive matching for estate_name)
     const { data: currentData } = await supabaseClient
         .from('daily_records')
         .select('*')
-        .eq('estate_name', estate)
+        .ilike('estate_name', estate)
         .gte('record_date', `${monthYear}-01`)
         .lte('record_date', `${monthYear}-${lastDayStr}`);
 
-    // 3. Query Previous Month Records
-    const { data: prevData } = await supabaseClient
+    // 3. Query Previous Month Records (Case-insensitive matching)
+    const { data: prevData, error: prevErr } = await supabaseClient
         .from('daily_records')
         .select('*')
-        .eq('estate_name', estate)
+        .ilike('estate_name', estate)
         .gte('record_date', `${prevMonthStr}-01`)
         .lte('record_date', `${prevMonthStr}-${String(prevLastDay).padStart(2, '0')}`);
+
+    if (prevErr) console.error("Previous Month Query Error:", prevErr);
 
     // Map previous month records by day (Day 1 to 31)
     let prevDataMap = {};
