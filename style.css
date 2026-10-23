@@ -221,7 +221,13 @@ body {
     color: #0f172a;
 }
 
-/* Strict Landscape Printing for Active Tab Only */
+.print-only {
+    display: none;
+}
+
+/* ==========================================================================
+   Strict Landscape Print Rules
+   ========================================================================== */
 @media print {
     @page {
         size: landscape;
@@ -234,8 +240,10 @@ body {
         margin: 0 !important;
         padding: 0 !important;
         overflow: visible !important;
+        font-family: Arial, sans-serif !important;
     }
 
+    /* Hide Controls & Navigation */
     .header-card, 
     .nav-tabs, 
     #loginOverlay, 
@@ -244,7 +252,9 @@ body {
     button, 
     .btn-delete, 
     .btn-edit,
-    .login-overlay {
+    .login-overlay,
+    .no-print,
+    div[style*="justify-content: flex-end"] {
         display: none !important;
     }
 
@@ -257,11 +267,40 @@ body {
         width: 100% !important;
     }
 
+    /* Show Print Header and Footer */
+    .print-only {
+        display: block !important;
+    }
+
+    .print-header-block {
+        margin-bottom: 15px;
+    }
+
+    .print-company-title {
+        text-align: center;
+        font-size: 16pt;
+        font-weight: bold;
+        letter-spacing: 1px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        border-bottom: 2px solid #000;
+        padding-bottom: 4px;
+    }
+
+    .print-meta-grid {
+        display: flex;
+        justify-content: space-between;
+        font-size: 10pt;
+        font-weight: bold;
+    }
+
+    /* Report Table Format */
     .report-table {
         width: 100% !important;
         border-collapse: collapse !important;
         box-shadow: none !important;
-        font-size: 8.5pt !important;
+        font-size: 8pt !important;
+        margin-bottom: 15px !important;
     }
 
     .report-table tr {
@@ -290,5 +329,27 @@ body {
         font-weight: bold !important;
         text-align: center !important;
         box-shadow: none !important;
+        color: #000000 !important;
+    }
+
+    /* Print Signature Footer Block */
+    .print-footer-block {
+        margin-top: 20px;
+        page-break-inside: avoid !important;
+    }
+
+    .print-end-label {
+        text-align: center;
+        font-size: 9pt;
+        font-weight: bold;
+        border-top: 1px dashed #000;
+        padding-top: 4px;
+        margin-bottom: 25px;
+    }
+
+    .print-signature-grid {
+        display: flex;
+        justify-content: space-between;
+        font-size: 10pt;
     }
 }
