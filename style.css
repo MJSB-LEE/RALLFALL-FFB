@@ -1,4 +1,3 @@
-
 * {
     box-sizing: border-box;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -227,11 +226,11 @@ body {
 }
 
 /* ==========================================================================
-   COLORFUL EXECUTIVE FULL-PAGE A4 LANDSCAPE PRINT ENGINE
+   COLORFUL EXECUTIVE SINGLE-PAGE A4 PORTRAIT PRINT ENGINE
    ========================================================================== */
 @media print {
     @page {
-        size: A4 landscape;
+        size: A4 portrait;
         margin: 0 !important;
     }
 
@@ -250,7 +249,7 @@ body {
         height: 100vh !important;
         max-height: 100vh !important;
         margin: 0 !important;
-        padding: 5mm 10mm !important;
+        padding: 4mm 6mm !important;
         background: #ffffff !important;
         color: #0f172a !important;
         font-family: Arial, Helvetica, sans-serif !important;
@@ -302,18 +301,18 @@ body {
 
     /* Executive Styled Colorful Header Box */
     .print-header-block {
-        margin-bottom: 5px !important;
-        border: 2px solid #1e3a8a;
+        margin-bottom: 4px !important;
+        border: 1.5px solid #1e3a8a;
         border-radius: 4px;
-        padding: 5px 12px;
+        padding: 4px 8px;
         background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
     }
 
     .print-company-title {
         text-align: center;
-        font-size: 15pt;
+        font-size: 13pt;
         font-weight: 900;
-        letter-spacing: 1.5px;
+        letter-spacing: 1.2px;
         margin-bottom: 1px;
         text-transform: uppercase;
         color: #1e3a8a !important;
@@ -321,11 +320,11 @@ body {
 
     .print-sub-title {
         text-align: center;
-        font-size: 9.5pt;
+        font-size: 8.5pt;
         font-weight: bold;
-        letter-spacing: 1px;
-        margin-bottom: 5px;
-        padding-bottom: 3px;
+        letter-spacing: 0.8px;
+        margin-bottom: 3px;
+        padding-bottom: 2px;
         border-bottom: 2px solid #2563eb;
         color: #1e40af !important;
     }
@@ -333,19 +332,19 @@ body {
     .print-meta-grid {
         display: flex;
         justify-content: space-between;
-        font-size: 8.5pt;
+        font-size: 7.5pt;
         font-weight: bold;
         color: #1e293b !important;
         padding: 0 2px;
     }
 
-    /* Table Layout - Proportionally Fills the Page Height */
+    /* Table Layout - Tight Portrait Fit */
     .report-table {
         width: 100% !important;
         border-collapse: collapse !important;
         box-shadow: none !important;
-        font-size: 7pt !important;
-        margin-bottom: 6px !important;
+        font-size: 5.8pt !important;
+        margin-bottom: 4px !important;
     }
 
     .report-table tr {
@@ -361,16 +360,16 @@ body {
         background-color: #1e293b !important;
         color: #ffffff !important;
         border: 1px solid #0f172a !important;
-        padding: 2.5px 2px !important;
+        padding: 2px 1px !important;
         font-weight: bold !important;
         text-transform: uppercase !important;
     }
 
     .report-table td {
         border: 1px solid #94a3b8 !important;
-        padding: 1.2px 2px !important;
+        padding: 0.6px 1px !important;
         text-align: center !important;
-        line-height: 1.1 !important;
+        line-height: 1 !important;
     }
 
     /* Strip input box borders in print */
@@ -389,7 +388,7 @@ body {
         padding: 0 !important;
         margin: 0 !important;
         height: auto !important;
-        font-size: 7pt !important;
+        font-size: 5.8pt !important;
     }
 
     /* Readonly cell accent */
@@ -400,8 +399,8 @@ body {
 
     /* Colorful Signature Footer Block */
     .print-footer-block {
-        margin-top: 6px !important;
-        padding-top: 6px !important;
+        margin-top: 4px !important;
+        padding-top: 4px !important;
         border-top: 1.5px solid #cbd5e1;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
@@ -411,14 +410,14 @@ body {
         display: flex !important;
         justify-content: space-between !important;
         width: 100% !important;
-        font-size: 8.5pt !important;
+        font-size: 7.5pt !important;
         font-weight: bold !important;
         color: #0f172a !important;
-        padding: 0 8px;
+        padding: 0 4px;
     }
 
     .sig-box {
-        width: 45%;
+        width: 48%;
     }
 
     .text-right {
