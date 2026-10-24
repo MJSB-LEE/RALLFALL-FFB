@@ -226,7 +226,7 @@ body {
 }
 
 /* ==========================================================================
-   STRICT 1-PAGE A4 LANDSCAPE PRINT ENGINE (FIXES SHEET OVERFLOW)
+   CODE-ONLY STRICT 1-PAGE A4 LANDSCAPE PRINT ENGINE
    ========================================================================== */
 @media print {
     @page {
@@ -249,7 +249,7 @@ body {
         height: 100vh !important;
         max-height: 100vh !important;
         margin: 0 !important;
-        padding: 2mm 6mm !important;
+        padding: 3mm 6mm !important;
         background: #ffffff !important;
         color: #000000 !important;
         font-family: Arial, Helvetica, sans-serif !important;
@@ -259,7 +259,7 @@ body {
         print-color-adjust: exact !important;
     }
 
-    /* Completely hide Web UI components from print renderer */
+    /* Completely hide Web Application Interface Elements */
     .header-card, 
     .nav-tabs, 
     #loginOverlay, 
@@ -279,12 +279,12 @@ body {
         border: none !important;
     }
 
-    /* Hide inactive tabs */
+    /* Hide Inactive Tabs strictly */
     div.tab-content {
         display: none !important;
     }
 
-    /* Show active tab only */
+    /* Show Only Active Tab */
     div.tab-content.active {
         display: block !important;
         width: 100% !important;
@@ -299,15 +299,15 @@ body {
 
     /* Executive Styled Header Box */
     .print-header-block {
-        margin-bottom: 2px !important;
+        margin-bottom: 3px !important;
         border: 1.5px solid #000000;
-        padding: 2px 6px;
+        padding: 3px 6px;
         background-color: #f8fafc !important;
     }
 
     .print-company-title {
         text-align: center;
-        font-size: 12pt;
+        font-size: 13pt;
         font-weight: 900;
         letter-spacing: 1.2px;
         margin-bottom: 1px;
@@ -317,11 +317,11 @@ body {
 
     .print-sub-title {
         text-align: center;
-        font-size: 8pt;
+        font-size: 8.5pt;
         font-weight: bold;
         letter-spacing: 0.8px;
-        margin-bottom: 2px;
-        padding-bottom: 1px;
+        margin-bottom: 3px;
+        padding-bottom: 2px;
         border-bottom: 2px double #000000;
         color: #334155;
     }
@@ -334,12 +334,32 @@ body {
         padding: 0 2px;
     }
 
-    /* Compact Single-Page Table */
+    /* Strip all Chrome form inputs styling during print */
+    .report-table input, 
+    .report-table select {
+        border: none !important;
+        background: transparent !important;
+        outline: none !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        box-shadow: none !important;
+        font-weight: bold !important;
+        text-align: center !important;
+        color: #000000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        height: auto !important;
+        font-size: 6.2pt !important;
+    }
+
+    /* Compact Table Layout */
     .report-table {
         width: 100% !important;
         border-collapse: collapse !important;
-        font-size: 6pt !important;
-        margin-bottom: 2px !important;
+        box-shadow: none !important;
+        font-size: 6.2pt !important;
+        margin-bottom: 3px !important;
     }
 
     .report-table tr {
@@ -358,28 +378,14 @@ body {
 
     .report-table td {
         border: 1px solid #000000 !important;
-        padding: 0px 1px !important;
+        padding: 0.2px 1px !important;
         text-align: center !important;
-        line-height: 0.9 !important;
+        line-height: 0.95 !important;
     }
 
-    input, select {
-        border: none !important;
-        background: transparent !important;
-        appearance: none !important;
-        -webkit-appearance: none !important;
-        font-weight: bold !important;
-        text-align: center !important;
-        color: #000000 !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        height: auto !important;
-        font-size: 6pt !important;
-    }
-
-    /* Compact Signature Section */
+    /* Side-by-Side Signature Footer */
     .print-footer-block {
-        margin-top: 2px !important;
+        margin-top: 4px !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -388,7 +394,7 @@ body {
         display: flex !important;
         justify-content: space-between !important;
         width: 100% !important;
-        font-size: 7pt !important;
+        font-size: 7.5pt !important;
         font-weight: bold !important;
         padding: 0 4px;
     }
