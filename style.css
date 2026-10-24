@@ -226,7 +226,7 @@ body {
 }
 
 /* ==========================================================================
-   CODE-ONLY STRICT 1-PAGE A4 LANDSCAPE PRINT ENGINE
+   COLORFUL EXECUTIVE FULL-PAGE A4 LANDSCAPE PRINT ENGINE
    ========================================================================== */
 @media print {
     @page {
@@ -249,9 +249,9 @@ body {
         height: 100vh !important;
         max-height: 100vh !important;
         margin: 0 !important;
-        padding: 3mm 6mm !important;
+        padding: 5mm 10mm !important;
         background: #ffffff !important;
-        color: #000000 !important;
+        color: #0f172a !important;
         font-family: Arial, Helvetica, sans-serif !important;
         overflow: hidden !important;
         box-sizing: border-box !important;
@@ -286,7 +286,9 @@ body {
 
     /* Show Only Active Tab */
     div.tab-content.active {
-        display: block !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
         width: 100% !important;
         height: 100% !important;
         page-break-after: avoid !important;
@@ -297,44 +299,80 @@ body {
         display: block !important;
     }
 
-    /* Executive Styled Header Box */
+    /* Executive Styled Colorful Header Box */
     .print-header-block {
-        margin-bottom: 3px !important;
-        border: 1.5px solid #000000;
-        padding: 3px 6px;
-        background-color: #f8fafc !important;
+        margin-bottom: 5px !important;
+        border: 2px solid #1e3a8a;
+        border-radius: 4px;
+        padding: 5px 12px;
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
     }
 
     .print-company-title {
         text-align: center;
-        font-size: 13pt;
+        font-size: 15pt;
         font-weight: 900;
-        letter-spacing: 1.2px;
+        letter-spacing: 1.5px;
         margin-bottom: 1px;
         text-transform: uppercase;
-        color: #0f172a;
+        color: #1e3a8a !important;
     }
 
     .print-sub-title {
         text-align: center;
-        font-size: 8.5pt;
+        font-size: 9.5pt;
         font-weight: bold;
-        letter-spacing: 0.8px;
-        margin-bottom: 3px;
-        padding-bottom: 2px;
-        border-bottom: 2px double #000000;
-        color: #334155;
+        letter-spacing: 1px;
+        margin-bottom: 5px;
+        padding-bottom: 3px;
+        border-bottom: 2px solid #2563eb;
+        color: #1e40af !important;
     }
 
     .print-meta-grid {
         display: flex;
         justify-content: space-between;
-        font-size: 7.5pt;
+        font-size: 8.5pt;
         font-weight: bold;
+        color: #1e293b !important;
         padding: 0 2px;
     }
 
-    /* Strip all Chrome form inputs styling during print */
+    /* Table Layout - Proportionally Fills the Page Height */
+    .report-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        box-shadow: none !important;
+        font-size: 7pt !important;
+        margin-bottom: 6px !important;
+    }
+
+    .report-table tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .report-table tr:nth-child(even) {
+        background-color: #f8fafc !important;
+    }
+
+    .report-table th {
+        background-color: #1e293b !important;
+        color: #ffffff !important;
+        border: 1px solid #0f172a !important;
+        padding: 2.5px 2px !important;
+        font-weight: bold !important;
+        text-transform: uppercase !important;
+    }
+
+    .report-table td {
+        border: 1px solid #94a3b8 !important;
+        padding: 1.2px 2px !important;
+        text-align: center !important;
+        line-height: 1.1 !important;
+    }
+
+    /* Strip input box borders in print */
     .report-table input, 
     .report-table select {
         border: none !important;
@@ -346,46 +384,24 @@ body {
         box-shadow: none !important;
         font-weight: bold !important;
         text-align: center !important;
-        color: #000000 !important;
+        color: #0f172a !important;
         padding: 0 !important;
         margin: 0 !important;
         height: auto !important;
-        font-size: 6.2pt !important;
+        font-size: 7pt !important;
     }
 
-    /* Compact Table Layout */
-    .report-table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-        box-shadow: none !important;
-        font-size: 6.2pt !important;
-        margin-bottom: 3px !important;
+    /* Readonly cell accent */
+    .readonly-cell {
+        background-color: #f1f5f9 !important;
+        color: #334155 !important;
     }
 
-    .report-table tr {
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-    }
-
-    .report-table th {
-        background-color: #e2e8f0 !important;
-        color: #000000 !important;
-        border: 1px solid #000000 !important;
-        padding: 1px 1px !important;
-        font-weight: bold !important;
-        text-transform: uppercase !important;
-    }
-
-    .report-table td {
-        border: 1px solid #000000 !important;
-        padding: 0.2px 1px !important;
-        text-align: center !important;
-        line-height: 0.95 !important;
-    }
-
-    /* Side-by-Side Signature Footer */
+    /* Colorful Signature Footer Block */
     .print-footer-block {
-        margin-top: 4px !important;
+        margin-top: 6px !important;
+        padding-top: 6px !important;
+        border-top: 1.5px solid #cbd5e1;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -394,9 +410,10 @@ body {
         display: flex !important;
         justify-content: space-between !important;
         width: 100% !important;
-        font-size: 7.5pt !important;
+        font-size: 8.5pt !important;
         font-weight: bold !important;
-        padding: 0 4px;
+        color: #0f172a !important;
+        padding: 0 8px;
     }
 
     .sig-box {
