@@ -226,7 +226,7 @@ body {
 }
 
 /* ==========================================================================
-   EXECUTIVE FULL-PAGE A4 PORTRAIT PRINT ENGINE (LARGE SIGNATURE AREA)
+   A4 PORTRAIT PRINT ENGINE (SIGNATURE MOVED DOWN TO PAGE BOTTOM)
    ========================================================================== */
 @media print {
     @page {
@@ -281,7 +281,7 @@ body {
     div.tab-content.active {
         display: flex !important;
         flex-direction: column !important;
-        justify-content: space-between !important;
+        justify-content: flex-start !important; /* Stack elements naturally top to bottom */
         width: 100% !important;
         height: 100% !important;
         page-break-after: avoid !important;
@@ -292,20 +292,20 @@ body {
         display: block !important;
     }
 
-    /* Executive Header */
+    /* Header Styling */
     .print-header-block {
         margin-bottom: 6px !important;
         border: 2px solid #1e3a8a;
         border-radius: 6px;
-        padding: 8px 14px;
+        padding: 6px 12px;
         background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
     }
 
     .print-company-title {
         text-align: center;
-        font-size: 16pt;
+        font-size: 15pt;
         font-weight: 900;
-        letter-spacing: 1.5px;
+        letter-spacing: 1.2px;
         margin-bottom: 2px;
         text-transform: uppercase;
         color: #1e3a8a !important;
@@ -313,11 +313,11 @@ body {
 
     .print-sub-title {
         text-align: center;
-        font-size: 10pt;
+        font-size: 9.5pt;
         font-weight: bold;
-        letter-spacing: 1px;
-        margin-bottom: 6px;
-        padding-bottom: 4px;
+        letter-spacing: 0.8px;
+        margin-bottom: 4px;
+        padding-bottom: 3px;
         border-bottom: 2px solid #2563eb;
         color: #1e40af !important;
     }
@@ -325,24 +325,24 @@ body {
     .print-meta-grid {
         display: flex;
         justify-content: space-between;
-        font-size: 9.5pt;
+        font-size: 8.5pt;
         font-weight: bold;
         color: #1e293b !important;
         padding: 0 4px;
     }
 
-    /* Full-Page Stretched Table Layout */
+    /* Compact Table Layout (Leaves room at bottom) */
     .report-table {
         width: 100% !important;
         border-collapse: collapse !important;
         box-shadow: none !important;
-        font-size: 8.5pt !important;
-        margin-bottom: 4px !important;
-        flex-grow: 1 !important;
+        font-size: 7.8pt !important;
+        margin-bottom: 0 !important;
+        flex-grow: 0 !important; /* Prevents table from over-stretching */
     }
 
     .report-table tr {
-        height: 1.95vh !important;
+        height: 1.6vh !important; /* Reduced row height */
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -355,15 +355,15 @@ body {
         background-color: #1e293b !important;
         color: #ffffff !important;
         border: 1px solid #0f172a !important;
-        padding: 4px 2px !important;
+        padding: 3px 2px !important;
         font-weight: bold !important;
         text-transform: uppercase !important;
-        font-size: 8.5pt !important;
+        font-size: 8pt !important;
     }
 
     .report-table td {
         border: 1px solid #64748b !important;
-        padding: 1px 2px !important;
+        padding: 0.5px 2px !important;
         text-align: center !important;
         vertical-align: middle !important;
     }
@@ -383,7 +383,7 @@ body {
         padding: 0 !important;
         margin: 0 !important;
         height: 100% !important;
-        font-size: 8.5pt !important;
+        font-size: 7.8pt !important;
     }
 
     .readonly-cell {
@@ -391,11 +391,11 @@ body {
         color: #334155 !important;
     }
 
-    /* Large & Spacious Prepared By / Approved By Signature Section */
+    /* Signature Section Pushed Down */
     .print-footer-block {
-        margin-top: auto !important;
+        margin-top: auto !important; /* Automatically anchors to the very bottom of A4 */
         padding-top: 10px !important;
-        border-top: 2px solid #1e293b;
+        padding-bottom: 5mm !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -404,30 +404,14 @@ body {
         display: flex !important;
         justify-content: space-between !important;
         width: 100% !important;
-        font-size: 11pt !important;
+        font-size: 8.5pt !important;
         font-weight: bold !important;
         color: #0f172a !important;
-        padding: 0 10px;
+        padding: 0 4px;
     }
 
     .sig-box {
         width: 48%;
-    }
-
-    /* Generous vertical gap so signatures don't overlap the text */
-    .sig-box span,
-    .sig-box strong {
-        font-size: 11pt !important;
-        letter-spacing: 0.5px;
-    }
-
-    .sig-line-area {
-        margin-top: 45px !important; /* Spacious area for physical handwriting */
-        border-top: 1.5px dashed #475569;
-        padding-top: 4px;
-        font-size: 9.5pt !important;
-        font-weight: 600;
-        color: #334155 !important;
     }
 
     .text-right {
