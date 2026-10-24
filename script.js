@@ -583,7 +583,7 @@ async function loadFromCloud() {
         const ffbPmElem = document.getElementById(`s1_ffb_pm_${d}`);
         if (ffbPmElem) {
             let ffbVal = pRow && pRow.ffb1 !== null ? parseFloat(pRow.ffb1) : 0;
-            ffbPmElem.value = ffbVal > 0 ? ffbVal.toFixed(2) : '';
+            ffbVal.value = ffbVal > 0 ? ffbVal.toFixed(2) : '';
         }
 
         for (let p = 1; p <= 4; p++) {
@@ -1107,11 +1107,15 @@ function calcS2() {
 function updateSummaryHeader() {
     let val = document.getElementById('bulanTahun')?.value;
     if (val) {
-        let d = new Date(val + "-01");
-        let mName = d.toLocaleString('en', { month: 'short' }).toUpperCase();
-        let y = d.getFullYear();
-        if (document.getElementById('sumReportTitle')) {
-            document.getElementById('sumReportTitle').innerText = `RAINFALL REPORT MONTH OF ${mName} ${y}`;
+        let parts = val.split('-');
+        if (parts.length === 2) {
+            let y = parts[0];
+            let m = parseInt(parts[1], 10) - 1;
+            let d = new Date(y, m, 1);
+            let mName = d.toLocaleString('en', { month: 'short' }).toUpperCase();
+            if (document.getElementById('sumReportTitle')) {
+                document.getElementById('sumReportTitle').innerText = `RAINFALL REPORT MONTH OF ${mName} ${y}`;
+            }
         }
     }
 }
@@ -1135,11 +1139,13 @@ function printActiveTab() {
     const prepVal = prepInputVal || fallbackUser;
     const appVal = appInputVal || 'Pending Manager Approval';
 
-    let formattedMonth = monthVal;
+    let formattedMonth = '-';
     if (monthVal && monthVal.includes('-')) {
         const [y, m] = monthVal.split('-');
-        const dateObj = new Date(y, parseInt(m, 10) - 1, 1);
-        formattedMonth = `${dateObj.toLocaleString('en', { month: 'long' }).toUpperCase()} ${y}`;
+        const dateObj = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
+        if (!isNaN(dateObj.getTime())) {
+            formattedMonth = `${dateObj.toLocaleString('en', { month: 'long' }).toUpperCase()} ${y}`;
+        }
     }
 
     // Populate Print Header & Footer Elements
