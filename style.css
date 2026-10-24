@@ -226,7 +226,7 @@ body {
 }
 
 /* ==========================================================================
-   AUTOMATIC FULL-PAGE A4 PORTRAIT PRINT ENGINE
+   AUTOMATIC FULL-PAGE A4 PORTRAIT PRINT ENGINE (LARGE SIGNATURE AREA)
    ========================================================================== */
 @media print {
     @page {
@@ -336,13 +336,13 @@ body {
         width: 100% !important;
         border-collapse: collapse !important;
         box-shadow: none !important;
-        font-size: 9pt !important;
-        margin-bottom: 6px !important;
+        font-size: 8.5pt !important;
+        margin-bottom: 4px !important;
         flex-grow: 1 !important;
     }
 
     .report-table tr {
-        height: 2.3vh !important; /* Automatic CSS row height expansion */
+        height: 2.1vh !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -358,7 +358,7 @@ body {
         padding: 4px 2px !important;
         font-weight: bold !important;
         text-transform: uppercase !important;
-        font-size: 9pt !important;
+        font-size: 8.5pt !important;
     }
 
     .report-table td {
@@ -383,7 +383,7 @@ body {
         padding: 0 !important;
         margin: 0 !important;
         height: 100% !important;
-        font-size: 9pt !important;
+        font-size: 8.5pt !important;
     }
 
     .readonly-cell {
@@ -391,11 +391,11 @@ body {
         color: #334155 !important;
     }
 
-    /* Bottom Signature Section Locked to Page Bottom */
+    /* Spacious & Roomy Signature Section */
     .print-footer-block {
         margin-top: auto !important;
-        padding-top: 8px !important;
-        border-top: 1.5px solid #64748b;
+        padding-top: 15px !important;
+        border-top: 2px solid #1e293b;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -404,14 +404,19 @@ body {
         display: flex !important;
         justify-content: space-between !important;
         width: 100% !important;
-        font-size: 9pt !important;
+        font-size: 10.5pt !important;
         font-weight: bold !important;
         color: #0f172a !important;
-        padding: 0 6px;
+        padding: 0 10px;
     }
 
     .sig-box {
-        width: 48%;
+        width: 46%;
+        line-height: 1.6 !important;
+    }
+
+    .sig-box div {
+        margin-top: 25px !important; /* Generous gap for physical handwriting */
     }
 
     .text-right {
