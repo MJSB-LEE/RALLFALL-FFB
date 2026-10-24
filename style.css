@@ -226,7 +226,7 @@ body {
 }
 
 /* ==========================================================================
-   COLORFUL EXECUTIVE SINGLE-PAGE A4 PORTRAIT PRINT ENGINE
+   COLORFUL EXECUTIVE FULL-PAGE A4 PORTRAIT PRINT ENGINE
    ========================================================================== */
 @media print {
     @page {
@@ -249,7 +249,7 @@ body {
         height: 100vh !important;
         max-height: 100vh !important;
         margin: 0 !important;
-        padding: 4mm 6mm !important;
+        padding: 6mm 10mm !important;
         background: #ffffff !important;
         color: #0f172a !important;
         font-family: Arial, Helvetica, sans-serif !important;
@@ -259,7 +259,7 @@ body {
         print-color-adjust: exact !important;
     }
 
-    /* Completely hide Web Application Interface Elements */
+    /* Completely Hide Web Interface Elements */
     .header-card, 
     .nav-tabs, 
     #loginOverlay, 
@@ -279,12 +279,11 @@ body {
         border: none !important;
     }
 
-    /* Hide Inactive Tabs strictly */
+    /* Tab Isolation */
     div.tab-content {
         display: none !important;
     }
 
-    /* Show Only Active Tab */
     div.tab-content.active {
         display: flex !important;
         flex-direction: column !important;
@@ -299,32 +298,32 @@ body {
         display: block !important;
     }
 
-    /* Executive Styled Colorful Header Box */
+    /* Executive Colorful Header Box */
     .print-header-block {
-        margin-bottom: 4px !important;
-        border: 1.5px solid #1e3a8a;
-        border-radius: 4px;
-        padding: 4px 8px;
+        margin-bottom: 8px !important;
+        border: 2px solid #1e3a8a;
+        border-radius: 6px;
+        padding: 8px 14px;
         background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
     }
 
     .print-company-title {
         text-align: center;
-        font-size: 13pt;
+        font-size: 16pt;
         font-weight: 900;
-        letter-spacing: 1.2px;
-        margin-bottom: 1px;
+        letter-spacing: 1.5px;
+        margin-bottom: 2px;
         text-transform: uppercase;
         color: #1e3a8a !important;
     }
 
     .print-sub-title {
         text-align: center;
-        font-size: 8.5pt;
+        font-size: 10pt;
         font-weight: bold;
-        letter-spacing: 0.8px;
-        margin-bottom: 3px;
-        padding-bottom: 2px;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+        padding-bottom: 4px;
         border-bottom: 2px solid #2563eb;
         color: #1e40af !important;
     }
@@ -332,19 +331,20 @@ body {
     .print-meta-grid {
         display: flex;
         justify-content: space-between;
-        font-size: 7.5pt;
+        font-size: 9pt;
         font-weight: bold;
         color: #1e293b !important;
-        padding: 0 2px;
+        padding: 0 4px;
     }
 
-    /* Table Layout - Tight Portrait Fit */
+    /* Full-Height Stretched Table Layout */
     .report-table {
         width: 100% !important;
+        height: 82% !important;
         border-collapse: collapse !important;
         box-shadow: none !important;
-        font-size: 5.8pt !important;
-        margin-bottom: 4px !important;
+        font-size: 8pt !important;
+        margin-bottom: 8px !important;
     }
 
     .report-table tr {
@@ -360,19 +360,19 @@ body {
         background-color: #1e293b !important;
         color: #ffffff !important;
         border: 1px solid #0f172a !important;
-        padding: 2px 1px !important;
+        padding: 4px 2px !important;
         font-weight: bold !important;
         text-transform: uppercase !important;
+        font-size: 8.5pt !important;
     }
 
     .report-table td {
-        border: 1px solid #94a3b8 !important;
-        padding: 0.6px 1px !important;
+        border: 1px solid #64748b !important;
+        padding: 2.5px 2px !important;
         text-align: center !important;
-        line-height: 1 !important;
+        line-height: 1.2 !important;
     }
 
-    /* Strip input box borders in print */
     .report-table input, 
     .report-table select {
         border: none !important;
@@ -388,19 +388,18 @@ body {
         padding: 0 !important;
         margin: 0 !important;
         height: auto !important;
-        font-size: 5.8pt !important;
+        font-size: 8pt !important;
     }
 
-    /* Readonly cell accent */
     .readonly-cell {
         background-color: #f1f5f9 !important;
         color: #334155 !important;
     }
 
-    /* Colorful Signature Footer Block */
+    /* Bottom Signature Section */
     .print-footer-block {
-        margin-top: 4px !important;
-        padding-top: 4px !important;
+        margin-top: auto !important;
+        padding-top: 8px !important;
         border-top: 1.5px solid #cbd5e1;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
@@ -410,10 +409,10 @@ body {
         display: flex !important;
         justify-content: space-between !important;
         width: 100% !important;
-        font-size: 7.5pt !important;
+        font-size: 8.5pt !important;
         font-weight: bold !important;
         color: #0f172a !important;
-        padding: 0 4px;
+        padding: 0 6px;
     }
 
     .sig-box {
