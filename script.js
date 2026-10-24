@@ -1128,7 +1128,6 @@ function printActiveTab() {
     const estVal = document.getElementById('ladangSelect')?.value || '-';
     const monthVal = document.getElementById('bulanTahun')?.value || '-';
     
-    // Extract dynamic user values from inputs
     const prepInputVal = document.getElementById('preparedByInput')?.value;
     const appInputVal = document.getElementById('approvedByInput')?.value;
 
@@ -1149,9 +1148,13 @@ function printActiveTab() {
     document.querySelectorAll('.lblPreparedBy').forEach(el => el.innerText = prepVal);
     document.querySelectorAll('.lblApprovedBy').forEach(el => el.innerText = appVal);
 
+    if (document.activeElement) {
+        document.activeElement.blur();
+    }
+
     setTimeout(() => {
         window.print();
-    }, 100);
+    }, 200);
 }
 
 document.addEventListener('change', (e) => {
