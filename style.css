@@ -226,7 +226,7 @@ body {
 }
 
 /* ==========================================================================
-   FULL-PAGE A4 PORTRAIT PRINT ENGINE WITH TALL SIGNATURE GAP
+   FULL-PAGE A4 PORTRAIT PRINT ENGINE (STRETCHED TO BOTTOM)
    ========================================================================== */
 @media print {
     @page {
@@ -243,7 +243,7 @@ body {
         width: 100% !important;
         height: 100% !important;
         margin: 0 !important;
-        padding: 6mm 8mm !important;
+        padding: 5mm 8mm !important;
         background: #ffffff !important;
         color: #0f172a !important;
         font-family: Arial, Helvetica, sans-serif !important;
@@ -331,18 +331,18 @@ body {
         padding: 0 4px;
     }
 
-    /* Full Page Table Layout */
+    /* Stretches the 31 rows taller (~5 extra cell heights total) */
     .report-table {
         width: 100% !important;
         border-collapse: collapse !important;
         box-shadow: none !important;
-        font-size: 8pt !important;
+        font-size: 8.2pt !important;
         margin-bottom: 0 !important;
         flex-grow: 1 !important;
     }
 
     .report-table tr {
-        height: 2.1vh !important; /* Stretches rows to fill the page */
+        height: 2.3vh !important; /* Stretches cells vertically */
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -383,7 +383,7 @@ body {
         padding: 0 !important;
         margin: 0 !important;
         height: 100% !important;
-        font-size: 8pt !important;
+        font-size: 8.2pt !important;
     }
 
     .readonly-cell {
@@ -391,11 +391,11 @@ body {
         color: #334155 !important;
     }
 
-    /* Signature Section with Space for Signing */
+    /* Signature Section Anchored Near Page Bottom */
     .print-footer-block {
-        margin-top: 12px !important;
-        padding-top: 6px !important;
-        padding-bottom: 4mm !important;
+        margin-top: auto !important;
+        padding-top: 8px !important;
+        padding-bottom: 2mm !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -412,13 +412,6 @@ body {
 
     .sig-box {
         width: 48%;
-    }
-
-    /* Adds big space inside the signature line so people can physically sign above the name */
-    .sig-box .lblPreparedBy,
-    .sig-box .lblApprovedBy {
-        display: inline-block;
-        margin-top: 40px !important; /* Tall signature room */
     }
 
     .text-right {
