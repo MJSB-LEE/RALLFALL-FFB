@@ -226,28 +226,40 @@ body {
 }
 
 /* ==========================================================================
-   Code-Only Strict Single-Page A4 Landscape Print Engine
+   STRICT 1-PAGE A4 LANDSCAPE PRINT ENGINE (ELIMINATES BLANK PAGE 2)
    ========================================================================== */
 @media print {
-    /* Margin 0 suppresses browser auto header/footer (Date, URL, 1/1) */
     @page {
         size: A4 landscape;
         margin: 0 !important;
     }
 
-    html, body {
+    *, *:before, *:after {
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+
+    html {
+        height: 100% !important;
+        overflow: hidden !important;
+    }
+
+    body {
         width: 100vw !important;
         height: 100vh !important;
+        max-height: 100vh !important;
         margin: 0 !important;
-        padding: 5mm 8mm !important;
+        padding: 4mm 8mm !important;
         background: #ffffff !important;
         color: #000000 !important;
         font-family: Arial, Helvetica, sans-serif !important;
         overflow: hidden !important;
         box-sizing: border-box !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
 
-    /* Hide Web Application Interface Elements */
+    /* Completely hide Web UI components from print renderer */
     .header-card, 
     .nav-tabs, 
     #loginOverlay, 
@@ -261,36 +273,43 @@ body {
     .no-print,
     div[style*="justify-content: flex-end"] {
         display: none !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
     }
 
+    /* Hide inactive tabs */
     div.tab-content {
         display: none !important;
     }
 
+    /* Show active tab only */
     div.tab-content.active {
         display: block !important;
         width: 100% !important;
+        height: 100% !important;
+        page-break-after: avoid !important;
+        break-after: avoid !important;
     }
 
     .print-only {
         display: block !important;
     }
 
-    /* Prettier Executive Corporate Header Box */
+    /* Executive Styled Header Box */
     .print-header-block {
-        margin-bottom: 4px !important;
+        margin-bottom: 3px !important;
         border: 1.5px solid #000000;
-        padding: 4px 8px;
+        padding: 3px 6px;
         background-color: #f8fafc !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
     }
 
     .print-company-title {
         text-align: center;
-        font-size: 14pt;
+        font-size: 13pt;
         font-weight: 900;
-        letter-spacing: 1.5px;
+        letter-spacing: 1.2px;
         margin-bottom: 1px;
         text-transform: uppercase;
         color: #0f172a;
@@ -298,10 +317,10 @@ body {
 
     .print-sub-title {
         text-align: center;
-        font-size: 9pt;
+        font-size: 8.5pt;
         font-weight: bold;
         letter-spacing: 0.8px;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
         padding-bottom: 2px;
         border-bottom: 2px double #000000;
         color: #334155;
@@ -310,22 +329,22 @@ body {
     .print-meta-grid {
         display: flex;
         justify-content: space-between;
-        font-size: 8pt;
+        font-size: 7.5pt;
         font-weight: bold;
         padding: 0 2px;
     }
 
-    /* Ultra-Compact Table to Ensure 1-Page Fit */
+    /* Compact Single-Page Table */
     .report-table {
         width: 100% !important;
         border-collapse: collapse !important;
-        box-shadow: none !important;
-        font-size: 6.5pt !important;
-        margin-bottom: 4px !important;
+        font-size: 6.2pt !important;
+        margin-bottom: 3px !important;
     }
 
     .report-table tr {
         page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
 
     .report-table th {
@@ -335,15 +354,13 @@ body {
         padding: 1px 1px !important;
         font-weight: bold !important;
         text-transform: uppercase !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
     }
 
     .report-table td {
         border: 1px solid #000000 !important;
-        padding: 0.4px 1px !important;
+        padding: 0.2px 1px !important;
         text-align: center !important;
-        line-height: 1 !important;
+        line-height: 0.95 !important;
     }
 
     input, select {
@@ -353,25 +370,25 @@ body {
         -webkit-appearance: none !important;
         font-weight: bold !important;
         text-align: center !important;
-        box-shadow: none !important;
         color: #000000 !important;
         padding: 0 !important;
         margin: 0 !important;
         height: auto !important;
-        font-size: 6.5pt !important;
+        font-size: 6.2pt !important;
     }
 
-    /* Signature Footer Block */
+    /* Signature Section */
     .print-footer-block {
-        margin-top: 6px !important;
+        margin-top: 4px !important;
         page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
 
     .print-signature-grid {
         display: flex !important;
         justify-content: space-between !important;
         width: 100% !important;
-        font-size: 8pt !important;
+        font-size: 7.5pt !important;
         font-weight: bold !important;
         padding: 0 4px;
     }
