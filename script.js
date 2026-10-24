@@ -1116,7 +1116,7 @@ function updateSummaryHeader() {
     }
 }
 
-// Clean Executive Print Function
+// Executive Print Handler
 function printActiveTab() {
     const activeTab = document.querySelector('.tab-content.active');
     
@@ -1127,8 +1127,14 @@ function printActiveTab() {
 
     const estVal = document.getElementById('ladangSelect')?.value || '-';
     const monthVal = document.getElementById('bulanTahun')?.value || '-';
-    const prepVal = document.getElementById('preparedByInput')?.value || '-';
-    const appVal = document.getElementById('approvedByInput')?.value || 'Pending Manager Approval';
+    
+    // Extract dynamic user values from inputs
+    const prepInputVal = document.getElementById('preparedByInput')?.value;
+    const appInputVal = document.getElementById('approvedByInput')?.value;
+
+    const fallbackUser = currentUser ? `${currentUser.full_name || currentUser.username} (${currentUser.username})` : 'System Administrator';
+    const prepVal = prepInputVal || fallbackUser;
+    const appVal = appInputVal || 'Pending Manager Approval';
 
     let formattedMonth = monthVal;
     if (monthVal && monthVal.includes('-')) {
@@ -1137,6 +1143,7 @@ function printActiveTab() {
         formattedMonth = `${dateObj.toLocaleString('en', { month: 'long' }).toUpperCase()} ${y}`;
     }
 
+    // Populate Print Header & Footer Elements
     document.querySelectorAll('.lblLocation').forEach(el => el.innerText = estVal);
     document.querySelectorAll('.lblMonth').forEach(el => el.innerText = formattedMonth);
     document.querySelectorAll('.lblPreparedBy').forEach(el => el.innerText = prepVal);
