@@ -1,5 +1,3 @@
-
-
 // Supabase Configuration
 const SUPABASE_URL = 'https://tiwulxrorrmyxtosvzkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_W4-5_riBQWAUBPVtgX8Pcw_WCRET_KF';
@@ -585,7 +583,7 @@ async function loadFromCloud() {
         const ffbPmElem = document.getElementById(`s1_ffb_pm_${d}`);
         if (ffbPmElem) {
             let ffbVal = pRow && pRow.ffb1 !== null ? parseFloat(pRow.ffb1) : 0;
-            ffbVal.value = ffbVal > 0 ? ffbVal.toFixed(2) : '';
+            ffbPmElem.value = ffbVal > 0 ? ffbVal.toFixed(2) : '';
         }
 
         for (let p = 1; p <= 4; p++) {
