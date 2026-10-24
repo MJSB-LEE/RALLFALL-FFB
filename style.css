@@ -226,7 +226,7 @@ body {
 }
 
 /* ==========================================================================
-   AUTOMATIC FULL-PAGE A4 PORTRAIT PRINT ENGINE (LARGE SIGNATURE AREA)
+   EXECUTIVE FULL-PAGE A4 PORTRAIT PRINT ENGINE (LARGE SIGNATURE AREA)
    ========================================================================== */
 @media print {
     @page {
@@ -273,7 +273,7 @@ body {
         border: none !important;
     }
 
-    /* Tab Isolation & Full Height Flexing */
+    /* Tab Isolation */
     div.tab-content {
         display: none !important;
     }
@@ -342,7 +342,7 @@ body {
     }
 
     .report-table tr {
-        height: 2.1vh !important;
+        height: 1.95vh !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -391,10 +391,10 @@ body {
         color: #334155 !important;
     }
 
-    /* Spacious & Roomy Signature Section */
+    /* Large & Spacious Prepared By / Approved By Signature Section */
     .print-footer-block {
         margin-top: auto !important;
-        padding-top: 15px !important;
+        padding-top: 10px !important;
         border-top: 2px solid #1e293b;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
@@ -404,19 +404,30 @@ body {
         display: flex !important;
         justify-content: space-between !important;
         width: 100% !important;
-        font-size: 10.5pt !important;
+        font-size: 11pt !important;
         font-weight: bold !important;
         color: #0f172a !important;
         padding: 0 10px;
     }
 
     .sig-box {
-        width: 46%;
-        line-height: 1.6 !important;
+        width: 48%;
     }
 
-    .sig-box div {
-        margin-top: 25px !important; /* Generous gap for physical handwriting */
+    /* Generous vertical gap so signatures don't overlap the text */
+    .sig-box span,
+    .sig-box strong {
+        font-size: 11pt !important;
+        letter-spacing: 0.5px;
+    }
+
+    .sig-line-area {
+        margin-top: 45px !important; /* Spacious area for physical handwriting */
+        border-top: 1.5px dashed #475569;
+        padding-top: 4px;
+        font-size: 9.5pt !important;
+        font-weight: 600;
+        color: #334155 !important;
     }
 
     .text-right {
