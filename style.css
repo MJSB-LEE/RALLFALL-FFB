@@ -226,10 +226,10 @@ body {
 }
 
 /* ==========================================================================
-   Code-Only Single Page A4 Landscape Print Engine
+   Code-Only Strict Single-Page A4 Landscape Print Engine
    ========================================================================== */
 @media print {
-    /* Setting margin to 0 suppresses default browser header/footer elements (Date, Time, URL, Page No.) */
+    /* Margin 0 suppresses browser auto header/footer (Date, URL, 1/1) */
     @page {
         size: A4 landscape;
         margin: 0 !important;
@@ -239,7 +239,7 @@ body {
         width: 100vw !important;
         height: 100vh !important;
         margin: 0 !important;
-        padding: 6mm 10mm !important;
+        padding: 5mm 8mm !important;
         background: #ffffff !important;
         color: #000000 !important;
         font-family: Arial, Helvetica, sans-serif !important;
@@ -247,7 +247,7 @@ body {
         box-sizing: border-box !important;
     }
 
-    /* Hide Web UI Components */
+    /* Hide Web Application Interface Elements */
     .header-card, 
     .nav-tabs, 
     #loginOverlay, 
@@ -263,12 +263,10 @@ body {
         display: none !important;
     }
 
-    /* Hide Inactive Tabs */
     div.tab-content {
         display: none !important;
     }
 
-    /* Display Only Active Tab */
     div.tab-content.active {
         display: block !important;
         width: 100% !important;
@@ -278,45 +276,51 @@ body {
         display: block !important;
     }
 
-    /* Company Title Header Styling */
+    /* Prettier Executive Corporate Header Box */
     .print-header-block {
         margin-bottom: 4px !important;
+        border: 1.5px solid #000000;
+        padding: 4px 8px;
+        background-color: #f8fafc !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 
     .print-company-title {
         text-align: center;
-        font-size: 15pt;
+        font-size: 14pt;
         font-weight: 900;
         letter-spacing: 1.5px;
         margin-bottom: 1px;
         text-transform: uppercase;
+        color: #0f172a;
     }
 
     .print-sub-title {
         text-align: center;
-        font-size: 9.5pt;
+        font-size: 9pt;
         font-weight: bold;
-        letter-spacing: 1px;
-        margin-bottom: 6px;
-        padding-bottom: 3px;
+        letter-spacing: 0.8px;
+        margin-bottom: 4px;
+        padding-bottom: 2px;
         border-bottom: 2px double #000000;
+        color: #334155;
     }
 
     .print-meta-grid {
         display: flex;
         justify-content: space-between;
-        font-size: 8.5pt;
+        font-size: 8pt;
         font-weight: bold;
         padding: 0 2px;
-        margin-bottom: 4px;
     }
 
-    /* Compact Table Layout to Fit All 31 Days on 1 Page */
+    /* Ultra-Compact Table to Ensure 1-Page Fit */
     .report-table {
         width: 100% !important;
         border-collapse: collapse !important;
         box-shadow: none !important;
-        font-size: 6.8pt !important;
+        font-size: 6.5pt !important;
         margin-bottom: 4px !important;
     }
 
@@ -325,17 +329,19 @@ body {
     }
 
     .report-table th {
-        background-color: #f1f5f9 !important;
+        background-color: #e2e8f0 !important;
         color: #000000 !important;
         border: 1px solid #000000 !important;
-        padding: 1.5px 1px !important;
+        padding: 1px 1px !important;
         font-weight: bold !important;
         text-transform: uppercase !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 
     .report-table td {
         border: 1px solid #000000 !important;
-        padding: 0.8px 1px !important;
+        padding: 0.4px 1px !important;
         text-align: center !important;
         line-height: 1 !important;
     }
@@ -352,12 +358,12 @@ body {
         padding: 0 !important;
         margin: 0 !important;
         height: auto !important;
-        font-size: 6.8pt !important;
+        font-size: 6.5pt !important;
     }
 
-    /* Side-by-Side Signature Footer */
+    /* Signature Footer Block */
     .print-footer-block {
-        margin-top: 10px !important;
+        margin-top: 6px !important;
         page-break-inside: avoid !important;
     }
 
@@ -365,7 +371,7 @@ body {
         display: flex !important;
         justify-content: space-between !important;
         width: 100% !important;
-        font-size: 8.5pt !important;
+        font-size: 8pt !important;
         font-weight: bold !important;
         padding: 0 4px;
     }
