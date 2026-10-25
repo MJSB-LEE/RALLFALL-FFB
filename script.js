@@ -216,13 +216,25 @@ function updateMillDropdownsForEstate(estateName) {
     }
 }
 
-// Fetch Estates (Preserves Custom Sort Order via sort_order field)
+// Safe Fetch Estates (Loads Custom Saved Order via localStorage or Table ID)
 async function fetchEstates() {
     if (!supabaseClient) return;
-    const { data, error } = await supabaseClient.from('estates').select('*').order('sort_order', { ascending: true });
+    
+    const { data, error } = await supabaseClient.from('estates').select('*').order('id', { ascending: true });
     
     if (!error && data && data.length > 0) {
-        estateList = data.map(e => e.name);
+        let fetchedNames = data.map(e => e.name);
+        let savedOrder = JSON.parse(localStorage.getItem('custom_estate_order'));
+        
+        if (savedOrder && Array.isArray(savedOrder)) {
+            // Keep local custom drag order for existing items, append any new ones
+            estateList = savedOrder.filter(name => fetchedNames.includes(name));
+            fetchedNames.forEach(name => {
+                if (!estateList.includes(name)) estateList.push(name);
+            });
+        } else {
+            estateList = fetchedNames;
+        }
     } else {
         estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk", "TUNGKU"];
     }
@@ -244,7 +256,7 @@ function handleDragOver(e) {
     e.dataTransfer.dropEffect = 'move';
 }
 
-async function handleDrop(e, targetIndex) {
+function handleDrop(e, targetIndex) {
     e.preventDefault();
     if (draggedEstateIndex === null || draggedEstateIndex === targetIndex) return;
 
@@ -252,20 +264,13 @@ async function handleDrop(e, targetIndex) {
     const movedItem = estateList.splice(draggedEstateIndex, 1)[0];
     estateList.splice(targetIndex, 0, movedItem);
 
+    // Save custom order locally
+    localStorage.setItem('custom_estate_order', JSON.stringify(estateList));
+
     // Render UI instantly
     renderSettingsUI();
     renderEstateDropdown();
     loadOverallSummary();
-
-    // Persist new order to Supabase database
-    if (supabaseClient) {
-        for (let i = 0; i < estateList.length; i++) {
-            await supabaseClient
-                .from('estates')
-                .update({ sort_order: i + 1 })
-                .eq('name', estateList[i]);
-        }
-    }
 
     draggedEstateIndex = null;
 }
@@ -1177,13 +1182,13 @@ async function saveUserEdit() {
     fetchActivityLogs();
 }
 
+// Safe Add New Estate (No sort_order dependency)
 async function addNewEstate() {
     const nameInput = document.getElementById('newEstateName');
     const newName = nameInput.value.trim();
     if (!newName) return alert("Enter estate name");
 
-    const newSortOrder = estateList.length + 1;
-    const { error } = await supabaseClient.from('estates').insert([{ name: newName, sort_order: newSortOrder }]);
+    const { error } = await supabaseClient.from('estates').insert([{ name: newName }]);
 
     if (error) {
         alert("Error adding estate: " + error.message);
