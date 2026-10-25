@@ -91,7 +91,7 @@ function switchTab(tabId) {
     }
 }
 
-// Centralized System Activity Logger (Supports all column schema combinations)
+// Centralized System Activity Logger (Passes all column aliases including record_date)
 async function logActivity(action, details, estate = 'SYSTEM') {
     if (!supabaseClient) return;
 
@@ -100,6 +100,8 @@ async function logActivity(action, details, estate = 'SYSTEM') {
         activeUser = currentUser.username || currentUser.full_name || 'USER';
     }
 
+    const todayDateStr = new Date().toISOString().split('T')[0];
+
     const payload = {
         username: activeUser,
         user_name: activeUser,
@@ -107,6 +109,7 @@ async function logActivity(action, details, estate = 'SYSTEM') {
         details: details,
         estate: estate,
         estate_name: estate,
+        record_date: todayDateStr, // Satisfies NOT NULL constraint on record_date column
         timestamp: new Date().toISOString()
     };
 
