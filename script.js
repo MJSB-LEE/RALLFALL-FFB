@@ -91,8 +91,21 @@ function switchTab(tabId) {
     }
 }
 
-// Centralized System Activity Logger (Passes all column aliases including record_date)
-async function logActivity(action, details, estate = 'SYSTEM') {
+// Helper: Convert YYYY-MM-DD or ISO string to DD-MM-YYYY format
+function formatDateToDDMMYYYY(dateInput) {
+    if (!dateInput) return '-';
+    // If it's a full ISO timestamp or YYYY-MM-DD
+    let datePart = dateInput.toString().split('T')[0];
+    let parts = datePart.split('-');
+    if (parts.length === 3) {
+        // [YYYY, MM, DD] -> [DD, MM, YYYY]
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateInput;
+}
+
+// Centralized System Activity Logger
+async function logActivity(action, details, estate = 'SYSTEM', recordDate = null, fieldName = '', oldValue = '', newValue = '') {
     if (!supabaseClient) return;
 
     let activeUser = 'SYSTEM';
@@ -109,7 +122,10 @@ async function logActivity(action, details, estate = 'SYSTEM') {
         details: details,
         estate: estate,
         estate_name: estate,
-        record_date: todayDateStr, // Satisfies NOT NULL constraint on record_date column
+        record_date: recordDate || todayDateStr,
+        field_name: fieldName,
+        old_value: String(oldValue),
+        new_value: String(newValue),
         timestamp: new Date().toISOString()
     };
 
@@ -122,7 +138,7 @@ async function logActivity(action, details, estate = 'SYSTEM') {
     }
 }
 
-// Database-Linked Activity Audit Logs
+// Database-Linked Activity Audit Logs (Displays dates as DD-MM-YYYY)
 async function fetchActivityLogs() {
     const tableBody = document.getElementById('activityLogTableBody');
     if (!tableBody || !supabaseClient) return;
@@ -131,7 +147,7 @@ async function fetchActivityLogs() {
         .from('activity_logs')
         .select('*')
         .order('id', { ascending: false })
-        .limit(50);
+        .limit(100);
 
     if (error) {
         tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #ef4444; padding: 10px;">
@@ -149,10 +165,14 @@ async function fetchActivityLogs() {
     data.forEach(log => {
         let logTime = log.timestamp || log.created_at;
         let timeStr = logTime ? new Date(logTime).toLocaleString() : 'N/A';
+        let recDateFormatted = log.record_date ? formatDateToDDMMYYYY(log.record_date) : '-';
+        let badgeColor = log.action?.includes('RAINFALL') ? '#0284c7' : (log.action?.includes('FFB') ? '#16a34a' : '#64748b');
+
         rowsHtml += `<tr>
             <td style="color: #64748b; font-size: 11px;">${timeStr}</td>
+            <td style="font-weight: bold; color: #1e293b;">${recDateFormatted}</td>
             <td><b>${log.username || log.user_name || 'SYSTEM'}</b></td>
-            <td><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;">${log.action || log.action_type || 'INFO'}</span></td>
+            <td><span style="background: ${badgeColor}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;">${log.action || 'INFO'}</span></td>
             <td>${log.estate || log.estate_name || '-'}</td>
             <td style="color: #334155;">${log.details || '-'}</td>
         </tr>`;
@@ -496,7 +516,7 @@ function setFormLockState(isLocked, statusText = '', isHqLocked = false) {
     }
 }
 
-// Save Function
+// Detailed Data Change Auditor inside saveToCloud (Logs dates in DD-MM-YYYY format in details)
 async function saveToCloud() {
     if (currentUser?.role === 'manager') {
         return alert("Managers have read/approve permissions only and cannot edit daily entries.");
@@ -521,13 +541,33 @@ async function saveToCloud() {
     const activeUserName = currentUser ? (currentUser.full_name || currentUser.username) : "System Administrator";
     const prepByVal = document.getElementById('preparedByInput')?.value || activeUserName;
 
+    // Fetch existing records for comparison
+    const { data: existingRecords } = await supabaseClient
+        .from('daily_records')
+        .select('*')
+        .ilike('estate_name', estate)
+        .gte('record_date', `${monthYear}-01`)
+        .lte('record_date', `${monthYear}-${String(daysInMonth).padStart(2, '0')}`);
+
+    let existingMap = {};
+    if (existingRecords) {
+        existingRecords.forEach(r => {
+            existingMap[r.record_date] = r;
+        });
+    }
+
     let updates = [];
+    let logEntries = [];
 
     for (let d = 1; d <= daysInMonth; d++) {
         let dayStr = String(d).padStart(2, '0');
+        let fullDateISO = `${monthYear}-${dayStr}`;
+        let dateDDMMYYYY = `${dayStr}-${String(month).padStart(2, '0')}-${year}`;
+        let existingRow = existingMap[fullDateISO] || {};
+
         let updateData = {
             estate_name: estate,
-            record_date: `${monthYear}-${dayStr}`,
+            record_date: fullDateISO,
             updated_by: activeUserName,
             updated_at: timestampNow,
             status: 'draft',
@@ -535,14 +575,49 @@ async function saveToCloud() {
         };
 
         if (activeTabId === 'tab1') {
-            updateData.rainfall_today = parseFloat(document.getElementById(`s1_rf_${d}`)?.value) || 0;
-            updateData.ffb1 = parseFloat(document.getElementById(`s1_ffb1_${d}`)?.value) || 0;
-            updateData.mill_name = document.getElementById(`s1_mill_${d}`)?.value || '';
+            let newRf = parseFloat(document.getElementById(`s1_rf_${d}`)?.value) || 0;
+            let newFfb = parseFloat(document.getElementById(`s1_ffb1_${d}`)?.value) || 0;
+            let newMill = document.getElementById(`s1_mill_${d}`)?.value || '';
+
+            let oldRf = existingRow.rainfall_today || 0;
+            let oldFfb = existingRow.ffb1 || 0;
+
+            updateData.rainfall_today = newRf;
+            updateData.ffb1 = newFfb;
+            updateData.mill_name = newMill;
+
+            if (newRf !== oldRf) {
+                logEntries.push({
+                    action: 'KEYIN_RAINFALL',
+                    details: `Keyed-in Rainfall for Date ${dateDDMMYYYY}: ${oldRf} mm ➔ ${newRf} mm`,
+                    estate: estate,
+                    date: fullDateISO
+                });
+            }
+
+            if (newFfb !== oldFfb) {
+                logEntries.push({
+                    action: 'KEYIN_FFB',
+                    details: `Keyed-in FFB for Date ${dateDDMMYYYY}: ${oldFfb} MT ➔ ${newFfb} MT (Mill: ${newMill || 'N/A'})`,
+                    estate: estate,
+                    date: fullDateISO
+                });
+            }
         } else if (activeTabId === 'tab2') {
-            updateData.rf_phase1 = parseFloat(document.getElementById(`s2_p1_t_${d}`)?.value) || 0;
-            updateData.rf_phase2 = parseFloat(document.getElementById(`s2_p2_t_${d}`)?.value) || 0;
-            updateData.rf_phase3 = parseFloat(document.getElementById(`s2_p3_t_${d}`)?.value) || 0;
-            updateData.rf_phase4 = parseFloat(document.getElementById(`s2_p4_t_${d}`)?.value) || 0;
+            for (let p = 1; p <= 4; p++) {
+                let newPhase = parseFloat(document.getElementById(`s2_p${p}_t_${d}`)?.value) || 0;
+                let oldPhase = existingRow[`rf_phase${p}`] || 0;
+                updateData[`rf_phase${p}`] = newPhase;
+
+                if (newPhase !== oldPhase) {
+                    logEntries.push({
+                        action: 'KEYIN_PHASE_RF',
+                        details: `Keyed-in Phase ${p} RF for Date ${dateDDMMYYYY}: ${oldPhase} mm ➔ ${newPhase} mm`,
+                        estate: estate,
+                        date: fullDateISO
+                    });
+                }
+            }
         }
 
         updates.push(updateData);
@@ -556,11 +631,9 @@ async function saveToCloud() {
         console.error("Save Error:", error);
         alert("❌ Save Failed: " + error.message);
     } else {
-        await logActivity(
-            'SAVE_DATA', 
-            `Saved daily ledger entries via ${(activeTabId || 'TAB').toUpperCase()} for ${monthYear}`, 
-            estate
-        );
+        for (const item of logEntries) {
+            await logActivity(item.action, item.details, item.estate, item.date);
+        }
 
         alert(`✅ Data for "${estate}" saved successfully!`);
         await loadFromCloud();
