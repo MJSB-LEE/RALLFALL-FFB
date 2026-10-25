@@ -95,18 +95,23 @@ function switchTab(tabId) {
 async function logActivity(action, details, estate = 'SYSTEM') {
     if (!supabaseClient) return;
 
-    const activeUser = currentUser ? (currentUser.username || currentUser.full_name) : 'SYSTEM';
+    let activeUser = 'SYSTEM';
+    if (currentUser) {
+        activeUser = currentUser.username || currentUser.full_name || 'USER';
+    }
 
-    const { error } = await supabaseClient.from('activity_logs').insert([{
+    const payload = {
         username: activeUser,
         action: action,
         details: details,
         estate: estate,
         timestamp: new Date().toISOString()
-    }]);
+    };
+
+    const { error } = await supabaseClient.from('activity_logs').insert([payload]);
 
     if (error) {
-        console.warn("Audit log insert warning:", error.message);
+        console.error("❌ Audit Log Error:", error.message);
     } else {
         fetchActivityLogs();
     }
@@ -125,7 +130,7 @@ async function fetchActivityLogs() {
 
     if (error) {
         tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #ef4444; padding: 10px;">
-            Unable to load audit logs. Please run the SQL setup script to create the <b>activity_logs</b> table in Supabase.
+            Unable to load audit logs: ${error.message}
         </td></tr>`;
         return;
     }
