@@ -1,3 +1,5 @@
+
+
 // Supabase Configuration
 const SUPABASE_URL = 'https://tiwulxrorrmyxtosvzkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_W4-5_riBQWAUBPVtgX8Pcw_WCRET_KF';
