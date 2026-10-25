@@ -91,7 +91,7 @@ function switchTab(tabId) {
     }
 }
 
-// Centralized System Activity Logger
+// Centralized System Activity Logger (Populates both username & user_name)
 async function logActivity(action, details, estate = 'SYSTEM') {
     if (!supabaseClient) return;
 
@@ -102,6 +102,7 @@ async function logActivity(action, details, estate = 'SYSTEM') {
 
     const payload = {
         username: activeUser,
+        user_name: activeUser, // Dual field payload to bypass NOT NULL constraints on legacy columns
         action: action,
         details: details,
         estate: estate,
