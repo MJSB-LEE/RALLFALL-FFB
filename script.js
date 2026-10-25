@@ -19,6 +19,17 @@ let estateMills = [];
 let userAccounts = [];
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
 
+// Auto-set the current real-time Month/Year (YYYY-MM)
+function setDefaultMonthYear() {
+    const monthYearInput = document.getElementById('bulanTahun');
+    if (monthYearInput && !monthYearInput.value) {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        monthYearInput.value = `${year}-${month}`;
+    }
+}
+
 // Tab Switcher Function
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -332,6 +343,7 @@ function applyUserPermissions() {
         }
     }
 
+    setDefaultMonthYear();
     onEstateOrMonthChange();
 }
 
@@ -1172,6 +1184,8 @@ document.addEventListener('change', (e) => {
 window.onload = async function() {
     initKeyInTables();
     switchTab('tab1');
+
+    setDefaultMonthYear(); // Auto-sets to real-time month
 
     await fetchEstates();        
     await fetchUserProfiles();   
