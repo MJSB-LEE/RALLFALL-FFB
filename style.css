@@ -226,7 +226,7 @@ body {
 }
 
 /* ==========================================================================
-   FULL-PAGE A4 PORTRAIT PRINT ENGINE (WITH EXTENDED SIGNATURE SPACE)
+   FULL-PAGE A4 PORTRAIT PRINT ENGINE (WITH 3-4 EXTRA ROW SIGNING GAP)
    ========================================================================== */
 @media print {
     @page {
@@ -243,7 +243,7 @@ body {
         width: 100% !important;
         height: 100% !important;
         margin: 0 !important;
-        padding: 5mm 8mm !important;
+        padding: 4mm 8mm !important;
         background: #ffffff !important;
         color: #0f172a !important;
         font-family: Arial, Helvetica, sans-serif !important;
@@ -253,7 +253,7 @@ body {
         print-color-adjust: exact !important;
     }
 
-    /* Hide Web UI Elements */
+    /* Hide Web UI Components */
     .header-card, 
     .nav-tabs, 
     #loginOverlay, 
@@ -294,7 +294,7 @@ body {
 
     /* Header Styling */
     .print-header-block {
-        margin-bottom: 6px !important;
+        margin-bottom: 4px !important;
         border: 2px solid #1e3a8a;
         border-radius: 6px;
         padding: 6px 12px;
@@ -342,7 +342,7 @@ body {
     }
 
     .report-table tr {
-        height: 2.15vh !important;
+        height: 2.0vh !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -391,10 +391,10 @@ body {
         color: #334155 !important;
     }
 
-    /* Signature Block with Extra Vertical Room for Handwriting */
+    /* Signature Block with 3-4 Extra Row Height Gap */
     .print-footer-block {
         margin-top: auto !important;
-        padding-top: 6px !important;
+        padding-top: 4px !important;
         padding-bottom: 2mm !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
@@ -414,19 +414,19 @@ body {
         width: 48%;
     }
 
-    /* Adds vertical gap (row room) inside PREPARED BY & APPROVED BY */
     .sig-box strong,
     .sig-box span {
         display: inline-block;
     }
 
+    /* Pushes dashed signature line down by 65px (~3 to 4 table row heights) */
     .lblPreparedBy, 
     .lblApprovedBy {
-        margin-top: 25px !important; /* Vertical signing space */
-        border-top: 1px dashed #94a3b8;
+        margin-top: 65px !important; 
+        border-top: 1px dashed #64748b;
         padding-top: 3px;
         display: inline-block;
-        min-width: 180px;
+        min-width: 200px;
     }
 
     .text-right {
