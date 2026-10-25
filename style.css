@@ -1,5 +1,3 @@
-
-
 * {
     box-sizing: border-box;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -228,11 +226,11 @@ body {
 }
 
 /* ==========================================================================
-   FULL-PAGE A4 PORTRAIT PRINT ENGINE (WITH 3-4 EXTRA ROW SIGNING GAP)
+   FULL-PAGE A4 LANDSCAPE PRINT ENGINE (FULL FIT & MULTI-ESTATE READY)
    ========================================================================== */
 @media print {
     @page {
-        size: A4 portrait;
+        size: A4 landscape;
         margin: 0 !important;
     }
 
@@ -245,7 +243,7 @@ body {
         width: 100% !important;
         height: 100% !important;
         margin: 0 !important;
-        padding: 4mm 8mm !important;
+        padding: 4mm 6mm !important;
         background: #ffffff !important;
         color: #0f172a !important;
         font-family: Arial, Helvetica, sans-serif !important;
@@ -338,13 +336,13 @@ body {
         width: 100% !important;
         border-collapse: collapse !important;
         box-shadow: none !important;
-        font-size: 8pt !important;
+        font-size: 7.5pt !important;
         margin-bottom: 0 !important;
         flex-grow: 1 !important;
     }
 
     .report-table tr {
-        height: 2.0vh !important;
+        height: 1.9vh !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -357,15 +355,15 @@ body {
         background-color: #1e293b !important;
         color: #ffffff !important;
         border: 1px solid #0f172a !important;
-        padding: 3px 2px !important;
+        padding: 2px 1px !important;
         font-weight: bold !important;
         text-transform: uppercase !important;
-        font-size: 8.5pt !important;
+        font-size: 7.8pt !important;
     }
 
     .report-table td {
         border: 1px solid #64748b !important;
-        padding: 0.5px 2px !important;
+        padding: 0.5px 1px !important;
         text-align: center !important;
         vertical-align: middle !important;
     }
@@ -385,7 +383,7 @@ body {
         padding: 0 !important;
         margin: 0 !important;
         height: 100% !important;
-        font-size: 8pt !important;
+        font-size: 7.5pt !important;
     }
 
     .readonly-cell {
@@ -393,7 +391,7 @@ body {
         color: #334155 !important;
     }
 
-    /* Signature Block with 3-4 Extra Row Height Gap */
+    /* Signature Block with Vertical Signing Space */
     .print-footer-block {
         margin-top: auto !important;
         padding-top: 4px !important;
@@ -421,10 +419,9 @@ body {
         display: inline-block;
     }
 
-    /* Pushes dashed signature line down by 65px (~3 to 4 table row heights) */
     .lblPreparedBy, 
     .lblApprovedBy {
-        margin-top: 65px !important; 
+        margin-top: 45px !important; 
         border-top: 1px dashed #64748b;
         padding-top: 3px;
         display: inline-block;
