@@ -18,6 +18,7 @@ let estateMills = [];
 
 let userAccounts = [];
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+let draggedEstateIndex = null;
 
 // Live Real-Time Malaysia Standard Time (UTC+8) Clock Engine
 function startMalaysiaClock() {
@@ -215,20 +216,58 @@ function updateMillDropdownsForEstate(estateName) {
     }
 }
 
-// Fetch Estates (Sorted Alphabetically)
+// Fetch Estates (Preserves Custom Sort Order via sort_order field)
 async function fetchEstates() {
     if (!supabaseClient) return;
-    const { data, error } = await supabaseClient.from('estates').select('name').order('name', { ascending: true });
+    const { data, error } = await supabaseClient.from('estates').select('*').order('sort_order', { ascending: true });
+    
     if (!error && data && data.length > 0) {
         estateList = data.map(e => e.name);
     } else {
-        estateList = ["Kars PH1/2/4", "Kars PH3", "Klagan PH1", "Labuk", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "STY", "TUNGKU"].sort();
+        estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk", "TUNGKU"];
     }
     
     renderEstateDropdown();
     renderNewUserEstateCheckboxes();
     renderSettingsUI();
     loadOverallSummary();
+}
+
+// Drag & Drop Custom Reordering Logic
+function handleDragStart(e, index) {
+    draggedEstateIndex = index;
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+}
+
+async function handleDrop(e, targetIndex) {
+    e.preventDefault();
+    if (draggedEstateIndex === null || draggedEstateIndex === targetIndex) return;
+
+    // Reorder local array
+    const movedItem = estateList.splice(draggedEstateIndex, 1)[0];
+    estateList.splice(targetIndex, 0, movedItem);
+
+    // Render UI instantly
+    renderSettingsUI();
+    renderEstateDropdown();
+    loadOverallSummary();
+
+    // Persist new order to Supabase database
+    if (supabaseClient) {
+        for (let i = 0; i < estateList.length; i++) {
+            await supabaseClient
+                .from('estates')
+                .update({ sort_order: i + 1 })
+                .eq('name', estateList[i]);
+        }
+    }
+
+    draggedEstateIndex = null;
 }
 
 // Fetch User Profiles
@@ -735,7 +774,7 @@ async function loadFromCloud() {
     calcS2();
 }
 
-// Auto-Sorted Overall Summary Matrix
+// Overall Summary Matrix (Follows Custom User Drag Sort Order)
 async function loadOverallSummary() {
     const monthYear = document.getElementById('bulanTahun')?.value;
     if (!monthYear || !supabaseClient) return;
@@ -751,11 +790,8 @@ async function loadOverallSummary() {
 
     if (error) return;
 
-    // Sort estates alphabetically
-    const sortedEstates = [...estateList].sort((a, b) => a.localeCompare(b));
-
     let matrix = {};
-    sortedEstates.forEach(est => { matrix[est] = {}; });
+    estateList.forEach(est => { matrix[est] = {}; });
 
     if (data) {
         data.forEach(r => {
@@ -768,7 +804,7 @@ async function loadOverallSummary() {
 
     let estateHdr = '<th>DATE</th>';
     let subHdr = '<th>DATE</th>';
-    sortedEstates.forEach(est => {
+    estateList.forEach(est => {
         estateHdr += `<th colspan="2" class="header-estate">${est}</th>`;
         subHdr += `<th>TO DAY</th><th>TO DATE</th>`;
     });
@@ -781,11 +817,11 @@ async function loadOverallSummary() {
     let tbody = '';
     let estateTotals = {};
     let estateDays = {};
-    sortedEstates.forEach(est => { estateTotals[est] = 0; estateDays[est] = 0; });
+    estateList.forEach(est => { estateTotals[est] = 0; estateDays[est] = 0; });
 
     for (let d = 1; d <= lastDay; d++) {
         tbody += `<tr><td><b>${d}</b></td>`;
-        sortedEstates.forEach(est => {
+        estateList.forEach(est => {
             let val = matrix[est][d] || 0;
             estateTotals[est] += val;
             if (val > 0) estateDays[est]++;
@@ -801,7 +837,7 @@ async function loadOverallSummary() {
 
     let totHtml = '<td>TOTAL</td>';
     let daysHtml = '<td>DAYS</td>';
-    sortedEstates.forEach(est => {
+    estateList.forEach(est => {
         totHtml += `<td>${estateTotals[est].toFixed(1)}</td><td class="readonly-cell">${estateTotals[est].toFixed(1)}</td>`;
         daysHtml += `<td colspan="2">${estateDays[est]} Days</td>`;
     });
@@ -906,9 +942,7 @@ function renderEstateDropdown(allowedEstatesFilter = null) {
     if (!estateSelect) return;
     estateSelect.innerHTML = '';
 
-    const sortedEstates = [...estateList].sort((a, b) => a.localeCompare(b));
-
-    sortedEstates.forEach(est => {
+    estateList.forEach(est => {
         if (!allowedEstatesFilter || (currentUser && currentUser.role === "admin") || allowedEstatesFilter.includes(est)) {
             let opt1 = document.createElement('option');
             opt1.value = est;
@@ -947,9 +981,7 @@ function renderNewUserEstateCheckboxes() {
         return;
     }
 
-    const sortedEstates = [...estateList].sort((a, b) => a.localeCompare(b));
-
-    sortedEstates.forEach(est => {
+    estateList.forEach(est => {
         container.innerHTML += `
             <label class="checkbox-item" style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
                 <input type="checkbox" value="${est}" class="new-estate-chk">
@@ -960,6 +992,7 @@ function renderNewUserEstateCheckboxes() {
     toggleUserEstateDropdown();
 }
 
+// Interactive Drag-and-Drop Settings UI
 function renderSettingsUI() {
     const userListUi = document.getElementById('userSettingsList');
     if (userListUi) {
@@ -984,10 +1017,16 @@ function renderSettingsUI() {
     const estListUi = document.getElementById('estateSettingsList');
     if (estListUi) {
         estListUi.innerHTML = '';
-        const sortedEstates = [...estateList].sort((a, b) => a.localeCompare(b));
-        sortedEstates.forEach((est, idx) => {
-            estListUi.innerHTML += `<li style="padding: 8px 12px; background: #ffffff; margin-bottom: 6px; border-radius: 4px; border: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box;">
-                <span style="font-size: 13px; font-weight: 600; color: #334155;">${est}</span>
+        estateList.forEach((est, idx) => {
+            estListUi.innerHTML += `<li draggable="true" 
+                ondragstart="handleDragStart(event, ${idx})" 
+                ondragover="handleDragOver(event)" 
+                ondrop="handleDrop(event, ${idx})"
+                style="padding: 8px 12px; background: #ffffff; margin-bottom: 6px; border-radius: 4px; border: 1px dashed #3b82f6; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; cursor: grab;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #94a3b8; font-size: 14px;">☰</span>
+                    <span style="font-size: 13px; font-weight: 600; color: #334155;">${est}</span>
+                </div>
                 <div>
                     <button class="btn-edit" onclick="editEstateName(${idx})">Edit</button>
                     <button class="btn-delete" onclick="removeEstate(${idx})">Delete</button>
@@ -1015,8 +1054,7 @@ function openEditUserModal(idx) {
     const editContainer = document.getElementById('editEstateCheckboxes');
     if (editContainer) {
         editContainer.innerHTML = '';
-        const sortedEstates = [...estateList].sort((a, b) => a.localeCompare(b));
-        sortedEstates.forEach(est => {
+        estateList.forEach(est => {
             let isChecked = userAssigned.includes(est) ? 'checked' : '';
             editContainer.innerHTML += `
                 <label class="checkbox-item" style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
@@ -1144,7 +1182,8 @@ async function addNewEstate() {
     const newName = nameInput.value.trim();
     if (!newName) return alert("Enter estate name");
 
-    const { error } = await supabaseClient.from('estates').insert([{ name: newName }]);
+    const newSortOrder = estateList.length + 1;
+    const { error } = await supabaseClient.from('estates').insert([{ name: newName, sort_order: newSortOrder }]);
 
     if (error) {
         alert("Error adding estate: " + error.message);
