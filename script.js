@@ -91,6 +91,65 @@ function switchTab(tabId) {
     }
 }
 
+// Centralized System Activity Logger
+async function logActivity(action, details, estate = 'SYSTEM') {
+    if (!supabaseClient) return;
+
+    const activeUser = currentUser ? (currentUser.username || currentUser.full_name) : 'SYSTEM';
+
+    const { error } = await supabaseClient.from('activity_logs').insert([{
+        username: activeUser,
+        action: action,
+        details: details,
+        estate: estate,
+        timestamp: new Date().toISOString()
+    }]);
+
+    if (error) {
+        console.warn("Audit log insert warning:", error.message);
+    } else {
+        fetchActivityLogs();
+    }
+}
+
+// Database-Linked Activity Audit Logs
+async function fetchActivityLogs() {
+    const tableBody = document.getElementById('activityLogTableBody');
+    if (!tableBody || !supabaseClient) return;
+
+    const { data, error } = await supabaseClient
+        .from('activity_logs')
+        .select('*')
+        .order('id', { ascending: false })
+        .limit(50);
+
+    if (error) {
+        tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #ef4444; padding: 10px;">
+            Unable to load audit logs. Please run the SQL setup script to create the <b>activity_logs</b> table in Supabase.
+        </td></tr>`;
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 10px;">No activity logs recorded yet. Perform actions like Saving Data or Logging In to test.</td></tr>`;
+        return;
+    }
+
+    let rowsHtml = '';
+    data.forEach(log => {
+        let logTime = log.timestamp || log.created_at;
+        let timeStr = logTime ? new Date(logTime).toLocaleString() : 'N/A';
+        rowsHtml += `<tr>
+            <td style="color: #64748b; font-size: 11px;">${timeStr}</td>
+            <td><b>${log.username || log.user_name || 'SYSTEM'}</b></td>
+            <td><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;">${log.action || log.action_type || 'INFO'}</span></td>
+            <td>${log.estate || log.estate_name || '-'}</td>
+            <td style="color: #334155;">${log.details || '-'}</td>
+        </tr>`;
+    });
+    tableBody.innerHTML = rowsHtml;
+}
+
 // Fetch Mill Suppliers from Supabase
 async function fetchMills() {
     if (!supabaseClient) return;
@@ -158,6 +217,7 @@ async function addNewMill() {
     if (error) {
         alert("Error adding mill: " + error.message);
     } else {
+        await logActivity('ADD_MILL', `Added mill supplier '${millName}' for ${estateName}`, estateName);
         alert(`Mill "${millName}" added for ${estateName}!`);
         millNameInput.value = '';
         await fetchMills();
@@ -176,6 +236,7 @@ async function editMill(millId, oldName) {
         if (error) {
             alert("Error updating mill: " + error.message);
         } else {
+            await logActivity('EDIT_MILL', `Renamed mill '${oldName}' to '${newName.trim()}'`);
             alert("Mill supplier updated successfully!");
             await fetchMills();
         }
@@ -191,6 +252,7 @@ async function removeMill(millId) {
     if (error) {
         alert("Error deleting mill: " + error.message);
     } else {
+        await logActivity('DELETE_MILL', `Deleted mill supplier record ID #${millId}`);
         await fetchMills();
     }
 }
@@ -216,7 +278,7 @@ function updateMillDropdownsForEstate(estateName) {
     }
 }
 
-// Safe Fetch Estates (Loads Custom Saved Order via localStorage or Table ID)
+// Fetch Estates
 async function fetchEstates() {
     if (!supabaseClient) return;
     
@@ -227,7 +289,6 @@ async function fetchEstates() {
         let savedOrder = JSON.parse(localStorage.getItem('custom_estate_order'));
         
         if (savedOrder && Array.isArray(savedOrder)) {
-            // Keep local custom drag order for existing items, append any new ones
             estateList = savedOrder.filter(name => fetchedNames.includes(name));
             fetchedNames.forEach(name => {
                 if (!estateList.includes(name)) estateList.push(name);
@@ -260,18 +321,16 @@ function handleDrop(e, targetIndex) {
     e.preventDefault();
     if (draggedEstateIndex === null || draggedEstateIndex === targetIndex) return;
 
-    // Reorder local array
     const movedItem = estateList.splice(draggedEstateIndex, 1)[0];
     estateList.splice(targetIndex, 0, movedItem);
 
-    // Save custom order locally
     localStorage.setItem('custom_estate_order', JSON.stringify(estateList));
 
-    // Render UI instantly
     renderSettingsUI();
     renderEstateDropdown();
     loadOverallSummary();
 
+    logActivity('REORDER_ESTATES', `Updated custom estate display sequence`);
     draggedEstateIndex = null;
 }
 
@@ -291,42 +350,6 @@ async function fetchUserProfiles() {
     renderSettingsUI();
 }
 
-// Database-Linked Activity Audit Logs
-async function fetchActivityLogs() {
-    const tableBody = document.getElementById('activityLogTableBody');
-    if (!tableBody || !supabaseClient) return;
-
-    const { data, error } = await supabaseClient
-        .from('activity_logs')
-        .select('*')
-        .order('id', { ascending: false })
-        .limit(40);
-
-    if (error) {
-        tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #ef4444;">Error loading logs: ${error.message}</td></tr>`;
-        return;
-    }
-
-    if (!data || data.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No activity logs recorded yet.</td></tr>`;
-        return;
-    }
-
-    let rowsHtml = '';
-    data.forEach(log => {
-        let logTime = log.timestamp || log.created_at;
-        let timeStr = logTime ? new Date(logTime).toLocaleString() : 'N/A';
-        rowsHtml += `<tr>
-            <td style="color: #64748b; font-size: 11px;">${timeStr}</td>
-            <td><b>${log.username || log.user_name || 'SYSTEM'}</b></td>
-            <td><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;">${log.action || log.action_type || 'INFO'}</span></td>
-            <td>${log.estate || log.estate_name || '-'}</td>
-            <td style="color: #334155;">${log.details || '-'}</td>
-        </tr>`;
-    });
-    tableBody.innerHTML = rowsHtml;
-}
-
 async function handleLogin() {
     const userIn = document.getElementById('loginUsername').value.trim();
     const passIn = document.getElementById('loginPassword').value.trim();
@@ -342,19 +365,14 @@ async function handleLogin() {
         errorElem.style.display = "none";
         document.getElementById('loginOverlay').style.display = "none";
         
-        if (supabaseClient) {
-            await supabaseClient.from('activity_logs').insert([{
-                username: currentUser.username,
-                action: 'LOGIN',
-                details: `User '${currentUser.username}' logged into system (${(currentUser.role || 'USER').toUpperCase()})`,
-                estate: currentUser.role === 'admin' ? 'ALL ESTATES' : (currentUser.assigned_estates?.[0] || 'SYSTEM'),
-                timestamp: new Date().toISOString()
-            }]);
-        }
+        await logActivity(
+            'LOGIN', 
+            `Logged into system as ${(currentUser.role || 'USER').toUpperCase()}`,
+            currentUser.role === 'admin' ? 'ALL ESTATES' : (currentUser.assigned_estates?.[0] || 'SYSTEM')
+        );
 
         applyUserPermissions();
         renderSettingsUI();
-        await fetchActivityLogs();
     } else {
         errorElem.innerText = "Invalid Username or Password!";
         errorElem.style.display = "block";
@@ -362,6 +380,9 @@ async function handleLogin() {
 }
 
 function handleLogout() {
+    if (currentUser) {
+        logActivity('LOGOUT', `User '${currentUser.username}' logged out`);
+    }
     currentUser = null;
     localStorage.removeItem('currentUser');
     document.getElementById('loginOverlay').style.display = "flex";
@@ -525,18 +546,15 @@ async function saveToCloud() {
         console.error("Save Error:", error);
         alert("❌ Save Failed: " + error.message);
     } else {
-        await supabaseClient.from('activity_logs').insert([{
-            username: currentUser ? currentUser.username : 'ADMIN',
-            action: 'SAVE_DATA',
-            details: `Saved Data via ${(activeTabId || 'TAB').toUpperCase()} for ${monthYear}`,
-            estate: estate,
-            timestamp: new Date().toISOString()
-        }]);
+        await logActivity(
+            'SAVE_DATA', 
+            `Saved daily ledger entries via ${(activeTabId || 'TAB').toUpperCase()} for ${monthYear}`, 
+            estate
+        );
 
         alert(`✅ Data for "${estate}" saved successfully!`);
         await loadFromCloud();
         await loadOverallSummary();
-        fetchActivityLogs();
     }
 }
 
@@ -563,14 +581,7 @@ async function submitMonthlyReport() {
     if (error) {
         alert("Submission Error: " + error.message);
     } else {
-        await supabaseClient.from('activity_logs').insert([{
-            username: currentUser ? currentUser.username : 'ADMIN',
-            action: 'SUBMIT_REPORT',
-            details: `Submitted monthly report for ${estate} (${monthYear})`,
-            estate: estate,
-            timestamp: new Date().toISOString()
-        }]);
-
+        await logActivity('SUBMIT_REPORT', `Submitted monthly report for ${estate} (${monthYear})`, estate);
         alert("🔒 Report submitted successfully and locked!");
         await loadFromCloud();
     }
@@ -602,14 +613,7 @@ async function approveMonthlyReport() {
     if (error) {
         alert("Approval Error: " + error.message);
     } else {
-        await supabaseClient.from('activity_logs').insert([{
-            username: currentUser.username,
-            action: 'APPROVE_REPORT',
-            details: `Approved monthly report for ${estate} (${monthYear})`,
-            estate: estate,
-            timestamp: new Date().toISOString()
-        }]);
-
+        await logActivity('APPROVE_REPORT', `Approved monthly report for ${estate} (${monthYear})`, estate);
         alert("Report officially approved!");
         loadFromCloud();
     }
@@ -638,14 +642,7 @@ async function hqLockReport() {
     if (error) {
         alert("HQ Lock Error: " + error.message);
     } else {
-        await supabaseClient.from('activity_logs').insert([{
-            username: currentUser.username,
-            action: 'HQ_LOCK_REPORT',
-            details: `HQ Submitted & Locked report permanently for ${estate} (${monthYear})`,
-            estate: estate,
-            timestamp: new Date().toISOString()
-        }]);
-
+        await logActivity('HQ_LOCK_REPORT', `HQ Submitted & Locked report permanently for ${estate} (${monthYear})`, estate);
         alert("🔒 Report permanently locked by HQ!");
         loadFromCloud();
     }
@@ -897,7 +894,7 @@ async function loadMillSummaryBreakdown() {
     const millsArray = Object.keys(millTotals).sort();
 
     if (millsArray.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="color: #94a3b8;">No mill FFB data recorded for ${estate} in ${monthYear}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="color: #94a3b8; padding: 12px;">No mill FFB data recorded for ${estate} in ${monthYear}</td></tr>`;
         tfoot.innerHTML = `<td>TOTAL</td><td>0.00 MT</td><td>0 Days</td><td>100.00%</td>`;
         return;
     }
@@ -1111,16 +1108,8 @@ async function addNewUser() {
     if (error) {
         alert("Error creating user: " + error.message);
     } else {
-        const activeAdmin = currentUser ? currentUser.username : 'ADMIN';
         const estateSummary = uRole === 'admin' ? 'ALL ESTATES' : (uEstates.join(', ') || 'NONE');
-
-        await supabaseClient.from('activity_logs').insert([{
-            username: activeAdmin,
-            action: 'CREATE_USER',
-            details: `Created user '${uName}' (${uRole.toUpperCase()}) with access: ${estateSummary}`,
-            estate: 'SYSTEM',
-            timestamp: new Date().toISOString()
-        }]);
+        await logActivity('CREATE_USER', `Created user account '${uName}' (${uRole.toUpperCase()}) with access to: ${estateSummary}`);
 
         alert(`User "${uName}" created successfully!`);
         document.getElementById('newUserFull').value = '';
@@ -1130,7 +1119,6 @@ async function addNewUser() {
         document.querySelectorAll('.new-estate-chk').forEach(chk => chk.checked = false);
 
         fetchUserProfiles();
-        fetchActivityLogs();
     }
 }
 
@@ -1165,24 +1153,14 @@ async function saveUserEdit() {
         if (error) return alert("Error updating database: " + error.message);
     }
 
-    const activeAdmin = currentUser ? currentUser.username : 'ADMIN';
     const estateSummary = newRole === 'admin' ? 'ALL ESTATES' : (newEstates.join(', ') || 'NONE');
-
-    await supabaseClient.from('activity_logs').insert([{
-        username: activeAdmin,
-        action: 'EDIT_USER',
-        details: `Updated user '${targetUser.username}' (${newRole.toUpperCase()}). Access: ${estateSummary}`,
-        estate: 'SYSTEM',
-        timestamp: new Date().toISOString()
-    }]);
+    await logActivity('EDIT_USER', `Updated user '${targetUser.username}' (${newRole.toUpperCase()}). Access: ${estateSummary}`);
 
     alert("User profile updated successfully!");
     closeEditModal();
     fetchUserProfiles();
-    fetchActivityLogs();
 }
 
-// Safe Add New Estate (No sort_order dependency)
 async function addNewEstate() {
     const nameInput = document.getElementById('newEstateName');
     const newName = nameInput.value.trim();
@@ -1193,6 +1171,7 @@ async function addNewEstate() {
     if (error) {
         alert("Error adding estate: " + error.message);
     } else {
+        await logActivity('ADD_ESTATE', `Created new estate location '${newName}'`, newName);
         alert(`Estate "${newName}" added permanently!`);
         nameInput.value = '';
         await fetchEstates();
@@ -1208,6 +1187,7 @@ async function removeEstate(idx) {
     if (error) {
         alert("Error deleting estate: " + error.message);
     } else {
+        await logActivity('DELETE_ESTATE', `Permanently deleted estate '${targetEstate}'`, targetEstate);
         alert(`Estate "${targetEstate}" permanently deleted!`);
         await fetchEstates();
     }
@@ -1227,6 +1207,7 @@ async function editEstateName(idx) {
         if (error) {
             alert("Error updating estate: " + error.message);
         } else {
+            await logActivity('EDIT_ESTATE', `Renamed estate from '${oldName}' to '${trimmedName}'`, trimmedName);
             alert(`Estate renamed to "${trimmedName}" permanently!`);
             await fetchEstates();
         }
@@ -1242,18 +1223,10 @@ async function removeUser(idx) {
         if (error) return alert("Error deleting user: " + error.message);
     }
 
-    const activeAdmin = currentUser ? currentUser.username : 'ADMIN';
-    await supabaseClient.from('activity_logs').insert([{
-        username: activeAdmin,
-        action: 'DELETE_USER',
-        details: `Deleted user profile '${targetUser.username}' (${targetUser.role ? targetUser.role.toUpperCase() : 'USER'})`,
-        estate: 'SYSTEM',
-        timestamp: new Date().toISOString()
-    }]);
+    await logActivity('DELETE_USER', `Deleted user profile '${targetUser.username}' (${targetUser.role ? targetUser.role.toUpperCase() : 'USER'})`);
 
     userAccounts.splice(idx, 1);
     renderSettingsUI();
-    fetchActivityLogs();
 }
 
 function onEstateOrMonthChange() {
@@ -1368,7 +1341,6 @@ function printActiveTab() {
         }
     }
 
-    // Populate Print Header & Footer Elements
     document.querySelectorAll('.lblLocation').forEach(el => el.innerText = estVal);
     document.querySelectorAll('.lblMonth').forEach(el => el.innerText = formattedMonth);
     document.querySelectorAll('.lblPreparedBy').forEach(el => el.innerText = prepVal);
