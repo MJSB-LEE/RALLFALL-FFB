@@ -226,7 +226,7 @@ body {
 }
 
 /* ==========================================================================
-   FULL-PAGE A4 PORTRAIT PRINT ENGINE (STRETCHED TO BOTTOM)
+   FULL-PAGE A4 PORTRAIT PRINT ENGINE (WITH EXTENDED SIGNATURE SPACE)
    ========================================================================== */
 @media print {
     @page {
@@ -253,7 +253,7 @@ body {
         print-color-adjust: exact !important;
     }
 
-    /* Completely Hide Web UI Components */
+    /* Hide Web UI Elements */
     .header-card, 
     .nav-tabs, 
     #loginOverlay, 
@@ -331,18 +331,18 @@ body {
         padding: 0 4px;
     }
 
-    /* Stretches the 31 rows taller (~5 extra cell heights total) */
+    /* Full Page Table Layout */
     .report-table {
         width: 100% !important;
         border-collapse: collapse !important;
         box-shadow: none !important;
-        font-size: 8.2pt !important;
+        font-size: 8pt !important;
         margin-bottom: 0 !important;
         flex-grow: 1 !important;
     }
 
     .report-table tr {
-        height: 2.3vh !important; /* Stretches cells vertically */
+        height: 2.15vh !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -383,7 +383,7 @@ body {
         padding: 0 !important;
         margin: 0 !important;
         height: 100% !important;
-        font-size: 8.2pt !important;
+        font-size: 8pt !important;
     }
 
     .readonly-cell {
@@ -391,10 +391,10 @@ body {
         color: #334155 !important;
     }
 
-    /* Signature Section Anchored Near Page Bottom */
+    /* Signature Block with Extra Vertical Room for Handwriting */
     .print-footer-block {
         margin-top: auto !important;
-        padding-top: 8px !important;
+        padding-top: 6px !important;
         padding-bottom: 2mm !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
@@ -412,6 +412,21 @@ body {
 
     .sig-box {
         width: 48%;
+    }
+
+    /* Adds vertical gap (row room) inside PREPARED BY & APPROVED BY */
+    .sig-box strong,
+    .sig-box span {
+        display: inline-block;
+    }
+
+    .lblPreparedBy, 
+    .lblApprovedBy {
+        margin-top: 25px !important; /* Vertical signing space */
+        border-top: 1px dashed #94a3b8;
+        padding-top: 3px;
+        display: inline-block;
+        min-width: 180px;
     }
 
     .text-right {
