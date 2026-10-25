@@ -19,13 +19,39 @@ let estateMills = [];
 let userAccounts = [];
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
 
-// Auto-set the current real-time Month/Year (YYYY-MM)
+// Live Real-Time Malaysia Standard Time (UTC+8) Clock Engine
+function startMalaysiaClock() {
+    function updateClock() {
+        const clockElem = document.getElementById('realTimeClock');
+        if (!clockElem) return;
+
+        const now = new Date();
+        const options = {
+            timeZone: 'Asia/Kuala_Lumpur',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        };
+
+        const mytTimeString = new Intl.DateTimeFormat('en-MY', options).format(now);
+        clockElem.innerText = `MYT (UTC+8): ${mytTimeString}`;
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+}
+
+// Automatically set Month/Year field using MYT timezone
 function setDefaultMonthYear() {
     const monthYearInput = document.getElementById('bulanTahun');
     if (monthYearInput && !monthYearInput.value) {
         const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const mytDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kuala_Lumpur' }).format(now);
+        const [year, month] = mytDateStr.split('-');
         monthYearInput.value = `${year}-${month}`;
     }
 }
@@ -1182,10 +1208,11 @@ document.addEventListener('change', (e) => {
 });
 
 window.onload = async function() {
+    startMalaysiaClock(); // Start UTC+8 real-time clock engine
     initKeyInTables();
     switchTab('tab1');
 
-    setDefaultMonthYear(); // Auto-sets to real-time month
+    setDefaultMonthYear(); // Auto-sets real-time month/year
 
     await fetchEstates();        
     await fetchUserProfiles();   
