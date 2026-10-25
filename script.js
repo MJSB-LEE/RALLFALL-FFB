@@ -1,5 +1,3 @@
-
-
 // Supabase Configuration
 const SUPABASE_URL = 'https://tiwulxrorrmyxtosvzkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_W4-5_riBQWAUBPVtgX8Pcw_WCRET_KF';
@@ -73,13 +71,17 @@ function switchTab(tabId) {
     const submitBtn = document.getElementById('submitBtn');
 
     if (saveBtn && submitBtn) {
-        if (tabId === 'tabSummary' || tabId === 'tabSettings') {
+        if (tabId === 'tabSummary' || tabId === 'tabMillSummary' || tabId === 'tabSettings') {
             saveBtn.style.display = 'none';
             submitBtn.style.display = 'none';
         } else {
             saveBtn.style.display = 'inline-block';
             submitBtn.style.display = 'inline-block';
         }
+    }
+
+    if (tabId === 'tabMillSummary') {
+        loadMillSummaryBreakdown();
     }
 
     if (tabId === 'tabSettings') {
@@ -213,14 +215,14 @@ function updateMillDropdownsForEstate(estateName) {
     }
 }
 
-// Fetch Estates
+// Fetch Estates (Sorted Alphabetically)
 async function fetchEstates() {
     if (!supabaseClient) return;
-    const { data, error } = await supabaseClient.from('estates').select('name').order('id', { ascending: true });
+    const { data, error } = await supabaseClient.from('estates').select('name').order('name', { ascending: true });
     if (!error && data && data.length > 0) {
         estateList = data.map(e => e.name);
     } else {
-        estateList = ["STY", "Klagan PH1", "Kars PH1/2/4", "Kars PH3", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "Labuk", "TUNGKU"];
+        estateList = ["Kars PH1/2/4", "Kars PH3", "Klagan PH1", "Labuk", "Sg Millian 1", "Sg Millian 2", "Sg Millian 3", "STY", "TUNGKU"].sort();
     }
     
     renderEstateDropdown();
@@ -238,13 +240,14 @@ async function fetchUserProfiles() {
     } else {
         userAccounts = [
             { username: "admin", password: "admin123", full_name: "System Admin", email: "admin@masihjaya.com", role: "admin", assigned_estates: [] },
+            { username: "manager", password: "manager123", full_name: "Estate Manager", email: "manager@masihjaya.com", role: "manager", assigned_estates: [] },
             { username: "sty_user", password: "user123", full_name: "STY Officer", email: "sty@masihjaya.com", role: "user", assigned_estates: ["STY"] }
         ];
     }
     renderSettingsUI();
 }
 
-// Fetch Activity Logs
+// Database-Linked Activity Audit Logs
 async function fetchActivityLogs() {
     const tableBody = document.getElementById('activityLogTableBody');
     if (!tableBody || !supabaseClient) return;
@@ -253,7 +256,7 @@ async function fetchActivityLogs() {
         .from('activity_logs')
         .select('*')
         .order('id', { ascending: false })
-        .limit(30);
+        .limit(40);
 
     if (error) {
         tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #ef4444;">Error loading logs: ${error.message}</td></tr>`;
@@ -299,7 +302,7 @@ async function handleLogin() {
             await supabaseClient.from('activity_logs').insert([{
                 username: currentUser.username,
                 action: 'LOGIN',
-                details: `User '${currentUser.username}' logged into system`,
+                details: `User '${currentUser.username}' logged into system (${(currentUser.role || 'USER').toUpperCase()})`,
                 estate: currentUser.role === 'admin' ? 'ALL ESTATES' : (currentUser.assigned_estates?.[0] || 'SYSTEM'),
                 timestamp: new Date().toISOString()
             }]);
@@ -335,6 +338,7 @@ function applyUserPermissions() {
     const ladangSelect = document.getElementById('ladangSelect');
     const settingsBtn = document.getElementById('btn-tabSettings');
     const approveBtn = document.getElementById('approveBtn');
+    const hqLockBtn = document.getElementById('hqLockBtn');
     const prepInput = document.getElementById('preparedByInput');
 
     if (userLabel) userLabel.innerText = `User: ${currentUser.full_name || currentUser.username} (${currentUser.username})`;
@@ -351,12 +355,22 @@ function applyUserPermissions() {
 
     if (currentUser.role === "admin") {
         if (badge) {
-            badge.innerText = "ROLE: ADMIN";
+            badge.innerText = "ROLE: ADMIN (HQ)";
             badge.style.background = "#dc2626";
         }
         if (ladangSelect) ladangSelect.disabled = false;
         if (settingsBtn) settingsBtn.style.display = "inline-block";
         if (approveBtn) approveBtn.style.display = "inline-block";
+        if (hqLockBtn) hqLockBtn.style.display = "inline-block";
+    } else if (currentUser.role === "manager") {
+        if (badge) {
+            badge.innerText = "ROLE: MANAGER";
+            badge.style.background = "#d97706";
+        }
+        if (ladangSelect) ladangSelect.disabled = false;
+        if (settingsBtn) settingsBtn.style.display = "none";
+        if (approveBtn) approveBtn.style.display = "inline-block";
+        if (hqLockBtn) hqLockBtn.style.display = "none";
     } else {
         if (badge) {
             badge.innerText = `ROLE: USER (${allowedEstates.length} Location${allowedEstates.length > 1 ? 's' : ''})`;
@@ -365,6 +379,7 @@ function applyUserPermissions() {
         if (ladangSelect) ladangSelect.disabled = allowedEstates.length <= 1; 
         if (settingsBtn) settingsBtn.style.display = "none";
         if (approveBtn) approveBtn.style.display = "none";
+        if (hqLockBtn) hqLockBtn.style.display = "none";
         
         if (document.getElementById('tabSettings')?.classList.contains('active')) {
             switchTab('tab1');
@@ -375,15 +390,15 @@ function applyUserPermissions() {
     onEstateOrMonthChange();
 }
 
-function setFormLockState(isLocked, statusText = '') {
-    if (currentUser?.role === 'admin') {
+function setFormLockState(isLocked, statusText = '', isHqLocked = false) {
+    if (currentUser?.role === 'admin' && !isHqLocked) {
         isLocked = false;
     }
 
     const inputs = document.querySelectorAll('#tbody-s1 input, #tbody-s1 select, #tbody-s2 input');
     inputs.forEach(input => {
         if (!input.classList.contains('readonly-cell')) {
-            input.disabled = isLocked;
+            input.disabled = isLocked || currentUser?.role === 'manager';
         }
     });
 
@@ -391,7 +406,7 @@ function setFormLockState(isLocked, statusText = '') {
     const submitBtn = document.getElementById('submitBtn');
 
     if (saveBtn && submitBtn) {
-        if (isLocked) {
+        if (isLocked || currentUser?.role === 'manager') {
             saveBtn.style.display = 'none';
             submitBtn.disabled = true;
             submitBtn.style.background = '#94a3b8';
@@ -408,10 +423,14 @@ function setFormLockState(isLocked, statusText = '') {
 
 // Save Function
 async function saveToCloud() {
+    if (currentUser?.role === 'manager') {
+        return alert("Managers have read/approve permissions only and cannot edit daily entries.");
+    }
+
     const activeTabElem = document.querySelector('.tab-content.active');
     const activeTabId = activeTabElem ? activeTabElem.id : '';
 
-    if (activeTabId === 'tabSummary' || activeTabId === 'tabSettings') {
+    if (activeTabId === 'tabSummary' || activeTabId === 'tabMillSummary' || activeTabId === 'tabSettings') {
         alert("⚠️ Save operation is only available on Input Tabs (Tabs 1 & 2).");
         return;
     }
@@ -514,18 +533,18 @@ async function submitMonthlyReport() {
 }
 
 async function approveMonthlyReport() {
-    if (currentUser?.role !== "admin") return alert("Only Administrators / Managers can approve reports.");
+    if (currentUser?.role !== "admin" && currentUser?.role !== "manager") return alert("Only Administrators or Managers can approve reports.");
 
     const estate = document.getElementById('ladangSelect')?.value;
     const monthYear = document.getElementById('bulanTahun')?.value;
     if (!monthYear || !estate) return alert("Select Estate and Month first.");
 
     let allowedEstates = currentUser.assigned_estates || [];
-    if (currentUser.role !== "admin" && !allowedEstates.includes(estate)) {
-        return alert(`Access Denied: You are only allowed to approve records for your assigned estate (${allowedEstates.join(', ')}).`);
+    if (currentUser.role !== "admin" && currentUser.role !== "manager" && !allowedEstates.includes(estate)) {
+        return alert(`Access Denied: You are only allowed to approve records for your assigned estate.`);
     }
 
-    const appName = `${currentUser.full_name || currentUser.username} (Manager)`;
+    const appName = `${currentUser.full_name || currentUser.username} (Approved)`;
     const [year, month] = monthYear.split('-').map(Number);
     const lastDay = new Date(year, month, 0).getDate();
 
@@ -548,6 +567,42 @@ async function approveMonthlyReport() {
         }]);
 
         alert("Report officially approved!");
+        loadFromCloud();
+    }
+}
+
+async function hqLockReport() {
+    if (currentUser?.role !== "admin") return alert("Only HQ / Admin can execute final HQ Lock.");
+
+    const estate = document.getElementById('ladangSelect')?.value;
+    const monthYear = document.getElementById('bulanTahun')?.value;
+    if (!monthYear || !estate) return alert("Select Estate and Month first.");
+
+    if (!confirm(`Confirm HQ FINAL LOCK for ${estate} (${monthYear})? No user or manager can edit this record afterwards.`)) return;
+
+    const appName = `${currentUser.full_name || currentUser.username} (HQ Final Lock)`;
+    const [year, month] = monthYear.split('-').map(Number);
+    const lastDay = new Date(year, month, 0).getDate();
+
+    const { error } = await supabaseClient
+        .from('daily_records')
+        .update({ status: 'hq_locked', approved_by: appName })
+        .ilike('estate_name', estate)
+        .gte('record_date', `${monthYear}-01`)
+        .lte('record_date', `${monthYear}-${String(lastDay).padStart(2, '0')}`);
+
+    if (error) {
+        alert("HQ Lock Error: " + error.message);
+    } else {
+        await supabaseClient.from('activity_logs').insert([{
+            username: currentUser.username,
+            action: 'HQ_LOCK_REPORT',
+            details: `HQ Submitted & Locked report permanently for ${estate} (${monthYear})`,
+            estate: estate,
+            timestamp: new Date().toISOString()
+        }]);
+
+        alert("🔒 Report permanently locked by HQ!");
         loadFromCloud();
     }
 }
@@ -649,8 +704,10 @@ async function loadFromCloud() {
             document.getElementById('approvedByInput').value = lastRecord.approved_by || "Pending Manager Approval";
         }
 
-        if (lastRecord.status === 'submitted' || lastRecord.status === 'approved') {
-            setFormLockState(true, lastRecord.status);
+        if (lastRecord.status === 'hq_locked') {
+            setFormLockState(true, 'HQ Locked', true);
+        } else if (lastRecord.status === 'submitted' || lastRecord.status === 'approved') {
+            setFormLockState(true, lastRecord.status, false);
         } else {
             setFormLockState(false);
         }
@@ -678,6 +735,7 @@ async function loadFromCloud() {
     calcS2();
 }
 
+// Auto-Sorted Overall Summary Matrix
 async function loadOverallSummary() {
     const monthYear = document.getElementById('bulanTahun')?.value;
     if (!monthYear || !supabaseClient) return;
@@ -693,8 +751,11 @@ async function loadOverallSummary() {
 
     if (error) return;
 
+    // Sort estates alphabetically
+    const sortedEstates = [...estateList].sort((a, b) => a.localeCompare(b));
+
     let matrix = {};
-    estateList.forEach(est => { matrix[est] = {}; });
+    sortedEstates.forEach(est => { matrix[est] = {}; });
 
     if (data) {
         data.forEach(r => {
@@ -707,7 +768,7 @@ async function loadOverallSummary() {
 
     let estateHdr = '<th>DATE</th>';
     let subHdr = '<th>DATE</th>';
-    estateList.forEach(est => {
+    sortedEstates.forEach(est => {
         estateHdr += `<th colspan="2" class="header-estate">${est}</th>`;
         subHdr += `<th>TO DAY</th><th>TO DATE</th>`;
     });
@@ -720,11 +781,11 @@ async function loadOverallSummary() {
     let tbody = '';
     let estateTotals = {};
     let estateDays = {};
-    estateList.forEach(est => { estateTotals[est] = 0; estateDays[est] = 0; });
+    sortedEstates.forEach(est => { estateTotals[est] = 0; estateDays[est] = 0; });
 
     for (let d = 1; d <= lastDay; d++) {
         tbody += `<tr><td><b>${d}</b></td>`;
-        estateList.forEach(est => {
+        sortedEstates.forEach(est => {
             let val = matrix[est][d] || 0;
             estateTotals[est] += val;
             if (val > 0) estateDays[est]++;
@@ -740,7 +801,7 @@ async function loadOverallSummary() {
 
     let totHtml = '<td>TOTAL</td>';
     let daysHtml = '<td>DAYS</td>';
-    estateList.forEach(est => {
+    sortedEstates.forEach(est => {
         totHtml += `<td>${estateTotals[est].toFixed(1)}</td><td class="readonly-cell">${estateTotals[est].toFixed(1)}</td>`;
         daysHtml += `<td colspan="2">${estateDays[est]} Days</td>`;
     });
@@ -749,6 +810,74 @@ async function loadOverallSummary() {
 
     if (document.getElementById('row-totals')) document.getElementById('row-totals').innerHTML = totHtml;
     if (document.getElementById('row-days')) document.getElementById('row-days').innerHTML = daysHtml;
+}
+
+// Mill Supplier Breakdown Summary
+async function loadMillSummaryBreakdown() {
+    const estate = document.getElementById('ladangSelect')?.value;
+    const monthYear = document.getElementById('bulanTahun')?.value;
+
+    if (!monthYear || !estate || !supabaseClient) return;
+
+    const [year, month] = monthYear.split('-').map(Number);
+    const lastDay = new Date(year, month, 0).getDate();
+
+    const { data, error } = await supabaseClient
+        .from('daily_records')
+        .select('mill_name, ffb1')
+        .ilike('estate_name', estate)
+        .gte('record_date', `${monthYear}-01`)
+        .lte('record_date', `${monthYear}-${String(lastDay).padStart(2, '0')}`);
+
+    const tbody = document.getElementById('tbody-mill-summary');
+    const tfoot = document.getElementById('row-mill-total');
+
+    if (error || !tbody) return;
+
+    let millTotals = {};
+    let millDays = {};
+    let grandTotalFfb = 0;
+
+    if (data) {
+        data.forEach(r => {
+            let mill = r.mill_name || 'Unassigned / Direct';
+            let ffb = parseFloat(r.ffb1) || 0;
+            if (!millTotals[mill]) {
+                millTotals[mill] = 0;
+                millDays[mill] = 0;
+            }
+            millTotals[mill] += ffb;
+            if (ffb > 0) millDays[mill]++;
+            grandTotalFfb += ffb;
+        });
+    }
+
+    let rowsHtml = '';
+    const millsArray = Object.keys(millTotals).sort();
+
+    if (millsArray.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color: #94a3b8;">No mill FFB data recorded for ${estate} in ${monthYear}</td></tr>`;
+        tfoot.innerHTML = `<td>TOTAL</td><td>0.00 MT</td><td>0 Days</td><td>100.00%</td>`;
+        return;
+    }
+
+    millsArray.forEach(mill => {
+        let ffbVal = millTotals[mill];
+        let pct = grandTotalFfb > 0 ? ((ffbVal / grandTotalFfb) * 100).toFixed(2) : '0.00';
+        rowsHtml += `<tr>
+            <td style="text-align: left; padding-left: 15px; font-weight: bold; color: #1e3a8a;">${mill}</td>
+            <td>${ffbVal.toFixed(2)}</td>
+            <td>${millDays[mill]} Days</td>
+            <td class="readonly-cell">${pct}%</td>
+        </tr>`;
+    });
+
+    tbody.innerHTML = rowsHtml;
+    tfoot.innerHTML = `
+        <td style="text-align: left; padding-left: 15px;">TOTAL FFB TONNAGE</td>
+        <td>${grandTotalFfb.toFixed(2)} MT</td>
+        <td>-</td>
+        <td>100.00%</td>`;
 }
 
 function clearForm() {
@@ -777,7 +906,9 @@ function renderEstateDropdown(allowedEstatesFilter = null) {
     if (!estateSelect) return;
     estateSelect.innerHTML = '';
 
-    estateList.forEach(est => {
+    const sortedEstates = [...estateList].sort((a, b) => a.localeCompare(b));
+
+    sortedEstates.forEach(est => {
         if (!allowedEstatesFilter || (currentUser && currentUser.role === "admin") || allowedEstatesFilter.includes(est)) {
             let opt1 = document.createElement('option');
             opt1.value = est;
@@ -816,7 +947,9 @@ function renderNewUserEstateCheckboxes() {
         return;
     }
 
-    estateList.forEach(est => {
+    const sortedEstates = [...estateList].sort((a, b) => a.localeCompare(b));
+
+    sortedEstates.forEach(est => {
         container.innerHTML += `
             <label class="checkbox-item" style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
                 <input type="checkbox" value="${est}" class="new-estate-chk">
@@ -851,7 +984,8 @@ function renderSettingsUI() {
     const estListUi = document.getElementById('estateSettingsList');
     if (estListUi) {
         estListUi.innerHTML = '';
-        estateList.forEach((est, idx) => {
+        const sortedEstates = [...estateList].sort((a, b) => a.localeCompare(b));
+        sortedEstates.forEach((est, idx) => {
             estListUi.innerHTML += `<li style="padding: 8px 12px; background: #ffffff; margin-bottom: 6px; border-radius: 4px; border: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box;">
                 <span style="font-size: 13px; font-weight: 600; color: #334155;">${est}</span>
                 <div>
@@ -881,7 +1015,8 @@ function openEditUserModal(idx) {
     const editContainer = document.getElementById('editEstateCheckboxes');
     if (editContainer) {
         editContainer.innerHTML = '';
-        estateList.forEach(est => {
+        const sortedEstates = [...estateList].sort((a, b) => a.localeCompare(b));
+        sortedEstates.forEach(est => {
             let isChecked = userAssigned.includes(est) ? 'checked' : '';
             editContainer.innerHTML += `
                 <label class="checkbox-item" style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
@@ -1081,6 +1216,7 @@ function onEstateOrMonthChange() {
     updateSummaryHeader();
     loadFromCloud();
     loadOverallSummary();
+    loadMillSummaryBreakdown();
 }
 
 function initKeyInTables() {
@@ -1210,11 +1346,11 @@ document.addEventListener('change', (e) => {
 });
 
 window.onload = async function() {
-    startMalaysiaClock(); // Start UTC+8 real-time clock engine
+    startMalaysiaClock(); 
     initKeyInTables();
     switchTab('tab1');
 
-    setDefaultMonthYear(); // Auto-sets real-time month/year
+    setDefaultMonthYear(); 
 
     await fetchEstates();        
     await fetchUserProfiles();   
