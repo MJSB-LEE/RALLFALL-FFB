@@ -59,8 +59,12 @@ async function handleLogin() {
         const overlay = document.getElementById('loginOverlay');
         if (overlay) overlay.style.display = "none";
 
+        const displayName = currentUser.full_name || currentUser.username;
+        if (document.getElementById('sigPreparedByName')) {
+            document.getElementById('sigPreparedByName').innerText = displayName;
+        }
         if (document.getElementById('lblLastKeyinUser')) {
-            document.getElementById('lblLastKeyinUser').innerText = currentUser.full_name || currentUser.username;
+            document.getElementById('lblLastKeyinUser').innerText = displayName;
         }
 
         if (typeof logActivity === 'function') {
@@ -92,6 +96,15 @@ function applyUserPermissions() {
     document.getElementById('loginOverlay').style.display = "none";
     document.getElementById('userBadge').innerText = `ROLE: ${(currentUser.role || 'USER').toUpperCase()}`;
     document.getElementById('userInfoLabel').innerText = `User: ${currentUser.full_name || currentUser.username}`;
+    
+    const displayName = currentUser.full_name || currentUser.username;
+    if (document.getElementById('sigPreparedByName')) {
+        document.getElementById('sigPreparedByName').innerText = displayName;
+    }
+    if (document.getElementById('lblLastKeyinUser')) {
+        document.getElementById('lblLastKeyinUser').innerText = displayName;
+    }
+
     renderEstateDropdown(currentUser.assigned_estates || []);
     setDefaultMonthYear();
     onEstateOrMonthChange();
