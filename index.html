@@ -30,7 +30,6 @@
                 <span id="userBadge" style="background:#1e40af; color:white; padding:3px 7px; border-radius:4px; font-weight:bold; font-size:10px;">ROLE: ADMIN</span>
                 <span id="userInfoLabel" style="font-size:11px; font-weight:600;">User: System Administrator</span>
                 
-                <button class="btn btn-save" id="saveBtn" onclick="saveToCloud()">💾 Save Data</button>
                 <button class="btn btn-print" onclick="printActiveTab()">🖨️ Print</button>
                 <button class="btn btn-logout" onclick="handleLogout()">🚪 Logout</button>
             </div>
@@ -68,13 +67,26 @@
                 <tbody id="tbody-s1"></tbody>
             </table>
 
-            <!-- PRINT FOOTER (Signature Only) -->
+            <!-- BOTTOM ACTION BAR (Below 31 Days on Screen) -->
+            <div class="bottom-action-bar">
+                <button class="btn btn-save" onclick="saveToCloud()">💾 Save Data</button>
+                <button class="btn btn-lock" onclick="submitForApproval()">🔒 Submit for Approval</button>
+            </div>
+
+            <!-- PRINT FOOTER (Only visible when printing) -->
             <div class="print-footer-summary">
-                <div class="signature-block">
+                <div class="signature-block sig-left">
                     <span class="sig-user-name" id="sigPreparedByName">System Administrator</span>
                     <div class="sig-line">
                         PREPARED BY<br>
                         <span style="font-weight:normal; font-size:8px;">(Estate Clerk / In-Charge)</span>
+                    </div>
+                </div>
+                <div class="signature-block sig-right">
+                    <span class="sig-user-name">&nbsp;</span>
+                    <div class="sig-line">
+                        APPROVED BY<br>
+                        <span style="font-weight:normal; font-size:8px;">(Manager / In-Charge)</span>
                     </div>
                 </div>
             </div>
@@ -101,6 +113,10 @@
                 </thead>
                 <tbody id="tbody-s2"></tbody>
             </table>
+            
+            <div class="bottom-action-bar">
+                <button class="btn btn-save" onclick="saveToCloud()">💾 Save Data</button>
+            </div>
         </div>
 
         <!-- TAB 3: DAILY FFB RECORD BY MILL -->
@@ -112,6 +128,10 @@
                 </thead>
                 <tbody id="tbody-tab3"></tbody>
             </table>
+            
+            <div class="bottom-action-bar">
+                <button class="btn btn-save" onclick="saveToCloud()">💾 Save Data</button>
+            </div>
         </div>
 
         <!-- TAB 4: OVERALL SUMMARY -->
