@@ -59,6 +59,10 @@ async function handleLogin() {
         const overlay = document.getElementById('loginOverlay');
         if (overlay) overlay.style.display = "none";
 
+        if (document.getElementById('lblLastKeyinUser')) {
+            document.getElementById('lblLastKeyinUser').innerText = currentUser.full_name || currentUser.username;
+        }
+
         if (typeof logActivity === 'function') {
             await logActivity('LOGIN', `Logged in as ${(currentUser.role || 'USER').toUpperCase()}`);
         }
