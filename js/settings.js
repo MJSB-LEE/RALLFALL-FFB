@@ -1,4 +1,47 @@
+async function createNewUserAccount() {
+    const username = document.getElementById('newUsername').value.trim();
+    const password = document.getElementById('newPassword').value.trim();
+    const fullName = document.getElementById('newFullName').value.trim();
+    const role = document.getElementById('newUserRole').value;
 
+    if (!username || !password || !fullName) {
+        return alert("Please fill in Username, Password, and Full Name.");
+    }
+
+    const newUser = { username, password, full_name: fullName, role, assigned_estates: [] };
+
+    if (supabaseClient) {
+        const { error } = await supabaseClient.from('user_profiles').insert([newUser]);
+        if (error) return alert("Failed to save user: " + error.message);
+    }
+
+    userAccounts.push(newUser);
+    await logActivity('CREATE_USER', `Created user ${username} (${role})`);
+    alert(`✅ User ${username} created successfully!`);
+
+    document.getElementById('newUsername').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('newFullName').value = '';
+}
+
+async function addNewEstate() {
+    const estateName = document.getElementById('newEstateName').value.trim();
+    if (!estateName) return alert("Enter estate name");
+
+    if (!estateList.includes(estateName)) {
+        estateList.push(estateName);
+        if (supabaseClient) {
+            await supabaseClient.from('estates').insert([{ name: estateName }]);
+        }
+        await logActivity('ADD_ESTATE', `Added estate ${estateName}`);
+        document.getElementById('newEstateName').value = '';
+        renderEstateDropdown();
+        renderSettingsUI();
+        alert(`✅ Estate ${estateName} added!`);
+    } else {
+        alert("Estate already exists!");
+    }
+}
 
 async function fetchMills() {
     if (!supabaseClient) return;
@@ -20,7 +63,7 @@ function renderMillSettingsUI() {
     if (millListUi) {
         millListUi.innerHTML = '';
         estateMills.filter(m => m.estate_name === currentEstate).forEach(m => {
-            millListUi.innerHTML += `<li style="padding:4px; background:#f8fafc; margin-bottom:4px; border:1px solid #cbd5e1; display:flex; justify-content:space-between;">
+            millListUi.innerHTML += `<li style="padding:4px; background:#fff; margin-bottom:4px; border:1px solid #cbd5e1; display:flex; justify-content:space-between; border-radius:4px;">
                 <span>${m.mill_name}</span>
                 <button onclick="removeMill(${m.id})" style="background:#dc2626; color:white; border:none; padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer;">Del</button>
             </li>`;
@@ -57,7 +100,6 @@ async function fetchEstates() {
     }
     renderEstateDropdown();
     renderSettingsUI();
-    loadOverallSummary();
 }
 
 function handleDragStart(e, index) { draggedEstateIndex = index; e.dataTransfer.effectAllowed = 'move'; }
@@ -70,7 +112,6 @@ function handleDrop(e, targetIndex) {
     localStorage.setItem('custom_estate_order', JSON.stringify(estateList));
     renderSettingsUI();
     renderEstateDropdown();
-    loadOverallSummary();
     draggedEstateIndex = null;
 }
 
@@ -78,7 +119,6 @@ async function fetchUserProfiles() {
     if (!supabaseClient) return;
     const { data } = await supabaseClient.from('user_profiles').select('*');
     if (data && data.length > 0) userAccounts = data;
-    renderSettingsUI();
 }
 
 function renderEstateDropdown(filter = null) {
@@ -97,7 +137,7 @@ function renderSettingsUI() {
     if (estListUi) {
         estListUi.innerHTML = '';
         estateList.forEach((est, idx) => {
-            estListUi.innerHTML += `<li draggable="true" ondragstart="handleDragStart(event, ${idx})" ondragover="handleDragOver(event)" ondrop="handleDrop(event, ${idx})" style="padding:6px; background:#fff; margin-bottom:4px; border:1px dashed #3b82f6; display:flex; justify-content:space-between; cursor:grab;">
+            estListUi.innerHTML += `<li draggable="true" ondragstart="handleDragStart(event, ${idx})" ondragover="handleDragOver(event)" ondrop="handleDrop(event, ${idx})" style="padding:4px 8px; background:#fff; margin-bottom:4px; border:1px dashed #3b82f6; border-radius:4px; display:flex; justify-content:space-between; cursor:grab;">
                 <span>☰ ${est}</span>
             </li>`;
         });
