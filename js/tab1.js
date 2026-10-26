@@ -1,3 +1,4 @@
+
 function calcS1() {
     let cumRf = 0, cumFfb = 0;
     for (let d = 1; d <= 31; d++) {
