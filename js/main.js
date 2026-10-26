@@ -1,3 +1,5 @@
+
+
 function startMalaysiaClock() {
     function updateClock() {
         const clockElem = document.getElementById('realTimeClock');
