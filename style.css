@@ -1,12 +1,9 @@
-
-
-/* Modern Root Theme Variables */
 :root {
     --primary-color: #1e40af;
     --primary-hover: #1d4ed8;
     --accent-blue: #0284c7;
     --accent-green: #059669;
-    --bg-main: #f8fafc;
+    --bg-main: #f1f5f9;
     --card-bg: #ffffff;
     --border-color: #cbd5e1;
     --text-dark: #0f172a;
@@ -18,20 +15,41 @@ body {
     background-color: var(--bg-main);
     color: var(--text-dark);
     margin: 0;
-    padding: 10px 15px;
+    padding: 10px;
 }
 
-/* Top Navigation Bar */
+/* Centered Container Layout */
+.app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Corporate Branding Header */
+.app-title-bar {
+    background: linear-gradient(135deg, #1e3a8a, #1e40af);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 6px 6px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+}
+
+/* Header & Controls Bar */
 .top-header {
     background: var(--card-bg);
-    padding: 8px 16px;
-    border-radius: 8px;
+    padding: 8px 14px;
+    border-radius: 0 0 6px 6px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.04);
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
     border: 1px solid var(--border-color);
+    border-top: none;
 }
 
 .control-group {
@@ -43,7 +61,6 @@ body {
 .control-group label {
     font-weight: 600;
     font-size: 12px;
-    color: var(--text-dark);
 }
 
 select, input[type="month"], input[type="text"], input[type="password"] {
@@ -54,7 +71,7 @@ select, input[type="month"], input[type="text"], input[type="password"] {
     outline: none;
 }
 
-/* Action Buttons */
+/* Buttons */
 .btn {
     padding: 5px 12px;
     border-radius: 4px;
@@ -80,9 +97,8 @@ select, input[type="month"], input[type="text"], input[type="password"] {
 .nav-tabs {
     display: flex;
     gap: 4px;
-    margin-bottom: 10px;
-    border-bottom: 2px solid #e2e8f0;
-    padding-bottom: 2px;
+    margin-bottom: 8px;
+    border-bottom: 2px solid #cbd5e1;
 }
 
 .tab-btn {
@@ -101,7 +117,7 @@ select, input[type="month"], input[type="text"], input[type="password"] {
     color: white;
 }
 
-/* Tab Container */
+/* Main Content Box */
 .tab-content {
     display: none;
     background: var(--card-bg);
@@ -122,11 +138,10 @@ select, input[type="month"], input[type="text"], input[type="password"] {
     margin-bottom: 8px;
 }
 
-/* Compact Table Layout (Prevents Oversizing) */
+/* Centered Compact Table */
 .data-table {
     width: 100%;
-    max-width: 1100px; /* Controls maximum width so it doesn't stretch huge */
-    margin: 0 auto 10px auto;
+    margin: 0 auto 8px auto;
     border-collapse: collapse;
     font-size: 11px;
 }
@@ -147,12 +162,10 @@ select, input[type="month"], input[type="text"], input[type="password"] {
 .th-rf-header { background-color: #ecfdf5 !important; color: #047857 !important; border-bottom: 2px solid #10b981 !important; }
 .th-ffb-header { background-color: #eff6ff !important; color: #1d4ed8 !important; border-bottom: 2px solid #3b82f6 !important; }
 
-.data-table tr:nth-child(even) {
-    background-color: #f8fafc;
-}
+.data-table tr:nth-child(even) { background-color: #f8fafc; }
 
 .data-table input {
-    width: 70px; /* Keeps inputs compact and aligned */
+    width: 65px;
     border: 1px solid #cbd5e1;
     text-align: right;
     padding: 1px 4px;
@@ -166,47 +179,24 @@ select, input[type="month"], input[type="text"], input[type="password"] {
     color: #0f172a;
 }
 
-/* Bottom Print Summary & Signature Area */
+/* Print Signature Area Only */
 .print-footer-summary {
-    max-width: 1100px;
-    margin: 10px auto 0 auto;
+    margin-top: 10px;
     padding-top: 6px;
-    border-top: 1.5px solid #94a3b8;
-    display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    gap: 15px;
-}
-
-.summary-info-box {
-    background: #f8fafc;
-    border: 1px solid #cbd5e1;
-    padding: 6px 10px;
-    border-radius: 4px;
-    font-size: 11px;
-}
-
-.summary-info-box h4 {
-    margin: 0 0 4px 0;
-    color: var(--primary-color);
-    font-size: 11px;
-}
-
-.summary-info-box p {
-    margin: 1px 0;
+    border-top: 1px solid #cbd5e1;
+    display: flex;
+    justify-content: flex-end;
 }
 
 .signature-block {
-    display: flex;
-    justify-content: space-around;
-    align-items: flex-end;
-    padding-bottom: 2px;
     text-align: center;
+    margin-right: 40px;
 }
 
 .sig-line {
-    width: 140px;
+    width: 160px;
     border-top: 1px solid #000;
-    padding-top: 2px;
+    padding-top: 3px;
     font-weight: 700;
     font-size: 9px;
 }
@@ -216,14 +206,14 @@ select, input[type="month"], input[type="text"], input[type="password"] {
     font-weight: 600;
     font-size: 10px;
     color: #0f172a;
-    margin-bottom: 18px;
+    margin-bottom: 22px;
 }
 
-/* 2-Column Side-by-Side Settings Layout */
+/* Settings Layout */
 .settings-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 15px;
+    gap: 12px;
 }
 
 .settings-card {
@@ -233,7 +223,7 @@ select, input[type="month"], input[type="text"], input[type="password"] {
     border-radius: 6px;
 }
 
-/* Login Modal Overlay */
+/* Login Overlay */
 .login-overlay {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -249,61 +239,21 @@ select, input[type="month"], input[type="text"], input[type="password"] {
     border-radius: 10px;
     width: 280px;
     text-align: center;
-    box-shadow: 0 10px 15px rgba(0,0,0,0.1);
 }
 
 .login-modal h3 { margin: 0 0 4px 0; color: var(--primary-color); }
 .login-modal p { margin: 0 0 14px 0; font-size: 11px; color: var(--text-muted); }
 .login-modal input { width: 90%; margin-bottom: 8px; }
 
-/* Clean A4 Portrait Print Layout */
+/* Print Mode Settings */
 @media print {
-    html, body {
-        height: 100%;
-        margin: 0 !important;
-        padding: 0 !important;
-        background: white !important;
-    }
-
-    .top-header, .nav-tabs, .btn, .login-overlay {
-        display: none !important;
-    }
-
-    .tab-content {
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-
-    .data-table {
-        max-width: 100% !important;
-        margin-bottom: 4px !important;
-    }
-
-    .data-table th, .data-table td {
-        padding: 1.5px 3px !important;
-        font-size: 9px !important;
-    }
-
-    .data-table input {
-        width: 100% !important;
-        border: none !important;
-        background: transparent !important;
-        text-align: center !important;
-        font-size: 9px !important;
-    }
-
-    .print-footer-summary {
-        max-width: 100% !important;
-        margin-top: 4px !important;
-        padding-top: 3px !important;
-        page-break-inside: avoid !important;
-    }
-
-    .sig-user-name {
-        margin-bottom: 14px !important;
-    }
+    body { padding: 0 !important; background: white !important; }
+    .app-title-bar, .top-header, .nav-tabs, .btn, .login-overlay { display: none !important; }
+    .tab-content { border: none !important; box-shadow: none !important; padding: 0 !important; }
+    .data-table { width: 100% !important; margin-bottom: 4px !important; }
+    .data-table th, .data-table td { padding: 1.5px 3px !important; font-size: 9px !important; }
+    .data-table input { border: none !important; background: transparent !important; text-align: center !important; font-size: 9px !important; }
+    .print-footer-summary { page-break-inside: avoid !important; }
 }
 
 body.print-tab1 { @page { size: A4 portrait; margin: 0.4cm; } }
