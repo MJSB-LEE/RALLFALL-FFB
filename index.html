@@ -3,199 +3,208 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Masih Jaya Group - Daily Ledger System</title>
+    <title>Masih Jaya Group - Daily Ledger</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Supabase JS Client Engine -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-    <!-- Header Navigation & Live Controls -->
-    <div class="no-print header-bar">
-        <div class="header-left">
-            <label><b>Estate:</b></label>
+    <!-- Top Controls Header -->
+    <div class="top-header">
+        <div class="control-group">
+            <label>Estate:</label>
             <select id="ladangSelect" onchange="onEstateOrMonthChange()"></select>
             
-            <label><b>Month/Year:</b></label>
+            <label>Month/Year:</label>
             <input type="month" id="bulanTahun" onchange="onEstateOrMonthChange()">
+
+            <span id="realTimeClock" style="font-weight:bold; color:#0284c7; font-size:12px; margin-left:15px;"></span>
+        </div>
+
+        <div class="control-group">
+            <span id="userBadge" style="background:#1e40af; color:white; padding:4px 8px; border-radius:4px; font-weight:bold; font-size:11px;">ROLE: ADMIN</span>
+            <span id="userInfoLabel" style="font-size:12px; font-weight:600;">User: System Administrator</span>
             
-            <span id="realTimeClock"></span>
-        </div>
-        <div class="header-right">
-            <span id="userBadge"></span>
-            <span id="userInfoLabel"></span>
-            <button onclick="saveToCloud()" id="saveBtn" class="btn btn-save">💾 Save Data</button>
-            <button onclick="printActiveTab()" class="btn btn-print">🖨️ Print</button>
-            <button onclick="handleLogout()" class="btn btn-logout">🚪 Logout</button>
+            <button class="btn btn-save" id="saveBtn" onclick="saveToCloud()">💾 Save Data</button>
+            <button class="btn btn-print" onclick="printActiveTab()">🖨️ Print</button>
+            <button class="btn btn-logout" onclick="handleLogout()">🚪 Logout</button>
         </div>
     </div>
 
-    <!-- Navigation Tab Buttons -->
-    <div class="no-print tab-navigation">
-        <button id="btn-tab1" class="tab-btn active" onclick="switchTab('tab1')">1. RAINFALL + MILL</button>
-        <button id="btn-tab2" class="tab-btn" onclick="switchTab('tab2')">2. RAINFALL BY PHASE</button>
-        <button id="btn-tab3" class="tab-btn" onclick="switchTab('tab3')">3. DAILY FFB RECORD BY MILL</button>
-        <button id="btn-tabSummary" class="tab-btn" onclick="switchTab('tabSummary')">4. OVERALL SUMMARY</button>
-        <button id="btn-tabMillSummary" class="tab-btn" onclick="switchTab('tabMillSummary')">5. MILL SUPPLIER SUMMARY</button>
-        <button id="btn-tabSettings" class="tab-btn" onclick="switchTab('tabSettings')">⚙️ SETTINGS & AUDIT</button>
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+        <button class="tab-btn active" id="btn-tab1" onclick="switchTab('tab1')">1. RAINFALL + MILL</button>
+        <button class="tab-btn" id="btn-tab2" onclick="switchTab('tab2')">2. RAINFALL BY PHASE</button>
+        <button class="tab-btn" id="btn-tab3" onclick="switchTab('tab3')">3. DAILY FFB RECORD BY MILL</button>
+        <button class="tab-btn" id="btn-tabSummary" onclick="switchTab('tabSummary')">4. OVERALL SUMMARY</button>
+        <button class="tab-btn" id="btn-tabMillSummary" onclick="switchTab('tabMillSummary')">5. MILL SUPPLIER SUMMARY</button>
+        <button class="tab-btn" id="btn-tabSettings" onclick="switchTab('tabSettings')">⚙️ SETTINGS & AUDIT</button>
     </div>
 
-    <!-- TAB 1: DAILY RAINFALL & FFB TONNAGE (Portrait A4) -->
+    <!-- TAB 1: DAILY RAINFALL & OVERALL FFB TONNAGE RECORD -->
     <div id="tab1" class="tab-content active">
-        <h2>1. DAILY RAINFALL & OVERALL FFB TONNAGE RECORD</h2>
-        <div class="table-responsive">
-            <table class="ledger-table">
-                <thead>
-                    <tr>
-                        <th rowspan="2">DATE</th>
-                        <th colspan="3">RAINFALL (MM)</th>
-                        <th colspan="3">FFB TONNAGE (MT)</th>
-                    </tr>
-                    <tr>
-                        <th>TO DAY</th>
-                        <th>TO DATE</th>
-                        <th>PREV MONTH</th>
-                        <th>TO DAY</th>
-                        <th>TO DATE</th>
-                        <th>PREV MONTH</th>
-                    </tr>
-                </thead>
-                <tbody id="tbody-s1"></tbody>
-            </table>
+        <div class="section-title">1. DAILY RAINFALL & OVERALL FFB TONNAGE RECORD</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th rowspan="2" style="width: 50px;">DATE</th>
+                    <th colspan="3" class="th-rf-header">RAINFALL (MM)</th>
+                    <th colspan="3" class="th-ffb-header">FFB TONNAGE (MT)</th>
+                </tr>
+                <tr>
+                    <th class="th-rf-header">TO DAY</th>
+                    <th class="th-rf-header">TO DATE</th>
+                    <th class="th-rf-header">PREV MONTH</th>
+                    <th class="th-ffb-header">TO DAY</th>
+                    <th class="th-ffb-header">TO DATE</th>
+                    <th class="th-ffb-header">PREV MONTH</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-s1"></tbody>
+        </table>
+
+        <!-- PRINT & SUMMARY FOOTER -->
+        <div class="print-footer-summary">
+            <div class="summary-info-box">
+                <h4>📊 Monthly Key-In Summary</h4>
+                <p><strong>Total Rainfall:</strong> <span id="lblTotalMonthlyRf">0.00 MM</span></p>
+                <p><strong>Total FFB Production:</strong> <span id="lblTotalMonthlyFfb">0.00 MT</span></p>
+                <p><strong>Average Daily FFB:</strong> <span id="lblAvgDailyFfb">0.00 MT/day</span></p>
+                <p style="margin-top:8px; font-size:11px; color:#64748b;">
+                    <strong>Last Key-in Date:</strong> <span id="lblLastKeyinDate">-</span> | 
+                    <strong>Keyed By:</strong> <span id="lblLastKeyinUser">System Administrator</span>
+                </p>
+            </div>
+
+            <div class="signature-block">
+                <div class="sig-line">
+                    PREPARED BY<br>
+                    <span style="font-weight:normal; font-size:10px;">(Estate Clerk / In-Charge)</span>
+                </div>
+                <div class="sig-line">
+                    VERIFIED BY<br>
+                    <span style="font-weight:normal; font-size:10px;">(Assistant / Manager)</span>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- TAB 2: DAILY RAINFALL BY PHASE (Landscape A4) -->
+    <!-- TAB 2: RAINFALL BY PHASE -->
     <div id="tab2" class="tab-content">
-        <h2>2. DAILY RAINFALL RECORD BY PHASE</h2>
-        <div class="table-responsive">
-            <table class="ledger-table">
-                <thead>
-                    <tr>
-                        <th rowspan="2">DATE</th>
-                        <th colspan="3">PHASE 1</th>
-                        <th colspan="3">PHASE 2</th>
-                        <th colspan="3">PHASE 3</th>
-                        <th colspan="3">PHASE 4</th>
-                    </tr>
-                    <tr>
-                        <th>TODAY</th><th>TODATE</th><th>PREV MTH</th>
-                        <th>TODAY</th><th>TODATE</th><th>PREV MTH</th>
-                        <th>TODAY</th><th>TODATE</th><th>PREV MTH</th>
-                        <th>TODAY</th><th>TODATE</th><th>PREV MTH</th>
-                    </tr>
-                </thead>
-                <tbody id="tbody-s2"></tbody>
-            </table>
-        </div>
+        <div class="section-title">2. RAINFALL BREAKDOWN BY PHASE (MM)</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th rowspan="2">DATE</th>
+                    <th colspan="3" class="th-rf-header">PHASE 1</th>
+                    <th colspan="3" class="th-rf-header">PHASE 2</th>
+                    <th colspan="3" class="th-rf-header">PHASE 3</th>
+                    <th colspan="3" class="th-rf-header">PHASE 4</th>
+                </tr>
+                <tr>
+                    <th class="th-rf-header">TO DAY</th><th class="th-rf-header">TO DATE</th><th class="th-rf-header">PREV</th>
+                    <th class="th-rf-header">TO DAY</th><th class="th-rf-header">TO DATE</th><th class="th-rf-header">PREV</th>
+                    <th class="th-rf-header">TO DAY</th><th class="th-rf-header">TO DATE</th><th class="th-rf-header">PREV</th>
+                    <th class="th-rf-header">TO DAY</th><th class="th-rf-header">TO DATE</th><th class="th-rf-header">PREV</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-s2"></tbody>
+        </table>
     </div>
 
-    <!-- TAB 3: DAILY FFB RECORD BY MILL (Landscape A4 Dynamic Matrix) -->
+    <!-- TAB 3: DAILY FFB RECORD BY MILL -->
     <div id="tab3" class="tab-content">
-        <h2>3. DAILY FFB RECORD BY MILL</h2>
-        <div class="table-responsive">
-            <table class="ledger-table">
-                <thead>
-                    <tr>
-                        <th rowspan="2">DATE</th>
-                        <th id="hdr-mills-parent" colspan="6">MILL SUPPLIERS</th>
-                        <th colspan="2">GRAND TOTAL</th>
-                        <th rowspan="2">PREV MONTH</th>
-                    </tr>
-                    <tr id="tab3HeaderMills"></tr>
-                </thead>
-                <tbody id="tbody-tab3"></tbody>
-            </table>
-        </div>
+        <div class="section-title">3. DAILY FFB PRODUCTION BY MILL (MT)</div>
+        <table class="data-table">
+            <thead>
+                <tr id="tab3HeaderMills"></tr>
+            </thead>
+            <tbody id="tbody-tab3"></tbody>
+        </table>
     </div>
 
-    <!-- TAB 4: OVERALL SUMMARY MATRIX (Landscape A4) -->
+    <!-- TAB 4: OVERALL SUMMARY -->
     <div id="tabSummary" class="tab-content">
-        <h2 id="sumReportTitle">RAINFALL REPORT OVERALL SUMMARY</h2>
-        <div class="table-responsive">
-            <table class="ledger-table">
-                <thead>
-                    <tr id="hdr-estates"></tr>
-                    <tr id="hdr-sub"></tr>
-                </thead>
-                <tbody id="tbody-summary"></tbody>
-                <tfoot>
-                    <tr id="row-totals"></tr>
-                    <tr id="row-days"></tr>
-                </tfoot>
-            </table>
-        </div>
+        <div class="section-title">4. GROUP OVERALL RAINFALL SUMMARY (ALL ESTATES)</div>
+        <table class="data-table">
+            <thead>
+                <tr id="hdr-estates"></tr>
+                <tr id="hdr-sub"></tr>
+            </thead>
+            <tbody id="tbody-summary"></tbody>
+        </table>
     </div>
 
-    <!-- TAB 5: MILL SUPPLIER SUMMARY BREAKDOWN (Portrait A4) -->
+    <!-- TAB 5: MILL SUPPLIER SUMMARY -->
     <div id="tabMillSummary" class="tab-content">
-        <h2>5. MILL SUPPLIER TONNAGE BREAKDOWN</h2>
-        <div class="table-responsive">
-            <table class="ledger-table">
-                <thead>
-                    <tr>
-                        <th>MILL SUPPLIER NAME</th>
-                        <th>TOTAL FFB TONNAGE (MT)</th>
-                        <th>DELIVERY DAYS</th>
-                        <th>PERCENTAGE SHARE (%)</th>
-                    </tr>
-                </thead>
-                <tbody id="tbody-mill-summary"></tbody>
-                <tfoot>
-                    <tr id="row-mill-total" class="total-row"></tr>
-                </tfoot>
-            </table>
-        </div>
+        <div class="section-title">5. MILL SUPPLIER TONNAGE & PERCENTAGE BREAKDOWN</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>MILL / SUPPLIER NAME</th>
+                    <th>TOTAL TONNAGE (MT)</th>
+                    <th>PREV MONTH (MT)</th>
+                    <th>PERCENTAGE (%)</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-mill-summary"></tbody>
+        </table>
     </div>
 
-    <!-- TAB 6: SETTINGS & SYSTEM AUDIT (Split Left/Right Layout) -->
+    <!-- TAB 6: SETTINGS & AUDIT -->
     <div id="tabSettings" class="tab-content">
-        <div class="settings-container-split">
-            <!-- LEFT PANEL: AUDIT LOGS & MILL CONFIG -->
+        <div class="section-title">⚙️ SYSTEM CONFIGURATION & AUDIT LOGS</div>
+        <div class="settings-grid">
+            <!-- LEFT PANEL: AUDIT LOGS -->
             <div class="settings-card">
-                <h3>📋 System Activity Audit Logs</h3>
-                <div class="audit-scroll-container">
-                    <table class="ledger-table audit-table">
+                <h3>📋 System Audit Logs</h3>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table class="data-table" style="font-size:11px;">
                         <thead>
-                            <tr><th>Time</th><th>Date</th><th>User</th><th>Action</th><th>Estate</th></tr>
+                            <tr>
+                                <th>TIME</th>
+                                <th>DATE</th>
+                                <th>USER</th>
+                                <th>ACTION</th>
+                                <th>ESTATE</th>
+                            </tr>
                         </thead>
                         <tbody id="activityLogTableBody"></tbody>
                     </table>
                 </div>
-
-                <h3 class="section-title-spacing">🏭 Mill Suppliers Management</h3>
-                <div class="form-row">
-                    <select id="millEstateSelect"></select>
-                    <input type="text" id="newMillName" placeholder="New Mill Name">
-                    <button onclick="addNewMill()" class="btn btn-add">Add Mill</button>
-                </div>
-                <ul id="millSettingsList" class="clean-list"></ul>
             </div>
 
-            <!-- RIGHT PANEL: USER PROFILES & ESTATE SORTING -->
+            <!-- RIGHT PANEL: SETTINGS & PROFILES -->
             <div class="settings-card">
-                <h3>👥 User Profiles & Permissions</h3>
-                <ul id="userSettingsList" class="clean-list list-spacing"></ul>
+                <h3>🏢 Mill Management</h3>
+                <div style="display:flex; gap:8px; margin-bottom:12px;">
+                    <select id="millEstateSelect" onchange="renderMillSettingsUI()"></select>
+                    <input type="text" id="newMillName" placeholder="New Mill Name">
+                    <button class="btn btn-save" onclick="addNewMill()">+ Add</button>
+                </div>
+                <ul id="millSettingsList" style="list-style:none; padding:0;"></ul>
 
-                <h3>🏞️ Custom Estate Reordering (Drag & Drop)</h3>
-                <ul id="estateSettingsList" class="clean-list"></ul>
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #cbd5e1;">
+
+                <h3>🔀 Estate Reordering (Drag & Drop)</h3>
+                <ul id="estateSettingsList" style="list-style:none; padding:0;"></ul>
             </div>
         </div>
     </div>
 
-    <!-- Login Authentication Overlay -->
+    <!-- LOGIN OVERLAY -->
     <div id="loginOverlay" class="login-overlay">
         <div class="login-modal">
             <h3>MASIH JAYA GROUP</h3>
             <p>Rainfall & FFB Ledger System</p>
             <input type="text" id="loginUsername" placeholder="Username"><br>
             <input type="password" id="loginPassword" placeholder="Password"><br>
-            <button onclick="handleLogin()" class="btn btn-login">Login</button>
-            <div id="loginError" class="login-error-msg"></div>
+            <button class="btn btn-save" style="width:100%; justify-center;" onclick="handleLogin()">Login</button>
+            <div id="loginError" style="color:#dc2626; font-size:11px; margin-top:10px; display:none;"></div>
         </div>
     </div>
 
-    <!-- Modular JavaScript Engine (Exact match for GitHub js/ folder) -->
+    <!-- JavaScript Scripts -->
     <script src="js/config.js"></script>
     <script src="js/audit.js"></script>
     <script src="js/tab1.js"></script>
