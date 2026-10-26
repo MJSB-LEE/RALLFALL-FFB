@@ -1,3 +1,4 @@
+
 async function loadOverallSummary() {
     const monthYear = document.getElementById('bulanTahun')?.value;
     if (!monthYear || !supabaseClient) return;
