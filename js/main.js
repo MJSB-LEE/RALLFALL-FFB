@@ -26,9 +26,6 @@ function switchTab(tabId) {
     document.getElementById(tabId)?.classList.add('active');
     document.getElementById(`btn-${tabId}`)?.classList.add('active');
 
-    const saveBtn = document.getElementById('saveBtn');
-    if (saveBtn) saveBtn.style.display = (tabId === 'tabSummary' || tabId === 'tabMillSummary' || tabId === 'tabSettings') ? 'none' : 'inline-block';
-
     if (tabId === 'tab3') buildTab3MillGrid();
     if (tabId === 'tabMillSummary') loadMillSummaryBreakdown();
     if (tabId === 'tabSettings') { fetchActivityLogs(); renderMillSettingsUI(); }
@@ -109,6 +106,7 @@ async function saveToCloud() {
     if (activeTabId === 'tab3') {
         await saveTab3ToCloud();
         await logActivity('SAVE_DATA', `Saved Tab 3 FFB by Mill`, document.getElementById('ladangSelect')?.value);
+        alert(`✅ Daily Mill FFB Data saved!`);
         await loadFromCloud();
         return;
     }
@@ -137,8 +135,25 @@ async function saveToCloud() {
     const { error } = await supabaseClient.from('daily_records').upsert(updates, { onConflict: 'estate_name,record_date' });
     if (!error) {
         await logActivity('SAVE_DATA', `Saved ${activeTabId.toUpperCase()} entries`, estate);
+        alert(`✅ Data saved successfully!`);
         await loadFromCloud();
         await loadOverallSummary();
+    }
+}
+
+// Lock inputs for user after submission
+async function submitForApproval() {
+    const estate = document.getElementById('ladangSelect')?.value;
+    const monthYear = document.getElementById('bulanTahun')?.value;
+    
+    await saveToCloud();
+    await logActivity('SUBMIT_APPROVAL', `Submitted ledger for approval`, estate);
+    
+    alert(`🔒 Ledger submitted for approval! Form locked.`);
+    
+    // Disable inputs for standard user view
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') {
+        document.querySelectorAll('#tbody-s1 input').forEach(input => input.disabled = true);
     }
 }
 
@@ -151,7 +166,7 @@ async function loadFromCloud() {
     const [year, month] = monthYear.split('-').map(Number);
     const lastDay = new Date(year, month, 0).getDate();
 
-    // Fetch Current Month Data
+    // 1. Fetch Current Month Data
     const { data } = await supabaseClient.from('daily_records').select('*').ilike('estate_name', estate).gte('record_date', `${monthYear}-01`).lte('record_date', `${monthYear}-${String(lastDay).padStart(2, '0')}`);
     if (data) {
         data.forEach(row => {
@@ -165,7 +180,7 @@ async function loadFromCloud() {
         });
     }
 
-    // Fetch Previous Month Data (Calculates sum of Sep when Oct is selected)
+    // 2. Fetch Previous Month Data & Map DAILY (e.g., Oct 1 gets Sep 1 data)
     let prevYear = month === 1 ? year - 1 : year;
     let prevMonth = month === 1 ? 12 : month - 1;
     let prevMonthStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
@@ -173,17 +188,14 @@ async function loadFromCloud() {
 
     const { data: prevData } = await supabaseClient.from('daily_records').select('*').ilike('estate_name', estate).gte('record_date', `${prevMonthStr}-01`).lte('record_date', `${prevMonthStr}-${String(prevLastDay).padStart(2, '0')}`);
     
-    let prevRfTotal = 0, prevFfbTotal = 0;
     if (prevData) {
         prevData.forEach(r => {
-            prevRfTotal += parseFloat(r.rainfall_today) || 0;
-            prevFfbTotal += parseFloat(r.ffb1) || 0;
+            let day = parseInt(r.record_date.split('-')[2], 10);
+            let rfVal = parseFloat(r.rainfall_today) || 0;
+            let ffbVal = parseFloat(r.ffb1) || 0;
+            if (document.getElementById(`s1_rf_pm_${day}`)) document.getElementById(`s1_rf_pm_${day}`).value = rfVal > 0 ? rfVal.toFixed(2) : '';
+            if (document.getElementById(`s1_ffb_pm_${day}`)) document.getElementById(`s1_ffb_pm_${day}`).value = ffbVal > 0 ? ffbVal.toFixed(2) : '';
         });
-    }
-
-    for (let d = 1; d <= 31; d++) {
-        if (document.getElementById(`s1_rf_pm_${d}`)) document.getElementById(`s1_rf_pm_${d}`).value = prevRfTotal > 0 ? prevRfTotal.toFixed(2) : '';
-        if (document.getElementById(`s1_ffb_pm_${d}`)) document.getElementById(`s1_ffb_pm_${d}`).value = prevFfbTotal > 0 ? prevFfbTotal.toFixed(2) : '';
     }
 
     calcS1(); calcS2();
@@ -192,8 +204,14 @@ async function loadFromCloud() {
 
 function clearForm() {
     for (let d = 1; d <= 31; d++) {
-        if (document.getElementById(`s1_rf_${d}`)) document.getElementById(`s1_rf_${d}`).value = '';
-        if (document.getElementById(`s1_ffb1_${d}`)) document.getElementById(`s1_ffb1_${d}`).value = '';
+        if (document.getElementById(`s1_rf_${d}`)) {
+            document.getElementById(`s1_rf_${d}`).value = '';
+            document.getElementById(`s1_rf_${d}`).disabled = false;
+        }
+        if (document.getElementById(`s1_ffb1_${d}`)) {
+            document.getElementById(`s1_ffb1_${d}`).value = '';
+            document.getElementById(`s1_ffb1_${d}`).disabled = false;
+        }
         if (document.getElementById(`s1_rf_pm_${d}`)) document.getElementById(`s1_rf_pm_${d}`).value = '';
         if (document.getElementById(`s1_ffb_pm_${d}`)) document.getElementById(`s1_ffb_pm_${d}`).value = '';
         for (let p = 1; p <= 4; p++) if (document.getElementById(`s2_p${p}_t_${d}`)) document.getElementById(`s2_p${p}_t_${d}`).value = '';
@@ -232,12 +250,10 @@ function initKeyInTables() {
     if (document.getElementById('tbody-s2')) document.getElementById('tbody-s2').innerHTML = s2;
 }
 
-// Automatically saves data before triggering print
 async function printActiveTab() {
     const activeTab = document.querySelector('.tab-content.active');
     if (!activeTab || activeTab.id === 'tabSettings') return alert("⚠️ Printing disabled on Settings.");
 
-    // Save Data First
     await saveToCloud();
 
     document.body.className = '';
