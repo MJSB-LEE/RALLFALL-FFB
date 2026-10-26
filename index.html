@@ -47,7 +47,7 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th rowspan="2" style="width: 50px;">DATE</th>
+                    <th rowspan="2" style="width: 40px;">DATE</th>
                     <th colspan="3" class="th-rf-header">RAINFALL (MM)</th>
                     <th colspan="3" class="th-ffb-header">FFB TONNAGE (MT)</th>
                 </tr>
@@ -63,27 +63,33 @@
             <tbody id="tbody-s1"></tbody>
         </table>
 
-        <!-- PRINT & SUMMARY FOOTER -->
+        <!-- PRINT & SUMMARY FOOTER (Fits 1 A4 Page Portrait) -->
         <div class="print-footer-summary">
             <div class="summary-info-box">
                 <h4>📊 Monthly Key-In Summary</h4>
                 <p><strong>Total Rainfall:</strong> <span id="lblTotalMonthlyRf">0.00 MM</span></p>
                 <p><strong>Total FFB Production:</strong> <span id="lblTotalMonthlyFfb">0.00 MT</span></p>
                 <p><strong>Average Daily FFB:</strong> <span id="lblAvgDailyFfb">0.00 MT/day</span></p>
-                <p style="margin-top:8px; font-size:11px; color:#64748b;">
+                <p style="margin-top:4px; font-size:10px; color:#64748b;">
                     <strong>Last Key-in Date:</strong> <span id="lblLastKeyinDate">-</span> | 
                     <strong>Keyed By:</strong> <span id="lblLastKeyinUser">System Administrator</span>
                 </p>
             </div>
 
             <div class="signature-block">
-                <div class="sig-line">
-                    PREPARED BY<br>
-                    <span style="font-weight:normal; font-size:10px;">(Estate Clerk / In-Charge)</span>
+                <div>
+                    <span class="sig-user-name" id="sigPreparedByName">System Administrator</span>
+                    <div class="sig-line">
+                        PREPARED BY<br>
+                        <span style="font-weight:normal; font-size:9px;">(Estate Clerk / In-Charge)</span>
+                    </div>
                 </div>
-                <div class="sig-line">
-                    VERIFIED BY<br>
-                    <span style="font-weight:normal; font-size:10px;">(Assistant / Manager)</span>
+                <div>
+                    <span class="sig-user-name">&nbsp;</span>
+                    <div class="sig-line">
+                        VERIFIED BY<br>
+                        <span style="font-weight:normal; font-size:9px;">(Assistant / Manager)</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -199,12 +205,12 @@
             <p>Rainfall & FFB Ledger System</p>
             <input type="text" id="loginUsername" placeholder="Username"><br>
             <input type="password" id="loginPassword" placeholder="Password"><br>
-            <button class="btn btn-save" style="width:100%; justify-center;" onclick="handleLogin()">Login</button>
+            <button class="btn btn-save" style="width:100%; justify-content:center;" onclick="handleLogin()">Login</button>
             <div id="loginError" style="color:#dc2626; font-size:11px; margin-top:10px; display:none;"></div>
         </div>
     </div>
 
-    <!-- JavaScript Scripts -->
+    <!-- JavaScript Engine Files -->
     <script src="js/config.js"></script>
     <script src="js/audit.js"></script>
     <script src="js/tab1.js"></script>
