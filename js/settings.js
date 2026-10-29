@@ -212,7 +212,7 @@ function renderUsersTable() {
         const ests = userEstates(u);
         const active = u.active !== false;
         return `<tr class="${active ? '' : 'is-hidden'}">
-            <td class="left"><b>${esc(u.username)}</b></td>
+            <td class="left"><b>${esc(u.username)}</b>${u.email && !u.email.endsWith('@ledger.local') ? `<div class="small muted">${esc(u.email)}</div>` : ''}</td>
             <td class="left">${esc(u.full_name || '')}</td>
             <td><span class="role-pill role-${esc(u.role)}">${esc((u.role || 'user').toUpperCase())}</span></td>
             <td class="left small">${u.role === 'admin' ? '<i>All</i>' : (ests.length ? ests.map(esc).join(', ') : '<i>All</i>')}</td>
@@ -239,6 +239,7 @@ function resetUserForm() {
     document.getElementById('ufUsername').value = '';
     document.getElementById('ufUsername').disabled = false;
     document.getElementById('ufFullName').value = '';
+    document.getElementById('ufEmail').value = '';
     document.getElementById('ufPassword').value = '';
     document.getElementById('ufPasswordLabel').textContent = 'Password';
     document.getElementById('ufRole').value = 'user';
@@ -255,6 +256,7 @@ function editUser(username) {
     document.getElementById('ufUsername').value = u.username;
     document.getElementById('ufUsername').disabled = true;
     document.getElementById('ufFullName').value = u.full_name || '';
+    document.getElementById('ufEmail').value = (u.email || '').endsWith('@ledger.local') ? '' : (u.email || '');
     document.getElementById('ufPassword').value = '';
     document.getElementById('ufPasswordLabel').textContent = 'New password (leave blank to keep)';
     document.getElementById('ufRole').value = u.role || 'user';
@@ -273,6 +275,10 @@ async function saveUserForm() {
     const editing = document.getElementById('ufEditing').value;
     const username = document.getElementById('ufUsername').value.trim();
     const full_name = document.getElementById('ufFullName').value.trim();
+    const emailIn = document.getElementById('ufEmail').value.trim().toLowerCase();
+    if (emailIn && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailIn)) return alert('Email does not look right.');
+    // Database requires an email; users without one get a placeholder based on the username
+    const email = emailIn || `${(username || editing).toLowerCase().replace(/[^a-z0-9._-]/g, '')}@ledger.local`;
     const password = document.getElementById('ufPassword').value;
     const role = document.getElementById('ufRole').value;
     const active = document.getElementById('ufActive').checked;
@@ -285,7 +291,7 @@ async function saveUserForm() {
 
     if (editing) {
         if (activeAdminsAfter({ username: editing, role, active }) === 0) return alert('There must be at least one active Admin.');
-        const changes = { full_name, role, active, assigned_estates };
+        const changes = { full_name, role, active, assigned_estates, email };
         if (password) changes.password = password;
         const { error } = await supabaseClient.from('user_profiles').update(changes).eq('username', editing);
         if (error) return alert('❌ ' + error.message);
@@ -293,8 +299,8 @@ async function saveUserForm() {
         toast(`✅ ${editing} updated`);
     } else {
         if (S.users.some(u => u.username.toLowerCase() === username.toLowerCase())) return alert('Username already exists.');
-        const { error } = await supabaseClient.from('user_profiles').insert([{ username, password, full_name, role, active, assigned_estates }]);
-        if (error) return alert('❌ ' + error.message);
+        const { error } = await supabaseClient.from('user_profiles').insert([{ username, password, full_name, email, role, active, assigned_estates }]);
+        if (error) return alert('❌ ' + (error.message.includes('duplicate') && error.message.includes('email') ? 'That email is already used by another user.' : error.message));
         await logActivity('CREATE_USER', `Created ${username} (${role})`);
         toast(`✅ ${username} created`);
     }
