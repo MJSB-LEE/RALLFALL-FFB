@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masih Jaya Group - Daily Ledger</title>
+    <link rel="stylesheet" href="style.css">
+    <style id="printPageStyle">@page { size: A4 portrait; margin: 6mm; }</style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Title Banner -->
+        <div class="app-title-bar">
+            <span>MASIH JAYA GROUP — RAINFALL & FFB LEDGER SYSTEM</span>
+            <span id="realTimeClock" class="clock"></span>
+        </div>
+
+        <!-- Top Controls Header -->
+        <div class="top-header">
+            <div class="control-group">
+                <label for="ladangSelect">Estate:</label>
+                <select id="ladangSelect" onchange="onEstateOrMonthChange()"></select>
+
+                <label for="bulanTahun">Month/Year:</label>
+                <input type="month" id="bulanTahun" onchange="onEstateOrMonthChange()">
+            </div>
+
+            <div class="control-group">
+                <span id="userBadge" class="role-badge">ROLE</span>
+                <span id="userInfoLabel" class="user-label"></span>
+                <button class="btn btn-print" onclick="printActiveTab()">🖨️ Print</button>
+                <button class="btn btn-logout" onclick="handleLogout()">🚪 Logout</button>
+            </div>
+        </div>
+
+        <div id="setupBanner" class="setup-banner" style="display:none;"></div>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <button class="tab-btn active" id="btn-tabRainfall" onclick="switchTab('tabRainfall')">1. RAINFALL BY PHASE</button>
+            <button class="tab-btn" id="btn-tabMill" onclick="switchTab('tabMill')">2. FFB BY MILL</button>
+            <button class="tab-btn" id="btn-tabBlock" onclick="switchTab('tabBlock')">3. FFB BY PHASE / BLOCK</button>
+            <button class="tab-btn" id="btn-tabSummary" onclick="switchTab('tabSummary')" data-min-role="manager">4. GROUP SUMMARY</button>
+            <button class="tab-btn" id="btn-tabMillSummary" onclick="switchTab('tabMillSummary')" data-min-role="manager">5. MILL SUMMARY</button>
+            <button class="tab-btn" id="btn-tabSettings" onclick="switchTab('tabSettings')" data-min-role="admin">⚙️ SETTINGS</button>
+        </div>
+
+        <!-- Status + actions for the key-in tabs -->
+        <div id="entryActions" class="entry-actions">
+            <div id="statusInfo" class="status-info"></div>
+            <div class="entry-buttons">
+                <span id="unsavedNote" class="unsaved-note" style="display:none;">● Unsaved changes</span>
+                <button class="btn btn-save" id="btnSave" onclick="saveToCloud()">💾 Save</button>
+                <button class="btn btn-lock" id="btnSubmit" onclick="submitForApproval()">🔒 Submit for Approval</button>
+                <button class="btn btn-approve" id="btnApprove" onclick="approveReport()">✅ Approve</button>
+                <button class="btn btn-reopen" id="btnReopen" onclick="reopenReport()">↩️ Return to Draft</button>
+            </div>
+        </div>
+
+        <!-- TAB 1: RAINFALL BY PHASE -->
+        <div id="tabRainfall" class="tab-content active">
+            <div class="print-head" data-title="DAILY RAINFALL RECORD"></div>
+            <div class="section-title screen-only">1. DAILY RAINFALL RECORD BY PHASE (MM)</div>
+            <div class="table-scroll"><table class="data-table" id="tblRainfall"></table></div>
+            <div class="print-sign"></div>
+        </div>
+
+        <!-- TAB 2: FFB BY MILL -->
+        <div id="tabMill" class="tab-content">
+            <div class="print-head" data-title="DAILY FFB RECORD BY MILL"></div>
+            <div class="section-title screen-only">2. DAILY FFB RECORD BY MILL (MT)</div>
+            <div class="table-scroll"><table class="data-table" id="tblMill"></table></div>
+            <div class="below-grid">
+                <div id="millMonthlyPanel"></div>
+                <div id="millPercentPanel"></div>
+            </div>
+            <div class="print-sign"></div>
+        </div>
+
+        <!-- TAB 3: FFB BY PHASE / BLOCK -->
+        <div id="tabBlock" class="tab-content">
+            <div class="print-head" data-title="DAILY FFB RECORD BY PHASE"></div>
+            <div class="section-title screen-only">3. DAILY FFB RECORD BY PHASE / BLOCK (MT)</div>
+            <div class="table-scroll"><table class="data-table" id="tblBlock"></table></div>
+            <div class="below-grid">
+                <div id="blockMonthlyPanel"></div>
+                <div id="blockCheckPanel"></div>
+            </div>
+            <div class="print-sign"></div>
+        </div>
+
+        <!-- TAB 4: GROUP SUMMARY -->
+        <div id="tabSummary" class="tab-content">
+            <div class="print-head" data-title="GROUP SUMMARY - RAINFALL & FFB" data-group="1"></div>
+            <div class="section-title screen-only">4. GROUP SUMMARY — ALL ESTATES</div>
+            <div id="summaryContent"></div>
+        </div>
+
+        <!-- TAB 5: MILL SUMMARY -->
+        <div id="tabMillSummary" class="tab-content">
+            <div class="print-head" data-title="MILL SUPPLIER SUMMARY" data-group="1"></div>
+            <div class="section-title screen-only">5. MILL SUPPLIER TONNAGE & PERCENTAGE — ALL ESTATES</div>
+            <div id="millSummaryContent"></div>
+        </div>
+
+        <!-- TAB 6: SETTINGS -->
+        <div id="tabSettings" class="tab-content">
+            <div class="settings-subtabs">
+                <button class="sub-btn active" data-sub="setColumns" onclick="switchSettings('setColumns')">📋 Column Setup</button>
+                <button class="sub-btn" data-sub="setEstates" onclick="switchSettings('setEstates')">🏢 Estates</button>
+                <button class="sub-btn" data-sub="setUsers" onclick="switchSettings('setUsers')">👤 Users</button>
+                <button class="sub-btn" data-sub="setAudit" onclick="switchSettings('setAudit')">📜 Audit Log</button>
+            </div>
+
+            <div id="setColumns" class="settings-pane active">
+                <div class="control-group" style="margin-bottom:10px;">
+                    <label for="colEstateSelect">Estate:</label>
+                    <select id="colEstateSelect" onchange="renderColumnSetup()"></select>
+                    <span class="hint">Set the column names this estate uses on its paper forms. Hidden columns keep their old data.</span>
+                </div>
+                <div class="columns-grid" id="columnSetupGrid"></div>
+            </div>
+
+            <div id="setEstates" class="settings-pane">
+                <div class="settings-card narrow">
+                    <h3>Estates (order shown everywhere)</h3>
+                    <ul id="estateSettingsList" class="item-list"></ul>
+                    <div class="add-row">
+                        <input type="text" id="newEstateName" placeholder="New estate name">
+                        <button class="btn btn-save" onclick="addNewEstate()">+ Add Estate</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="setUsers" class="settings-pane">
+                <div class="users-layout">
+                    <div class="settings-card">
+                        <h3>User Accounts</h3>
+                        <table class="data-table users-table">
+                            <thead><tr><th>USERNAME</th><th>FULL NAME</th><th>ROLE</th><th>ESTATES</th><th>STATUS</th><th></th></tr></thead>
+                            <tbody id="usersTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="settings-card" id="userFormCard">
+                        <h3 id="userFormTitle">Add New User</h3>
+                        <input type="hidden" id="ufEditing">
+                        <label class="field">Username<input type="text" id="ufUsername" autocomplete="off"></label>
+                        <label class="field">Full name (shown on print)<input type="text" id="ufFullName"></label>
+                        <label class="field"><span id="ufPasswordLabel">Password</span><input type="password" id="ufPassword" autocomplete="new-password"></label>
+                        <label class="field">Role
+                            <select id="ufRole" onchange="toggleEstateChecks()">
+                                <option value="user">User — key in data for own estates</option>
+                                <option value="manager">Manager — approve, see summaries</option>
+                                <option value="admin">Admin — everything + settings</option>
+                            </select>
+                        </label>
+                        <div class="field" id="ufEstatesWrap">Estates this user can see <span class="hint">(none ticked = all estates)</span>
+                            <div id="ufEstates" class="estate-checks"></div>
+                        </div>
+                        <label class="check-line"><input type="checkbox" id="ufActive" checked> Active (can log in)</label>
+                        <div class="add-row">
+                            <button class="btn btn-save" onclick="saveUserForm()">💾 Save User</button>
+                            <button class="btn btn-grey" onclick="resetUserForm()">Clear</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="setAudit" class="settings-pane">
+                <div class="table-scroll" style="max-height:520px;">
+                    <table class="data-table audit-table">
+                        <thead><tr><th>DATE / TIME</th><th>USER</th><th>ACTION</th><th>ESTATE</th><th>DETAILS</th></tr></thead>
+                        <tbody id="activityLogTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIN OVERLAY -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-modal">
+            <h3>MASIH JAYA GROUP</h3>
+            <p>Rainfall & FFB Ledger System</p>
+            <input type="text" id="loginUsername" placeholder="Username" autocomplete="username"><br>
+            <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password"
+                   onkeydown="if(event.key==='Enter')handleLogin()"><br>
+            <button class="btn btn-save login-btn" onclick="handleLogin()">Login</button>
+            <div id="loginError" class="login-error"></div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/audit.js"></script>
+    <script src="js/entry.js"></script>
+    <script src="js/summaries.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
