@@ -42,8 +42,8 @@
             <button class="tab-btn active" id="btn-tabRainfall" onclick="switchTab('tabRainfall')">1. RAINFALL BY PHASE</button>
             <button class="tab-btn" id="btn-tabMill" onclick="switchTab('tabMill')">2. FFB BY MILL</button>
             <button class="tab-btn" id="btn-tabBlock" onclick="switchTab('tabBlock')">3. FFB BY PHASE / BLOCK</button>
-            <button class="tab-btn" id="btn-tabSummary" onclick="switchTab('tabSummary')" data-min-role="manager">4. GROUP SUMMARY</button>
-            <button class="tab-btn" id="btn-tabMillSummary" onclick="switchTab('tabMillSummary')" data-min-role="manager">5. MILL SUMMARY</button>
+            <button class="tab-btn" id="btn-tabSummary" onclick="switchTab('tabSummary')">4. SUMMARY</button>
+            <button class="tab-btn" id="btn-tabMillSummary" onclick="switchTab('tabMillSummary')">5. MILL SUMMARY</button>
             <button class="tab-btn" id="btn-tabSettings" onclick="switchTab('tabSettings')" data-min-role="admin">⚙️ SETTINGS</button>
         </div>
 
@@ -55,7 +55,7 @@
                 <button class="btn btn-save" id="btnSave" onclick="saveToCloud()">💾 Save</button>
                 <button class="btn btn-lock" id="btnSubmit" onclick="submitForApproval()">🔒 Submit for Approval</button>
                 <button class="btn btn-approve" id="btnApprove" onclick="approveReport()">✅ Approve</button>
-                <button class="btn btn-reopen" id="btnReopen" onclick="reopenReport()">↩️ Return to Draft</button>
+                <button class="btn btn-reopen" id="btnReopen" onclick="reopenReport()">🔓 Unlock to Edit (Admin)</button>
             </div>
         </div>
 
@@ -94,14 +94,14 @@
         <!-- TAB 4: GROUP SUMMARY -->
         <div id="tabSummary" class="tab-content">
             <div class="print-head" data-title="GROUP SUMMARY - RAINFALL & FFB" data-group="1"></div>
-            <div class="section-title screen-only">4. GROUP SUMMARY — ALL ESTATES</div>
+            <div class="section-title screen-only">4. SUMMARY — <span id="summaryScope">ALL ESTATES</span></div>
             <div id="summaryContent"></div>
         </div>
 
         <!-- TAB 5: MILL SUMMARY -->
         <div id="tabMillSummary" class="tab-content">
             <div class="print-head" data-title="MILL SUPPLIER SUMMARY" data-group="1"></div>
-            <div class="section-title screen-only">5. MILL SUPPLIER TONNAGE & PERCENTAGE — ALL ESTATES</div>
+            <div class="section-title screen-only">5. MILL SUPPLIER TONNAGE & PERCENTAGE — <span id="millSummaryScope">ALL ESTATES</span></div>
             <div id="millSummaryContent"></div>
         </div>
 
@@ -112,6 +112,7 @@
                 <button class="sub-btn" data-sub="setEstates" onclick="switchSettings('setEstates')">🏢 Estates</button>
                 <button class="sub-btn" data-sub="setUsers" onclick="switchSettings('setUsers')">👤 Users</button>
                 <button class="sub-btn" data-sub="setAudit" onclick="switchSettings('setAudit')">📜 Audit Log</button>
+                <button class="sub-btn" data-sub="setBackup" onclick="switchSettings('setBackup')">💾 Backup</button>
             </div>
 
             <div id="setColumns" class="settings-pane active">
@@ -139,7 +140,7 @@
                     <div class="settings-card">
                         <h3>User Accounts</h3>
                         <table class="data-table users-table">
-                            <thead><tr><th>USERNAME</th><th>FULL NAME</th><th>ROLE</th><th>ESTATES</th><th>STATUS</th><th></th></tr></thead>
+                            <thead><tr><th>USERNAME</th><th>FULL NAME</th><th>ROLE</th><th>ESTATES</th><th>LAST LOGIN</th><th>STATUS</th><th></th></tr></thead>
                             <tbody id="usersTableBody"></tbody>
                         </table>
                     </div>
@@ -157,7 +158,7 @@
                                 <option value="admin">Admin — everything + settings</option>
                             </select>
                         </label>
-                        <div class="field" id="ufEstatesWrap">Estates this user can see <span class="hint">(none ticked = all estates)</span>
+                        <div class="field" id="ufEstatesWrap">Estates this user can see and key in <span class="hint">(tick at least one)</span>
                             <div id="ufEstates" class="estate-checks"></div>
                         </div>
                         <label class="check-line"><input type="checkbox" id="ufActive" checked> Active (can log in)</label>
@@ -169,10 +170,34 @@
                 </div>
             </div>
 
+            <div id="setBackup" class="settings-pane">
+                <div class="settings-card narrow">
+                    <h3>💾 Export Backup</h3>
+                    <p class="hint" style="font-size:12px;">Downloads <b>all data</b> (every estate, every month, settings, users without passwords, audit log) as one Excel file.
+                        Do this <b>once a week</b> and save the file to Google Drive or a USB drive.</p>
+                    <div id="backupInfo" class="backup-info"></div>
+                    <button class="btn btn-save" id="btnBackup" onclick="exportBackup()">💾 Download Backup (Excel)</button>
+                </div>
+            </div>
+
             <div id="setAudit" class="settings-pane">
-                <div class="table-scroll" style="max-height:520px;">
+                <div class="audit-filters">
+                    <div class="quick-range">
+                        <button class="btn-mini" onclick="setAuditRange('today')">Today</button>
+                        <button class="btn-mini" onclick="setAuditRange('yesterday')">Yesterday</button>
+                        <button class="btn-mini" onclick="setAuditRange('7')">Last 7 days</button>
+                        <button class="btn-mini" onclick="setAuditRange('month')">This month</button>
+                    </div>
+                    <label>From <input type="date" id="auditFrom" onchange="fetchActivityLogs()"></label>
+                    <label>To <input type="date" id="auditTo" onchange="fetchActivityLogs()"></label>
+                    <label>User <select id="auditUser" onchange="fetchActivityLogs()"></select></label>
+                    <label>Estate <select id="auditEstate" onchange="fetchActivityLogs()"></select></label>
+                    <label>Action <select id="auditAction" onchange="fetchActivityLogs()"></select></label>
+                    <span id="auditCount" class="hint"></span>
+                </div>
+                <div class="table-scroll" style="max-height:560px;">
                     <table class="data-table audit-table">
-                        <thead><tr><th>DATE / TIME</th><th>USER</th><th>ACTION</th><th>ESTATE</th><th>DETAILS</th></tr></thead>
+                        <thead><tr><th>TIME</th><th>USER</th><th>ACTION</th><th>ESTATE</th><th>DETAILS</th></tr></thead>
                         <tbody id="activityLogTableBody"></tbody>
                     </table>
                 </div>
@@ -185,11 +210,15 @@
         <div class="login-modal">
             <h3>MASIH JAYA GROUP</h3>
             <p>Rainfall & FFB Ledger System</p>
+            <div id="reloginNote" class="relogin-note" style="display:none;">
+                ⏱️ Your login has expired.<br>Log in again to continue — <b>the numbers you typed are kept</b>.
+            </div>
             <input type="text" id="loginUsername" placeholder="Username" autocomplete="username"><br>
             <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password"
                    onkeydown="if(event.key==='Enter')handleLogin()"><br>
             <button class="btn btn-save login-btn" onclick="handleLogin()">Login</button>
             <div id="loginError" class="login-error"></div>
+            <a href="#" id="reloginCancel" class="relogin-cancel" style="display:none;" onclick="cancelRelogin();return false;">Cancel</a>
         </div>
     </div>
 
@@ -198,6 +227,7 @@
     <script src="js/entry.js"></script>
     <script src="js/summaries.js"></script>
     <script src="js/settings.js"></script>
+    <script src="js/backup.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
