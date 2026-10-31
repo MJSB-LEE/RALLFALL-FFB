@@ -370,3 +370,19 @@ select, input[type="month"], input[type="text"], input[type="password"], input[t
     .print-sign .sig-line { border-bottom: 1px solid #000; height: 24px; }
     .print-sign .sig-name { grid-column: 2; text-align: center; font-size: 9px; }
 }
+
+/* Login popup after expiry */
+.relogin-note { background: #fef3c7; border: 1px solid #f59e0b; color: #78350f; font-size: 11px; padding: 6px; border-radius: 4px; margin-bottom: 10px; }
+.relogin-cancel { display: inline-block; margin-top: 8px; font-size: 11px; color: #64748b; }
+
+/* Audit filters */
+.audit-filters { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 8px; font-size: 11px; font-weight: 600; }
+.audit-filters label { display: flex; align-items: center; gap: 4px; }
+.audit-filters input[type=date] { padding: 3px 6px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 12px; }
+.quick-range { display: flex; gap: 4px; }
+.day-row td { background: #1e3a8a !important; color: white; font-weight: 800; text-align: left !important; padding: 4px 8px !important; }
+.day-row .day-count { font-weight: 600; opacity: .8; margin-left: 8px; }
+
+/* Backup */
+.backup-info { font-size: 12px; margin: 8px 0 12px; }
+.banner-close { margin-left: 10px; font-size: 11px; color: #78350f; }
