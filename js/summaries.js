@@ -25,6 +25,11 @@ async function loadGroupData() {
     return { totals, reports, error: entriesRes.error };
 }
 
+function setScopeLabel(id, estates) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = estates.length === S.estates.length ? 'ALL ESTATES' : estates.join(', ').toUpperCase();
+}
+
 function sumCols(cols, totals, key) { return cols.reduce((s, c) => s + (totals[c.id]?.[key] || 0), 0); }
 
 async function loadOverallSummary() {
@@ -33,6 +38,7 @@ async function loadOverallSummary() {
     box.innerHTML = '<div class="hint">Loading…</div>';
     const { totals, reports } = await loadGroupData();
     const estates = visibleEstates();
+    setScopeLabel('summaryScope', estates);
 
     // ---- Rainfall ----
     let rf = `<h4 class="sum-title">RAINFALL (MM) — ${monthLabel(S.month)}</h4>
@@ -84,7 +90,7 @@ async function loadOverallSummary() {
             <td><b>${pay.toFixed(2)}</b></td><td>${prev.toFixed(2)}</td>
             <td><span class="status-pill st-${st}">${st.toUpperCase()}</span></td></tr>`;
     });
-    ffb += `</tbody><tfoot><tr class="grand-row"><td>GROUP TOTAL</td>
+    ffb += `</tbody><tfoot><tr class="grand-row"><td>TOTAL</td>
         <td>${g.mill.toFixed(2)}</td><td>${g.block.toFixed(2)}</td><td></td>
         <td>${g.bgL.toFixed(2)}</td><td>${g.bgT.toFixed(2)}</td><td><b>${g.pay.toFixed(2)} MT</b></td><td>${g.prev.toFixed(2)}</td><td></td></tr></tfoot></table>
         <div class="hint screen-only">CHECK = By Phase/Block minus By Mill. ✓ means both forms give the same monthly total.</div>`;
@@ -100,6 +106,7 @@ async function loadMillSummaryBreakdown() {
 
     // Group mills by name across estates (e.g. "Golden Elite" used by 2 estates = 1 row)
     const estates = visibleEstates().filter(est => columnsFor(est, 'mill', true).length);
+    setScopeLabel('millSummaryScope', visibleEstates());
     const mills = {}; // key -> { name, perEstate: {est: mt}, total, prev }
     estates.forEach(est => {
         columnsFor(est, 'mill', true).forEach(c => {

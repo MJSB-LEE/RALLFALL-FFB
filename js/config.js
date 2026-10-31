@@ -2,13 +2,35 @@
 const SUPABASE_URL = 'https://tiwulxrorrmyxtosvzkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_W4-5_riBQWAUBPVtgX8Pcw_WCRET_KF';
 
+// Login session key: sent with every request, the database checks it (sql/03_security.sql)
+const SESSION_KEY = 'appSession';
+let sessionToken = null;
+try { sessionToken = localStorage.getItem(SESSION_KEY); } catch (e) {}
+
+function makeClient(token) {
+    if (typeof supabase === 'undefined') return null;
+    return supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { headers: token ? { 'x-app-session': token } : {} }
+    });
+}
+function setSession(token) {
+    sessionToken = token;
+    try { token ? localStorage.setItem(SESSION_KEY, token) : localStorage.removeItem(SESSION_KEY); } catch (e) {}
+    supabaseClient = makeClient(token);
+}
+
 let supabaseClient;
-try {
-    if (typeof supabase !== 'undefined') {
-        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    }
-} catch (e) {
-    console.error("Failed to initialize Supabase client:", e);
+try { supabaseClient = makeClient(sessionToken); } catch (e) { console.error("Failed to initialize Supabase client:", e); }
+
+// Database refused because login expired / no permission
+function isPermissionError(err) {
+    const m = String(err?.message || err || '');
+    return err?.code === '42501' || /row-level security|permission denied/i.test(m);
+}
+function dbErrorMessage(err) {
+    if (isPermissionError(err)) return 'Not allowed. Your login may have expired, or this month is locked. Please log out and log in again.';
+    return String(err?.message || err);
 }
 
 const CATEGORIES = {
@@ -33,7 +55,7 @@ const S = {
     tablesReady: true
 };
 let currentUser = null;
-try { currentUser = JSON.parse(localStorage.getItem('currentUser')) || null; } catch (e) { currentUser = null; }
+try { localStorage.removeItem('currentUser'); } catch (e) {} // old version stored the password here
 
 // ---------- Helpers ----------
 function esc(v) {

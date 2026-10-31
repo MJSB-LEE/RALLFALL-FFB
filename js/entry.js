@@ -65,12 +65,10 @@ function lastToDateDay(cols) {
     return last;
 }
 
+// After Submit, only admin can edit (manager can only Approve)
 function isLocked() {
-    const st = S.report?.status || 'draft';
     if (roleAtLeast('admin')) return false;
-    if (st === 'approved') return true;
-    if (st === 'submitted') return !roleAtLeast('manager');
-    return false;
+    return (S.report?.status || 'draft') !== 'draft';
 }
 
 function inputHtml(colId, d, dp = 2) {
@@ -80,6 +78,7 @@ function inputHtml(colId, d, dp = 2) {
 }
 
 function emptyColumnsMsg(category, colspan = 1) {
+    if (!S.estate) return `<tbody><tr><td class="empty-msg">No estate is assigned to your account yet. Ask your admin to tick your estate in Settings → Users.</td></tr></tbody>`;
     const adminHint = roleAtLeast('admin')
         ? `Go to <b>⚙️ Settings → Column Setup</b> to add them.`
         : `Ask your admin to set them up in Settings.`;
@@ -364,7 +363,8 @@ async function saveReport() {
 async function saveToCloud(silent = false) {
     if (!S.estate || !S.month) { alert('Select Estate & Month.'); return false; }
     if (!supabaseClient || !S.tablesReady) { alert('Database is not ready. See the message at the top of the page.'); return false; }
-    if (isLocked()) { if (!silent) alert('🔒 This month is locked (submitted/approved). Ask a manager to return it to draft.'); return false; }
+    if (isLocked()) { if (!silent) alert('🔒 This month is locked (submitted/approved). Only admin can unlock it.'); return false; }
+    if (!(await ensureSession())) return false;
 
     const user = currentUser?.username || 'SYSTEM';
     const now = new Date().toISOString();
@@ -379,7 +379,7 @@ async function saveToCloud(silent = false) {
         }
         if (S.reportDirty || S.report._needsSave) await saveReport();
     } catch (err) {
-        alert('❌ Save failed: ' + (err.message || err));
+        alert('❌ Save failed: ' + dbErrorMessage(err));
         return false;
     }
     S.dirty.clear();
@@ -390,10 +390,11 @@ async function saveToCloud(silent = false) {
 }
 
 async function setStatus(status, extra, action, message) {
+    if (!(await ensureSession())) return;
     const backup = { ...S.report };
     Object.assign(S.report, { status }, extra);
     try { await saveReport(); }
-    catch (err) { S.report = backup; alert('❌ Failed: ' + (err.message || err)); return; }
+    catch (err) { S.report = backup; alert('❌ Failed: ' + dbErrorMessage(err)); return; }
     await logActivity(action, `${monthLabel(S.month)}`, S.estate);
     renderAllEntryTabs();
     toast(message);
@@ -413,9 +414,9 @@ async function approveReport() {
         'APPROVE', '✅ Approved');
 }
 async function reopenReport() {
-    if (!roleAtLeast('manager')) return;
-    if (!confirm(`Return ${S.estate} — ${monthLabel(S.month)} to draft so it can be edited again?`)) return;
-    await setStatus('draft', { approved_by: null, approved_at: null }, 'RETURN_TO_DRAFT', '↩️ Returned to draft');
+    if (!roleAtLeast('admin')) return;
+    if (!confirm(`Unlock ${S.estate} — ${monthLabel(S.month)}?\n\nIt goes back to DRAFT so it can be edited, and must be submitted and approved again.`)) return;
+    await setStatus('draft', { approved_by: null, approved_at: null }, 'UNLOCK', '🔓 Unlocked — back to draft');
 }
 
 function renderStatus() {
@@ -431,9 +432,9 @@ function renderStatus() {
 
     const show = (id, on) => { const b = document.getElementById(id); if (b) b.style.display = on ? '' : 'none'; };
     show('btnSave', !isLocked());
-    show('btnSubmit', st === 'draft');
+    show('btnSubmit', st === 'draft' && !!S.estate);
     show('btnApprove', st === 'submitted' && roleAtLeast('manager'));
-    show('btnReopen', st !== 'draft' && roleAtLeast('manager'));
+    show('btnReopen', st !== 'draft' && roleAtLeast('admin'));
 }
 
 function toast(msg) {

@@ -15,7 +15,7 @@ function visibleEstates() {
     const all = S.estates.map(e => e.name);
     if (!currentUser || currentUser.role === 'admin') return all;
     const mine = userEstates(currentUser);
-    return mine.length ? all.filter(n => mine.includes(n)) : all;
+    return all.filter(n => mine.includes(n)); // nothing ticked = nothing (admin sees all)
 }
 
 function renderEstateDropdown() {
@@ -72,34 +72,60 @@ function publicUser(u) {
     return { username: u.username, full_name: u.full_name, role: u.role || 'user', assigned_estates: userEstates(u) };
 }
 
+async function loadReferenceData() {
+    await Promise.all([fetchEstates(), fetchColumns(), roleAtLeast('admin') ? fetchUserProfiles() : null]);
+}
+
 async function handleLogin() {
     const userIn = document.getElementById('loginUsername').value.trim();
     const passIn = document.getElementById('loginPassword').value;
     const errorElem = document.getElementById('loginError');
-    await fetchUserProfiles();
-
-    let matched = S.users.find(u => u.username === userIn && u.password === passIn);
-    // First-time setup only: built-in admin works while no users exist in the database
-    if (!matched && S.users.length === 0 && userIn === 'admin' && passIn === 'admin123') {
-        matched = { username: 'admin', full_name: 'System Admin', role: 'admin' };
-    }
-    if (!matched) { errorElem.style.display = 'block'; errorElem.innerText = 'Invalid Username or Password!'; return; }
-    if (matched.active === false) { errorElem.style.display = 'block'; errorElem.innerText = 'This account is disabled. Contact your admin.'; return; }
+    const showErr = msg => { errorElem.style.display = 'block'; errorElem.innerText = msg; };
+    if (!userIn || !passIn) return showErr('Enter username and password.');
+    if (!supabaseClient) return showErr('Cannot connect to the database. Check your internet.');
+    const btn = document.querySelector('.login-btn');
+    btn.disabled = true;
+    const { data, error } = await (makeClient(null) || supabaseClient).rpc('app_login', { p_username: userIn, p_password: passIn });
+    btn.disabled = false;
+    if (error) return showErr(/app_login/.test(error.message)
+        ? 'Database not updated yet: run sql/03_security.sql in Supabase.' : error.message);
+    if (!data || data.error) return showErr(data?.error || 'Login failed.');
 
     errorElem.style.display = 'none';
     document.getElementById('loginPassword').value = '';
-    currentUser = publicUser(matched);
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    setSession(data.token);
+
+    // Login popup after expiry: same person -> keep everything typed and carry on
+    if (reloginResolver) {
+        const resolve = reloginResolver;
+        reloginResolver = null;
+        showReloginMode(false);
+        if (currentUser && data.user.username === currentUser.username) {
+            currentUser = publicUser(data.user);
+            document.getElementById('loginOverlay').style.display = 'none';
+            await logActivity('LOGIN', 'Logged in again after login expired');
+            resolve(true);
+            return;
+        }
+        resolve(false); // a different person logged in: start fresh
+        S.dirty.clear(); S.reportDirty = false;
+    }
+    currentUser = publicUser(data.user);
+    await loadReferenceData();
     await logActivity('LOGIN', `Logged in as ${currentUser.role.toUpperCase()}`);
     await applyUserPermissions();
 }
 
-function handleLogout() {
-    if ((S.dirty.size || S.reportDirty) && !confirm('You have unsaved changes. Logout anyway?')) return;
-    if (currentUser) logActivity('LOGOUT', 'Logged out');
+async function handleLogout(force = false) {
+    if (!force && (S.dirty.size || S.reportDirty) && !confirm('You have unsaved changes. Logout anyway?')) return;
+    if (currentUser && !force) {
+        await logActivity('LOGOUT', 'Logged out');
+        try { await supabaseClient.rpc('app_logout'); } catch (e) {}
+    }
     currentUser = null;
-    localStorage.removeItem('currentUser');
+    setSession(null);
     S.dirty.clear(); S.reportDirty = false;
+    S.estates = []; S.columns = []; S.users = []; S.entries = {};
     document.getElementById('loginOverlay').style.display = 'flex';
 }
 
@@ -111,15 +137,71 @@ async function applyUserPermissions() {
     document.querySelectorAll('.tab-btn[data-min-role]').forEach(b => {
         b.style.display = roleAtLeast(b.dataset.minRole) ? '' : 'none';
     });
-    if (S.users.length === 0 && currentUser.role === 'admin') {
-        showSetupBanner(S.tablesReady ? '⚠️ No user accounts exist yet. Go to <b>⚙️ Settings → Users</b> and create your own Admin account — the built-in admin/admin123 stops working once a user exists.' : document.getElementById('setupBanner').innerHTML);
-    }
+    if (currentUser.role === 'admin' && S.tablesReady) checkBackupReminder();
     renderEstateDropdown();
     setDefaultMonthYear();
     lastSelection = { estate: S.estate, month: S.month };
     switchTab('tabRainfall');
     await loadMonthData();
 }
+
+// ---------------------------------------------------------------------
+// Keep login alive + login popup when it expires (typed numbers are kept)
+// ---------------------------------------------------------------------
+let reloginResolver = null;
+let lastActivityAt = Date.now();
+
+// Extends the login 24 hours. Returns the user, or null if the login has expired.
+async function touchSession() {
+    if (!sessionToken || !supabaseClient) return null;
+    let { data, error } = await supabaseClient.rpc('app_touch');
+    if (error && /app_touch/.test(error.message)) ({ data, error } = await supabaseClient.rpc('app_me')); // 04_updates.sql not run yet
+    if (error) return null;
+    return data;
+}
+
+// Call before saving. Shows the login popup if needed; resolves true when it is OK to continue.
+async function ensureSession() {
+    const me = await touchSession();
+    if (me && me.username === currentUser?.username) {
+        currentUser = publicUser(me);
+        return true;
+    }
+    return await promptRelogin();
+}
+
+function showReloginMode(on) {
+    document.getElementById('reloginNote').style.display = on ? 'block' : 'none';
+    document.getElementById('reloginCancel').style.display = on ? 'inline-block' : 'none';
+    const u = document.getElementById('loginUsername');
+    if (on && currentUser) u.value = currentUser.username;
+}
+
+function promptRelogin() {
+    return new Promise(resolve => {
+        reloginResolver = resolve;
+        showReloginMode(true);
+        document.getElementById('loginError').style.display = 'none';
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('loginPassword').focus();
+    });
+}
+
+function cancelRelogin() {
+    if (!reloginResolver) return;
+    const resolve = reloginResolver;
+    reloginResolver = null;
+    showReloginMode(false);
+    document.getElementById('loginOverlay').style.display = 'none';
+    toast('Not saved — log in again to save your changes');
+    resolve(false);
+}
+
+// While someone is actively working, keep the login alive every 20 minutes
+['keydown', 'click', 'input'].forEach(ev => document.addEventListener(ev, () => { lastActivityAt = Date.now(); }, { passive: true }));
+setInterval(() => {
+    if (currentUser && !reloginResolver && Date.now() - lastActivityAt < 20 * 60 * 1000) touchSession();
+}, 20 * 60 * 1000);
 
 // ---------------------------------------------------------------------
 // Print
@@ -164,15 +246,12 @@ window.onload = async function () {
     if (!supabaseClient) {
         showSetupBanner('⚠️ Cannot connect to the database (Supabase library did not load). Check your internet connection.');
     }
-    await Promise.all([fetchEstates(), fetchUserProfiles(), fetchColumns()]);
-
-    // Refresh saved login from the database (role/estates may have changed)
-    if (currentUser) {
-        const fresh = S.users.find(u => u.username === currentUser.username);
-        if (fresh && fresh.active !== false) currentUser = publicUser(fresh);
-        else if (!(S.users.length === 0 && currentUser.username === 'admin')) currentUser = null;
-        if (currentUser) localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        else localStorage.removeItem('currentUser');
+    // Still logged in from before? Ask the database (role/estates may have changed, or login expired)
+    if (sessionToken && supabaseClient) {
+        const data = await touchSession();
+        if (data && data.username) currentUser = publicUser(data);
+        else setSession(null);
     }
+    if (currentUser) await loadReferenceData();
     await applyUserPermissions();
 };

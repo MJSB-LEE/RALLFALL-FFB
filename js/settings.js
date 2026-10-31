@@ -5,10 +5,11 @@
 function switchSettings(id) {
     document.querySelectorAll('.settings-pane').forEach(p => p.classList.toggle('active', p.id === id));
     document.querySelectorAll('.sub-btn').forEach(b => b.classList.toggle('active', b.dataset.sub === id));
-    if (id === 'setAudit') fetchActivityLogs();
+    if (id === 'setAudit') { initAuditFilters(); fetchActivityLogs(); }
     if (id === 'setUsers') renderUsersTable();
     if (id === 'setEstates') renderEstateSettings();
     if (id === 'setColumns') renderColumnSetup();
+    if (id === 'setBackup') renderBackupInfo();
 }
 
 function renderSettings() {
@@ -20,7 +21,7 @@ function renderSettings() {
     }
     renderColumnSetup();
     renderEstateSettings();
-    renderUsersTable();
+    if (roleAtLeast('admin')) fetchUserProfiles().then(renderUsersTable);
 }
 
 // ---------------------------------------------------------------------
@@ -193,8 +194,9 @@ async function addNewEstate() {
 // Users
 // ---------------------------------------------------------------------
 async function fetchUserProfiles() {
-    if (!supabaseClient) return;
-    const { data } = await supabaseClient.from('user_profiles').select('*');
+    if (!supabaseClient || !roleAtLeast('admin')) return;
+    const { data, error } = await supabaseClient.rpc('app_list_users');
+    if (error) { console.warn(error); return; }
     S.users = (data || []).sort((a, b) => (a.username || '').localeCompare(b.username || ''));
 }
 
@@ -215,14 +217,27 @@ function renderUsersTable() {
             <td class="left"><b>${esc(u.username)}</b>${u.email && !u.email.endsWith('@ledger.local') ? `<div class="small muted">${esc(u.email)}</div>` : ''}</td>
             <td class="left">${esc(u.full_name || '')}</td>
             <td><span class="role-pill role-${esc(u.role)}">${esc((u.role || 'user').toUpperCase())}</span></td>
-            <td class="left small">${u.role === 'admin' ? '<i>All</i>' : (ests.length ? ests.map(esc).join(', ') : '<i>All</i>')}</td>
+            <td class="left small">${u.role === 'admin' ? '<i>All</i>' : (ests.length ? ests.map(esc).join(', ') : '<span class="bad">None — cannot see anything</span>')}</td>
+            <td class="small nowrap">${lastLoginText(u.last_login_at)}</td>
             <td>${active ? 'Active' : '<b>Disabled</b>'}</td>
             <td class="nowrap">
                 <button class="btn-mini" onclick="editUser('${esc(u.username)}')">✏️ Edit</button>
                 <button class="btn-mini del" onclick="deleteUser('${esc(u.username)}')">✕</button>
             </td></tr>`;
-    }).join('') || '<tr><td colspan="6">No users yet.</td></tr>';
+    }).join('') || '<tr><td colspan="7">No users yet.</td></tr>';
     if (!document.getElementById('ufEstates').children.length) resetUserForm();
+}
+
+function lastLoginText(ts) {
+    if (!ts) return '<span class="muted">Never</span>';
+    const d = new Date(ts);
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kuala_Lumpur' }).format(new Date());
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kuala_Lumpur' }).format(d);
+    const days = Math.round((new Date(today) - new Date(day)) / 86400000);
+    const time = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kuala_Lumpur', hour: '2-digit', minute: '2-digit', hour12: true }).format(d);
+    if (days === 0) return `Today ${time}`;
+    if (days === 1) return `Yesterday ${time}`;
+    return `${formatDateTime(ts).split(',')[0]} <span class="muted">(${days} days ago)</span>`;
 }
 
 function renderEstateChecks(selected = []) {
@@ -288,19 +303,22 @@ async function saveUserForm() {
     if (!username || !full_name) return alert('Please fill in Username and Full Name.');
     if (!editing && !password) return alert('Please set a password for the new user.');
     if (password && password.length < 6) return alert('Password must be at least 6 characters.');
+    if (role !== 'admin' && !assigned_estates.length) return alert('Tick at least one estate for this user.');
 
     if (editing) {
         if (activeAdminsAfter({ username: editing, role, active }) === 0) return alert('There must be at least one active Admin.');
-        const changes = { full_name, role, active, assigned_estates, email };
-        if (password) changes.password = password;
-        const { error } = await supabaseClient.from('user_profiles').update(changes).eq('username', editing);
-        if (error) return alert('❌ ' + error.message);
+        const { error } = await supabaseClient.rpc('app_save_user', {
+            p_editing: editing, p_username: editing, p_full_name: full_name, p_email: email,
+            p_password: password || '', p_role: role, p_active: active, p_estates: assigned_estates });
+        if (error) return alert('❌ ' + dbErrorMessage(error));
         await logActivity('EDIT_USER', `Edited ${editing} (${role}${active ? '' : ', disabled'}${password ? ', password reset' : ''})`);
         toast(`✅ ${editing} updated`);
     } else {
         if (S.users.some(u => u.username.toLowerCase() === username.toLowerCase())) return alert('Username already exists.');
-        const { error } = await supabaseClient.from('user_profiles').insert([{ username, password, full_name, email, role, active, assigned_estates }]);
-        if (error) return alert('❌ ' + (error.message.includes('duplicate') && error.message.includes('email') ? 'That email is already used by another user.' : error.message));
+        const { error } = await supabaseClient.rpc('app_save_user', {
+            p_editing: '', p_username: username, p_full_name: full_name, p_email: email,
+            p_password: password, p_role: role, p_active: active, p_estates: assigned_estates });
+        if (error) return alert('❌ ' + (/duplicate/.test(error.message) && /email/.test(error.message) ? 'That email is already used by another user.' : dbErrorMessage(error)));
         await logActivity('CREATE_USER', `Created ${username} (${role})`);
         toast(`✅ ${username} created`);
     }
@@ -313,8 +331,8 @@ async function deleteUser(username) {
     if (username === currentUser?.username) return alert('You cannot delete your own account.');
     if (activeAdminsAfter({ username, active: false }) === 0) return alert('There must be at least one active Admin.');
     if (!confirm(`Delete user "${username}"?\n\nTip: you can untick "Active" instead to block login but keep the name in records.`)) return;
-    const { error } = await supabaseClient.from('user_profiles').delete().eq('username', username);
-    if (error) return alert('❌ ' + error.message);
+    const { error } = await supabaseClient.rpc('app_delete_user', { p_username: username });
+    if (error) return alert('❌ ' + dbErrorMessage(error));
     await logActivity('DELETE_USER', `Deleted ${username}`);
     await fetchUserProfiles();
     resetUserForm();
