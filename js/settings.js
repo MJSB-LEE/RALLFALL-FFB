@@ -2,7 +2,11 @@
 // SETTINGS: Column Setup, Estates, Users, Audit Log (admin only)
 // =====================================================================
 
+// Settings for a "Column Setup only" user: just the Column Setup page
 function switchSettings(id) {
+    const btn = document.querySelector(`.sub-btn[data-sub="${id}"]`);
+    if (btn?.dataset.need === 'settings' && !isSettingsUser()) id = 'setColumns';
+    if (id === 'setDeletePwd') renderDeletePwdStatus();
     document.querySelectorAll('.settings-pane').forEach(p => p.classList.toggle('active', p.id === id));
     document.querySelectorAll('.sub-btn').forEach(b => b.classList.toggle('active', b.dataset.sub === id));
     if (id === 'setAudit') { initAuditFilters(); fetchActivityLogs(); }
@@ -14,11 +18,14 @@ function switchSettings(id) {
 }
 
 function renderSettings() {
+    document.querySelectorAll('.sub-btn[data-need="settings"]').forEach(b => { b.style.display = isSettingsUser() ? '' : 'none'; });
+    if (!isSettingsUser()) switchSettings('setColumns');
     const sel = document.getElementById('colEstateSelect');
     if (sel) {
         const keep = sel.value || S.estate;
-        sel.innerHTML = S.estates.map(e => `<option value="${esc(e.name)}">${esc(e.name)}</option>`).join('');
-        if (S.estates.some(e => e.name === keep)) sel.value = keep;
+        const list = visibleEstates();  // Column Setup users: only their own estates
+        sel.innerHTML = list.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+        if (list.includes(keep)) sel.value = keep;
     }
     renderColumnSetup();
     renderEstateSettings();
@@ -126,17 +133,60 @@ async function toggleColumn(id) {
 
 async function deleteColumn(id) {
     const col = S.columns.find(c => c.id === id);
-    const { count, error: cErr } = await supabaseClient.from('daily_entries')
-        .select('column_id', { count: 'exact', head: true }).eq('column_id', id).not('value', 'is', null);
-    if (cErr) return alert('❌ ' + cErr.message);
-    if (count > 0) {
-        return alert(`"${col.name}" already has ${count} day(s) of data, so it cannot be deleted.\n\nUse 🚫 Hide instead — it disappears from key-in but old months stay correct.`);
-    }
-    if (!confirm(`Delete "${col.name}"? It has no data.`)) return;
-    const { error } = await supabaseClient.from('estate_columns').delete().eq('id', id);
-    if (error) return alert('❌ ' + error.message);
-    await logActivity('DELETE_COLUMN', col.name, col.estate_name);
+    const pwd = await askDeletePassword(`Delete column <b>${esc(col.name)}</b> (${esc(col.estate_name)})?`);
+    if (pwd === null) return;
+    if (!(await runDelete('app_delete_column', { p_id: id, p_password: pwd }))) return;
+    toast(`🗑️ ${col.name} deleted`);
     await afterColumnChange();
+}
+
+// ---------- Delete password box (every delete) ----------
+let pwdResolver = null;
+function askDeletePassword(messageHtml) {
+    return new Promise(resolve => {
+        pwdResolver = resolve;
+        document.getElementById('pwdMessage').innerHTML = messageHtml + '<br><span class="hint">Enter the IT delete password to confirm.</span>';
+        document.getElementById('pwdInput').value = '';
+        document.getElementById('pwdOverlay').style.display = 'flex';
+        setTimeout(() => document.getElementById('pwdInput').focus(), 50);
+    });
+}
+function closePwdBox(ok) {
+    const v = document.getElementById('pwdInput').value;
+    if (ok && !v) return document.getElementById('pwdInput').focus();
+    document.getElementById('pwdOverlay').style.display = 'none';
+    document.getElementById('pwdInput').value = '';
+    const r = pwdResolver; pwdResolver = null;
+    if (r) r(ok ? v : null);
+}
+// calls a delete function; the database checks the password and writes the Audit Log
+async function runDelete(fn, args) {
+    if (!(await ensureSession())) return false;
+    const { data, error } = await supabaseClient.rpc(fn, args);
+    if (error) { alert('❌ ' + dbErrorMessage(error)); return false; }
+    if (data && data.error) { alert('❌ ' + data.error); return false; }
+    return true;
+}
+
+// ---------- Settings -> Delete Password ----------
+async function renderDeletePwdStatus() {
+    const { data } = await supabaseClient.rpc('app_has_delete_password');
+    document.getElementById('deletePwdStatus').innerHTML = data
+        ? '<span class="ok">✓ A delete password is set.</span> To change it, type the current one first.'
+        : '<span class="bad">No delete password yet — nobody can delete until you set one.</span>';
+    document.getElementById('dpCurrentWrap').style.display = data ? '' : 'none';
+}
+async function saveDeletePassword() {
+    const cur = document.getElementById('dpCurrent').value;
+    const n1 = document.getElementById('dpNew').value, n2 = document.getElementById('dpNew2').value;
+    if (n1.length < 6) return alert('The delete password must be at least 6 characters.');
+    if (n1 !== n2) return alert('The two new passwords are not the same.');
+    const { data, error } = await supabaseClient.rpc('app_set_delete_password', { p_current: cur, p_new: n1 });
+    if (error) return alert('❌ ' + dbErrorMessage(error));
+    if (data && data.error) return alert('❌ ' + data.error);
+    ['dpCurrent', 'dpNew', 'dpNew2'].forEach(id => { document.getElementById(id).value = ''; });
+    toast('✅ Delete password saved');
+    renderDeletePwdStatus();
 }
 
 // ---------------------------------------------------------------------
@@ -337,10 +387,10 @@ async function saveUserForm() {
 
 async function deleteUser(username) {
     if (username === currentUser?.username) return alert('You cannot delete your own account.');
-    if (!confirm(`Delete user "${username}"?\n\nTip: you can untick "Active" instead to block login but keep the name in records.`)) return;
-    const { error } = await supabaseClient.rpc('app_delete_user', { p_username: username });
-    if (error) return alert('❌ ' + dbErrorMessage(error));
-    await logActivity('DELETE_USER', `Deleted ${username}`);
+    const pwd = await askDeletePassword(`Delete user <b>${esc(username)}</b>?<br><span class="hint">Tip: untick "Active" instead to block login but keep the name in records.</span>`);
+    if (pwd === null) return;
+    if (!(await runDelete('app_delete_user', { p_username: username, p_password: pwd }))) return;
+    toast(`🗑️ ${username} deleted`);
     await fetchUserProfiles();
     resetUserForm();
     renderUsersTable();
@@ -353,7 +403,7 @@ const GROUP_TABS = [
     ['tab_rainfall', ['none', 'view', 'edit']], ['tab_mill', ['none', 'view', 'edit']], ['tab_block', ['none', 'view', 'edit']],
     ['tab_summary', ['none', 'view']], ['tab_millsummary', ['none', 'view']]
 ];
-const GROUP_ACTIONS = ['can_submit', 'can_approve', 'can_unlock', 'can_settings'];
+const GROUP_ACTIONS = ['can_submit', 'can_approve', 'can_unlock', 'can_columns', 'can_settings'];
 
 async function fetchGroups() {
     if (!supabaseClient || !isSettingsUser()) return;
@@ -381,7 +431,7 @@ function renderGroupsTable() {
                 <button class="btn-mini" onclick="saveGroupRow(${g.id})">💾 Save</button>
                 <button class="btn-mini del" onclick="deleteGroup(${g.id})" ${g.users ? 'disabled title="Move its users to another group first"' : ''}>✕</button>
             </td></tr>`;
-    }).join('') || '<tr><td colspan="12">No groups yet. Run sql/05_user_groups.sql in Supabase.</td></tr>';
+    }).join('') || '<tr><td colspan="13">No groups yet. Run sql/05_user_groups.sql in Supabase.</td></tr>';
 }
 
 function markGroupChanged(el) { el.closest('tr').classList.add('changed'); }
@@ -417,7 +467,7 @@ async function addGroup() {
     const name = input.value.trim();
     if (!name) return alert('Type a group name first.');
     const perms = { tab_rainfall: 'view', tab_mill: 'view', tab_block: 'view', tab_summary: 'view', tab_millsummary: 'view',
-                    can_submit: false, can_approve: false, can_unlock: false, can_settings: false };
+                    can_submit: false, can_approve: false, can_unlock: false, can_columns: false, can_settings: false };
     const { error } = await supabaseClient.rpc('app_save_group', { p_id: null, p_name: name, p_perms: perms });
     if (error) return alert('❌ ' + dbErrorMessage(error));
     await logActivity('SAVE_GROUP', `Added group ${name}`);
@@ -428,9 +478,10 @@ async function addGroup() {
 
 async function deleteGroup(id) {
     const g = (S.groups || []).find(x => x.id === id);
-    if (!g || !confirm(`Delete group "${g.name}"?`)) return;
-    const { error } = await supabaseClient.rpc('app_delete_group', { p_id: id });
-    if (error) return alert('❌ ' + dbErrorMessage(error));
-    await logActivity('DELETE_GROUP', `Deleted group ${g.name}`);
+    if (!g) return;
+    const pwd = await askDeletePassword(`Delete group <b>${esc(g.name)}</b>?`);
+    if (pwd === null) return;
+    if (!(await runDelete('app_delete_group', { p_id: id, p_password: pwd }))) return;
+    toast(`🗑️ ${g.name} deleted`);
     await afterGroupChange();
 }
