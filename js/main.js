@@ -55,6 +55,7 @@ function tabAllowed(tabId) {
     const btn = document.getElementById(`btn-${tabId}`);
     const key = btn?.dataset.perm;
     if (!key) return true;
+    if (key === 'settings_or_columns') return can('can_settings') || can('can_columns');
     return key.startsWith('can_') ? can(key) : tabAccess(key) !== 'none';
 }
 function firstAllowedTab() {
