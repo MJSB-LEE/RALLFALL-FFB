@@ -110,8 +110,8 @@ async function exportBackup() {
         })), [10, 14, 22, 24, 7, 8]);
         add('Estates', estates.data.map(e => ({ ID: e.id, Name: e.name, Order: e.sort_order ?? '' })), [6, 20, 7]);
         add('Users', S.users.map(u => ({
-            Username: u.username, 'Full Name': u.full_name, Email: u.email, Role: u.role,
-            Estates: u.role === 'admin' ? 'All' : (userEstates(u).join(', ') || 'All'), Active: u.active === false ? 'Disabled' : 'Yes'
+            Username: u.username, 'Full Name': u.full_name, Email: u.email, Group: u.group_name || u.role,
+            Estates: u.all_estates ? 'All' : (userEstates(u).join(', ') || 'None'), Active: u.active === false ? 'Disabled' : 'Yes'
         })), [14, 24, 26, 9, 30, 9]);
         add('Audit Log', logs.data.map(l => ({
             Time: formatDateTime(l.timestamp), User: l.username, Action: l.action, Estate: l.estate, Details: l.details
