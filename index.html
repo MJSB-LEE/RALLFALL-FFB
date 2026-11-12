@@ -28,7 +28,7 @@
             </div>
 
             <div class="control-group">
-                <span id="userBadge" class="role-badge">ROLE</span>
+                <span id="userBadge" class="role-badge">GROUP</span>
                 <span id="userInfoLabel" class="user-label"></span>
                 <button class="btn btn-print" onclick="printActiveTab()">🖨️ Print</button>
                 <button class="btn btn-logout" onclick="handleLogout()">🚪 Logout</button>
@@ -39,12 +39,12 @@
 
         <!-- Navigation Tabs -->
         <div class="nav-tabs">
-            <button class="tab-btn active" id="btn-tabRainfall" onclick="switchTab('tabRainfall')">1. RAINFALL BY PHASE</button>
-            <button class="tab-btn" id="btn-tabMill" onclick="switchTab('tabMill')">2. FFB BY MILL</button>
-            <button class="tab-btn" id="btn-tabBlock" onclick="switchTab('tabBlock')">3. FFB BY PHASE / BLOCK</button>
-            <button class="tab-btn" id="btn-tabSummary" onclick="switchTab('tabSummary')">4. SUMMARY</button>
-            <button class="tab-btn" id="btn-tabMillSummary" onclick="switchTab('tabMillSummary')">5. MILL SUMMARY</button>
-            <button class="tab-btn" id="btn-tabSettings" onclick="switchTab('tabSettings')" data-min-role="admin">⚙️ SETTINGS</button>
+            <button class="tab-btn active" id="btn-tabRainfall" onclick="switchTab('tabRainfall')" data-perm="tab_rainfall">1. RAINFALL BY PHASE</button>
+            <button class="tab-btn" id="btn-tabMill" onclick="switchTab('tabMill')" data-perm="tab_mill">2. FFB BY MILL</button>
+            <button class="tab-btn" id="btn-tabBlock" onclick="switchTab('tabBlock')" data-perm="tab_block">3. FFB BY PHASE / BLOCK</button>
+            <button class="tab-btn" id="btn-tabSummary" onclick="switchTab('tabSummary')" data-perm="tab_summary">4. SUMMARY</button>
+            <button class="tab-btn" id="btn-tabMillSummary" onclick="switchTab('tabMillSummary')" data-perm="tab_millsummary">5. MILL SUMMARY</button>
+            <button class="tab-btn" id="btn-tabSettings" onclick="switchTab('tabSettings')" data-perm="can_settings">⚙️ SETTINGS</button>
         </div>
 
         <!-- Status + actions for the key-in tabs -->
@@ -63,7 +63,7 @@
         <div id="tabRainfall" class="tab-content active">
             <div class="print-head" data-title="DAILY RAINFALL RECORD"></div>
             <div class="section-title screen-only">1. DAILY RAINFALL RECORD BY PHASE (MM)</div>
-            <div class="table-scroll"><table class="data-table" id="tblRainfall"></table></div>
+            <div class="table-scroll"><table class="data-table grid-table" id="tblRainfall"></table></div>
             <div class="print-sign"></div>
         </div>
 
@@ -71,7 +71,7 @@
         <div id="tabMill" class="tab-content">
             <div class="print-head" data-title="DAILY FFB RECORD BY MILL"></div>
             <div class="section-title screen-only">2. DAILY FFB RECORD BY MILL (MT)</div>
-            <div class="table-scroll"><table class="data-table" id="tblMill"></table></div>
+            <div class="table-scroll"><table class="data-table grid-table" id="tblMill"></table></div>
             <div class="below-grid">
                 <div id="millMonthlyPanel"></div>
                 <div id="millPercentPanel"></div>
@@ -83,7 +83,7 @@
         <div id="tabBlock" class="tab-content">
             <div class="print-head" data-title="DAILY FFB RECORD BY PHASE"></div>
             <div class="section-title screen-only">3. DAILY FFB RECORD BY PHASE / BLOCK (MT)</div>
-            <div class="table-scroll"><table class="data-table" id="tblBlock"></table></div>
+            <div class="table-scroll"><table class="data-table grid-table" id="tblBlock"></table></div>
             <div class="below-grid">
                 <div id="blockMonthlyPanel"></div>
                 <div id="blockCheckPanel"></div>
@@ -95,6 +95,7 @@
         <div id="tabSummary" class="tab-content">
             <div class="print-head" data-title="GROUP SUMMARY - RAINFALL & FFB" data-group="1"></div>
             <div class="section-title screen-only">4. SUMMARY — <span id="summaryScope">ALL ESTATES</span></div>
+            <div class="loc-picker screen-only" data-target="summary"></div>
             <div id="summaryContent"></div>
         </div>
 
@@ -102,6 +103,7 @@
         <div id="tabMillSummary" class="tab-content">
             <div class="print-head" data-title="MILL SUPPLIER SUMMARY" data-group="1"></div>
             <div class="section-title screen-only">5. MILL SUPPLIER TONNAGE & PERCENTAGE — <span id="millSummaryScope">ALL ESTATES</span></div>
+            <div class="loc-picker screen-only" data-target="millsummary"></div>
             <div id="millSummaryContent"></div>
         </div>
 
@@ -111,6 +113,7 @@
                 <button class="sub-btn active" data-sub="setColumns" onclick="switchSettings('setColumns')">📋 Column Setup</button>
                 <button class="sub-btn" data-sub="setEstates" onclick="switchSettings('setEstates')">🏢 Estates</button>
                 <button class="sub-btn" data-sub="setUsers" onclick="switchSettings('setUsers')">👤 Users</button>
+                <button class="sub-btn" data-sub="setGroups" onclick="switchSettings('setGroups')">👥 User Groups</button>
                 <button class="sub-btn" data-sub="setAudit" onclick="switchSettings('setAudit')">📜 Audit Log</button>
                 <button class="sub-btn" data-sub="setBackup" onclick="switchSettings('setBackup')">💾 Backup</button>
             </div>
@@ -140,7 +143,7 @@
                     <div class="settings-card">
                         <h3>User Accounts</h3>
                         <table class="data-table users-table">
-                            <thead><tr><th>USERNAME</th><th>FULL NAME</th><th>ROLE</th><th>ESTATES</th><th>LAST LOGIN</th><th>STATUS</th><th></th></tr></thead>
+                            <thead><tr><th>USERNAME</th><th>FULL NAME</th><th>GROUP</th><th>ESTATES</th><th>LAST LOGIN</th><th>STATUS</th><th></th></tr></thead>
                             <tbody id="usersTableBody"></tbody>
                         </table>
                     </div>
@@ -151,21 +154,42 @@
                         <label class="field">Full name (shown on print)<input type="text" id="ufFullName"></label>
                         <label class="field">Email <span class="hint">(optional — leave blank if the user has none)</span><input type="email" id="ufEmail" autocomplete="off"></label>
                         <label class="field"><span id="ufPasswordLabel">Password</span><input type="password" id="ufPassword" autocomplete="new-password"></label>
-                        <label class="field">Role
-                            <select id="ufRole" onchange="toggleEstateChecks()">
-                                <option value="user">User — key in data for own estates</option>
-                                <option value="manager">Manager — approve, see summaries</option>
-                                <option value="admin">Admin — everything + settings</option>
-                            </select>
+                        <label class="field">User Group <span class="hint">(what this user can view / edit — set up in 👥 User Groups)</span>
+                            <select id="ufGroup"></select>
                         </label>
-                        <div class="field" id="ufEstatesWrap">Estates this user can see and key in <span class="hint">(tick at least one)</span>
-                            <div id="ufEstates" class="estate-checks"></div>
+                        <div class="field">Estates / Locations
+                            <label class="check-line all-estates"><input type="checkbox" id="ufAllEstates" onchange="toggleEstateChecks()"> <b>All estates (full access)</b></label>
+                            <div id="ufEstatesWrap"><span class="hint">or tick the user's own estates:</span>
+                                <div id="ufEstates" class="estate-checks"></div>
+                            </div>
                         </div>
                         <label class="check-line"><input type="checkbox" id="ufActive" checked> Active (can log in)</label>
                         <div class="add-row">
                             <button class="btn btn-save" onclick="saveUserForm()">💾 Save User</button>
                             <button class="btn btn-grey" onclick="resetUserForm()">Clear</button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="setGroups" class="settings-pane">
+                <div class="settings-card">
+                    <h3>👥 User Groups — what each group can do</h3>
+                    <p class="hint" style="font-size:12px;margin-top:0;"><b>None</b> = tab hidden · <b>View</b> = can see, cannot change · <b>Edit</b> = can key in.
+                        Which estates a user sees is set per user in 👤 Users.</p>
+                    <div class="table-scroll">
+                        <table class="data-table groups-table">
+                            <thead>
+                                <tr><th rowspan="2">GROUP NAME</th><th colspan="5">TABS</th><th colspan="4">ACTIONS</th><th rowspan="2">USERS</th><th rowspan="2"></th></tr>
+                                <tr><th>1. Rainfall</th><th>2. FFB by Mill</th><th>3. FFB by Phase/Block</th><th>4. Summary</th><th>5. Mill Summary</th>
+                                    <th>Submit</th><th>Approve</th><th>Unlock</th><th>Settings</th></tr>
+                            </thead>
+                            <tbody id="groupsTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="add-row" style="margin-top:8px;max-width:420px;">
+                        <input type="text" id="newGroupName" placeholder="New group name, e.g. Clerk Styland">
+                        <button class="btn btn-save" onclick="addGroup()">+ Add Group</button>
                     </div>
                 </div>
             </div>
