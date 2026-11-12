@@ -13,7 +13,7 @@ function showSetupBanner(html) {
 
 function visibleEstates() {
     const all = S.estates.map(e => e.name);
-    if (!currentUser || currentUser.role === 'admin') return all;
+    if (!currentUser || currentUser.all_estates || isSettingsUser()) return all;
     const mine = userEstates(currentUser);
     return all.filter(n => mine.includes(n)); // nothing ticked = nothing (admin sees all)
 }
@@ -51,9 +51,19 @@ async function onEstateOrMonthChange() {
     if (active === 'tabMillSummary') loadMillSummaryBreakdown();
 }
 
-function switchTab(tabId) {
+function tabAllowed(tabId) {
     const btn = document.getElementById(`btn-${tabId}`);
-    if (btn?.dataset.minRole && !roleAtLeast(btn.dataset.minRole)) tabId = 'tabRainfall';
+    const key = btn?.dataset.perm;
+    if (!key) return true;
+    return key.startsWith('can_') ? can(key) : tabAccess(key) !== 'none';
+}
+function firstAllowedTab() {
+    return [...document.querySelectorAll('.tab-btn')].map(b => b.id.replace('btn-', '')).find(tabAllowed) || null;
+}
+
+function switchTab(tabId) {
+    if (!tabAllowed(tabId)) tabId = firstAllowedTab();
+    if (!tabId) return;
     document.querySelectorAll('.tab-content').forEach(el => el.classList.toggle('active', el.id === tabId));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.toggle('active', el.id === `btn-${tabId}`));
     document.getElementById('entryActions').style.display = ENTRY_TABS.includes(tabId) ? '' : 'none';
@@ -63,17 +73,25 @@ function switchTab(tabId) {
     if (tabId === 'tabSummary') loadOverallSummary();
     if (tabId === 'tabMillSummary') loadMillSummaryBreakdown();
     if (tabId === 'tabSettings') renderSettings();
+    if (ENTRY_TABS.includes(tabId)) renderStatus();
 }
 
 // ---------------------------------------------------------------------
 // Login
 // ---------------------------------------------------------------------
 function publicUser(u) {
-    return { username: u.username, full_name: u.full_name, role: u.role || 'user', assigned_estates: userEstates(u) };
+    const role = u.role || 'user';
+    return {
+        username: u.username, full_name: u.full_name, role,
+        assigned_estates: userEstates(u),
+        all_estates: !!u.all_estates || (!u.perms && role === 'admin'),
+        group_name: u.group_name || role.toUpperCase(),
+        perms: u.perms && Object.keys(u.perms).length ? u.perms : (ROLE_DEFAULT_PERMS[role] || ROLE_DEFAULT_PERMS.user)
+    };
 }
 
 async function loadReferenceData() {
-    await Promise.all([fetchEstates(), fetchColumns(), roleAtLeast('admin') ? fetchUserProfiles() : null]);
+    await Promise.all([fetchEstates(), fetchColumns(), isSettingsUser() ? fetchUserProfiles() : null]);
 }
 
 async function handleLogin() {
@@ -112,7 +130,7 @@ async function handleLogin() {
     }
     currentUser = publicUser(data.user);
     await loadReferenceData();
-    await logActivity('LOGIN', `Logged in as ${currentUser.role.toUpperCase()}`);
+    await logActivity('LOGIN', `Logged in (${currentUser.group_name})`);
     await applyUserPermissions();
 }
 
@@ -132,16 +150,17 @@ async function handleLogout(force = false) {
 async function applyUserPermissions() {
     if (!currentUser) { document.getElementById('loginOverlay').style.display = 'flex'; return; }
     document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('userBadge').innerText = `ROLE: ${currentUser.role.toUpperCase()}`;
+    document.getElementById('userBadge').innerText = currentUser.group_name.toUpperCase();
     document.getElementById('userInfoLabel').innerText = `User: ${displayName(currentUser)}`;
-    document.querySelectorAll('.tab-btn[data-min-role]').forEach(b => {
-        b.style.display = roleAtLeast(b.dataset.minRole) ? '' : 'none';
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        b.style.display = tabAllowed(b.id.replace('btn-', '')) ? '' : 'none';
     });
-    if (currentUser.role === 'admin' && S.tablesReady) checkBackupReminder();
+    if (isSettingsUser() && S.tablesReady) checkBackupReminder();
     renderEstateDropdown();
     setDefaultMonthYear();
     lastSelection = { estate: S.estate, month: S.month };
-    switchTab('tabRainfall');
+    switchTab(firstAllowedTab());
+    if (!firstAllowedTab()) showSetupBanner('Your user group has no tabs switched on. Ask your admin to check 👥 User Groups.');
     await loadMonthData();
 }
 
@@ -212,7 +231,7 @@ function renderPrintParts() {
         el.innerHTML = `<div class="ph-group">MASIH JAYA GROUP</div>
             <div class="ph-title">${esc(el.dataset.title)}</div>
             <div class="ph-meta">
-                <span>${group ? '' : `Nama Ladang: <b class="ph-box">${esc(S.estate)}</b>`}</span>
+                <span>${group ? `Lokasi: <b class="ph-box">${esc(summaryEstates().join(', '))}</b>` : `Nama Ladang: <b class="ph-box">${esc(S.estate)}</b>`}</span>
                 <span>Bulan/Tahun: <b class="ph-box">${S.month ? monthLabel(S.month) : ''}</b></span>
             </div>`;
     });
