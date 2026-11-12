@@ -19,7 +19,7 @@ async function logActivity(action, details, estate = 'SYSTEM') {
 // Audit Log viewer (Settings -> Audit Log): filter by day range, user, estate, action
 // ---------------------------------------------------------------------
 const AUDIT_ACTIONS = ['LOGIN', 'LOGOUT', 'SAVE_DATA', 'SUBMIT_APPROVAL', 'APPROVE', 'UNLOCK', 'BACKUP',
-    'CREATE_USER', 'EDIT_USER', 'DELETE_USER', 'ADD_ESTATE', 'ADD_COLUMN', 'RENAME_COLUMN', 'HIDE_COLUMN', 'SHOW_COLUMN', 'DELETE_COLUMN'];
+    'CREATE_USER', 'EDIT_USER', 'DELETE_USER', 'SAVE_GROUP', 'DELETE_GROUP', 'ADD_ESTATE', 'ADD_COLUMN', 'RENAME_COLUMN', 'HIDE_COLUMN', 'SHOW_COLUMN', 'DELETE_COLUMN'];
 
 function mytDate(d = new Date()) { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kuala_Lumpur' }).format(d); }
 function addDays(ymd, n) { const d = new Date(ymd + 'T12:00:00+08:00'); d.setDate(d.getDate() + n); return mytDate(d); }
