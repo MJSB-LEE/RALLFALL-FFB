@@ -25,9 +25,45 @@ async function loadGroupData() {
     return { totals, reports, error: entriesRes.error };
 }
 
+// ---------- Location picker (Tabs 4-5): only the user's own estates; "All Locations" = all of them ----------
+function locKey() { return `summaryLocations:${currentUser?.username || ''}`; }
+function summaryEstates() {
+    const allowed = visibleEstates();
+    let sel = null;
+    try { sel = JSON.parse(localStorage.getItem(locKey())); } catch (e) {}
+    if (!Array.isArray(sel)) return allowed;
+    const picked = allowed.filter(e => sel.includes(e));
+    return picked.length ? picked : allowed;
+}
+function setSummaryEstates(list) {
+    try { localStorage.setItem(locKey(), JSON.stringify(list)); } catch (e) {}
+    const tab = activeTabId();
+    if (tab === 'tabSummary') loadOverallSummary();
+    if (tab === 'tabMillSummary') loadMillSummaryBreakdown();
+}
+function renderLocPickers() {
+    const allowed = visibleEstates();
+    const picked = summaryEstates();
+    const all = picked.length === allowed.length;
+    document.querySelectorAll('.loc-picker').forEach(box => {
+        box.innerHTML = `<span class="loc-label">📍 Location:</span>`
+            + (allowed.length > 1 ? `<button class="btn-all ${all ? '' : 'off'}" onclick="setSummaryEstates(visibleEstates())">All Locations</button>` : '')
+            + allowed.map(e => `<label><input type="checkbox" ${picked.includes(e) ? 'checked' : ''} ${allowed.length === 1 ? 'disabled' : ''}
+                data-est="${esc(e)}" onchange="pickLocation(this)"> ${esc(e)}</label>`).join('')
+            + (!allowed.length ? '<span class="muted">No estate assigned to your account.</span>' : '');
+    });
+}
+function pickLocation(cb) {
+    const estate = cb.dataset.est;
+    let list = summaryEstates();
+    list = cb.checked ? [...new Set([...list, estate])] : list.filter(e => e !== estate);
+    if (!list.length) { cb.checked = true; return toast('Keep at least one location ticked'); }
+    setSummaryEstates(visibleEstates().filter(e => list.includes(e)));
+}
+
 function setScopeLabel(id, estates) {
     const el = document.getElementById(id);
-    if (el) el.textContent = estates.length === S.estates.length ? 'ALL ESTATES' : estates.join(', ').toUpperCase();
+    if (el) el.textContent = estates.length === S.estates.length ? 'ALL ESTATES' : (estates.join(', ').toUpperCase() || '-');
 }
 
 function sumCols(cols, totals, key) { return cols.reduce((s, c) => s + (totals[c.id]?.[key] || 0), 0); }
@@ -37,7 +73,8 @@ async function loadOverallSummary() {
     if (!box || !S.month || !supabaseClient || !S.tablesReady) return;
     box.innerHTML = '<div class="hint">Loading…</div>';
     const { totals, reports } = await loadGroupData();
-    const estates = visibleEstates();
+    renderLocPickers();
+    const estates = summaryEstates();
     setScopeLabel('summaryScope', estates);
 
     // ---- Rainfall ----
@@ -98,46 +135,60 @@ async function loadOverallSummary() {
     box.innerHTML = ffb + rf;
 }
 
+// Tab 5: one section per estate. Each estate's own phases/blocks and own mills, each = 100% of that estate.
 async function loadMillSummaryBreakdown() {
     const box = document.getElementById('millSummaryContent');
     if (!box || !S.month || !supabaseClient || !S.tablesReady) return;
     box.innerHTML = '<div class="hint">Loading…</div>';
-    const { totals } = await loadGroupData();
+    const { totals, reports } = await loadGroupData();
+    renderLocPickers();
+    const estates = summaryEstates();
+    setScopeLabel('millSummaryScope', estates);
 
-    // Group mills by name across estates (e.g. "Golden Elite" used by 2 estates = 1 row)
-    const estates = visibleEstates().filter(est => columnsFor(est, 'mill', true).length);
-    setScopeLabel('millSummaryScope', visibleEstates());
-    const mills = {}; // key -> { name, perEstate: {est: mt}, total, prev }
+    // rows of one category for one estate (hidden columns only if they have data)
+    const rowsFor = (est, cat) => columnsFor(est, cat, true)
+        .map(c => ({ c, cur: totals[c.id]?.cur || 0, prev: totals[c.id]?.prev || 0 }))
+        .filter(r => r.c.active !== false || r.cur || r.prev);
+    const pct = (v, t) => t && v ? (v / t * 100).toFixed(1) + '%' : '-';
+    const mt = v => v ? v.toFixed(2) : '-';
+
+    const table = (title, cls, rows, total, prevTotal, estimates) => {
+        if (!rows.length) return `<div class="ms-empty">${title}: <span class="muted">not set up</span></div>`;
+        const est = estimates !== undefined;
+        return `<table class="data-table ms-table">
+            <thead><tr><th class="${cls} left">${title}</th>${est ? '<th>ESTIMATE %</th>' : ''}<th>MT</th><th>%</th><th>PREV MONTH MT</th></tr></thead>
+            <tbody>${rows.map(r => `<tr><td class="left">${esc(r.c.name)}${r.c.active === false ? ' <i class="muted">(hidden)</i>' : ''}</td>
+                ${est ? `<td>${estimates[r.c.id] ? estimates[r.c.id] + '%' : '-'}</td>` : ''}
+                <td><b>${mt(r.cur)}</b></td><td>${pct(r.cur, total)}</td><td>${mt(r.prev)}</td></tr>`).join('')}</tbody>
+            <tfoot><tr class="grand-row"><td class="left">SUBTOTAL</td>${est ? '<td></td>' : ''}
+                <td>${total.toFixed(2)} MT</td><td>${total ? '100%' : '-'}</td><td>${prevTotal.toFixed(2)} MT</td></tr></tfoot>
+        </table>`;
+    };
+
+    let html = '', shown = 0;
     estates.forEach(est => {
-        columnsFor(est, 'mill', true).forEach(c => {
-            const t = totals[c.id] || {};
-            if (c.active === false && !t.cur && !t.prev) return;
-            const key = c.name.trim().toLowerCase();
-            const m = mills[key] || (mills[key] = { name: c.name.trim(), perEstate: {}, total: 0, prev: 0 });
-            m.perEstate[est] = (m.perEstate[est] || 0) + (t.cur || 0);
-            m.total += t.cur || 0;
-            m.prev += t.prev || 0;
-        });
+        const blocks = rowsFor(est, 'block'), mills = rowsFor(est, 'mill');
+        if (!blocks.length && !mills.length) return;
+        shown++;
+        const bT = blocks.reduce((s, r) => s + r.cur, 0), bP = blocks.reduce((s, r) => s + r.prev, 0);
+        const mT = mills.reduce((s, r) => s + r.cur, 0), mP = mills.reduce((s, r) => s + r.prev, 0);
+        let check = '';
+        if (blocks.length && mills.length && (bT || mT)) {
+            check = Math.abs(bT - mT) < 0.005
+                ? `<span class="ok">✓ Phase/Block total = Mill total (${mT.toFixed(2)} MT)</span>`
+                : `<span class="bad">⚠ Phase/Block ${bT.toFixed(2)} MT ≠ Mill ${mT.toFixed(2)} MT (difference ${(bT - mT).toFixed(2)})</span>`;
+        }
+        const st = reports[est]?.status || 'draft';
+        html += `<div class="ms-estate">
+            <div class="ms-head"><span>${esc(est)}</span>
+                <span class="ms-total">Total FFB: <b>${(mills.length ? mT : bT).toFixed(2)} MT</b>
+                <span class="status-pill st-${st}">${st.toUpperCase()}</span></span></div>
+            <div class="ms-body">
+                ${table('PHASE / BLOCK', 'th-blk-header', blocks, bT, bP)}
+                ${table('MILL / SUPPLIER', 'th-ffb-header', mills, mT, mP, reports[est]?.mill_estimates || {})}
+            </div>
+            ${check ? `<div class="ms-check">${check}</div>` : ''}
+        </div>`;
     });
-    const rows = Object.values(mills).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
-    const grand = rows.reduce((s, m) => s + m.total, 0);
-    const grandPrev = rows.reduce((s, m) => s + m.prev, 0);
-
-    if (!rows.length) { box.innerHTML = `<div class="empty-msg">No mills set up yet.</div>`; return; }
-
-    let h = `<h4 class="sum-title">MILL SUPPLIER — ${monthLabel(S.month)}</h4>
-        <div class="table-scroll"><table class="data-table sum-table"><thead><tr><th>MILL / SUPPLIER</th>
-        ${estates.map(e => `<th class="th-ffb-header">${esc(e)}</th>`).join('')}
-        <th class="th-total-header">TOTAL (MT)</th><th class="th-total-header">%</th><th>PREV MONTH (MT)</th></tr></thead><tbody>`;
-    rows.forEach(m => {
-        h += `<tr><td class="left"><b>${esc(m.name)}</b></td>
-            ${estates.map(e => `<td>${m.perEstate[e] ? m.perEstate[e].toFixed(2) : (e in m.perEstate ? '-' : '')}</td>`).join('')}
-            <td><b>${m.total.toFixed(2)}</b></td><td>${grand ? (m.total / grand * 100).toFixed(1) + '%' : '-'}</td>
-            <td>${m.prev.toFixed(2)}</td></tr>`;
-    });
-    h += `</tbody><tfoot><tr class="grand-row"><td>GRAND TOTAL</td>
-        ${estates.map(e => `<td>${rows.reduce((s, m) => s + (m.perEstate[e] || 0), 0).toFixed(2)}</td>`).join('')}
-        <td><b>${grand.toFixed(2)} MT</b></td><td>${grand ? '100%' : ''}</td><td>${grandPrev.toFixed(2)}</td></tr></tfoot></table></div>
-        <div class="hint screen-only">Mills with the same name in different estates are added together.</div>`;
-    box.innerHTML = h;
+    box.innerHTML = shown ? html : `<div class="empty-msg">No phases/blocks or mills set up for your estates.</div>`;
 }
