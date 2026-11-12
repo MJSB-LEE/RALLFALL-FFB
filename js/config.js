@@ -43,7 +43,7 @@ const TAB_PERM = { tabRainfall: 'tab_rainfall', tabMill: 'tab_mill', tabBlock: '
 const TAB_CATEGORY = { tabRainfall: 'rainfall', tabMill: 'mill', tabBlock: 'block' };
 // Used only if sql/05 has not been run yet (old roles)
 const ROLE_DEFAULT_PERMS = {
-    admin:   { tab_rainfall: 'edit', tab_mill: 'edit', tab_block: 'edit', tab_summary: 'view', tab_millsummary: 'view', can_submit: true, can_approve: true, can_unlock: true, can_settings: true },
+    admin:   { tab_rainfall: 'edit', tab_mill: 'edit', tab_block: 'edit', tab_summary: 'view', tab_millsummary: 'view', can_submit: true, can_approve: true, can_unlock: true, can_columns: true, can_settings: true },
     manager: { tab_rainfall: 'view', tab_mill: 'view', tab_block: 'view', tab_summary: 'view', tab_millsummary: 'view', can_submit: false, can_approve: true, can_unlock: false, can_settings: false },
     user:    { tab_rainfall: 'edit', tab_mill: 'edit', tab_block: 'edit', tab_summary: 'view', tab_millsummary: 'view', can_submit: true, can_approve: false, can_unlock: false, can_settings: false }
 };
@@ -90,6 +90,7 @@ function can(key) { return currentUser?.perms?.[key] === true; }               /
 function tabAccess(key) { return currentUser?.perms?.[key] || 'none'; }         // 'none' | 'view' | 'edit'
 function canEditCat(cat) { return tabAccess('tab_' + cat) === 'edit'; }
 function isSettingsUser() { return can('can_settings'); }
+function canColumnSetup() { return can('can_settings') || can('can_columns'); }
 function activeTabId() { return document.querySelector('.tab-content.active')?.id; }
 function displayName(u) { return u?.full_name || u?.username || ''; }
 
