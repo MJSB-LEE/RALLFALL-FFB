@@ -34,7 +34,7 @@ async function loadMonthData() {
         S.prevReport = reps.find(r => r.month === pm) || null;
 
         // Buah Gantung (Last Month) = previous month's Buah Gantung (This Month), if not keyed in yet
-        if ((S.report.buah_gantung_last === null || S.report.buah_gantung_last === undefined)
+        if (canEditCat('mill') && (S.report.buah_gantung_last === null || S.report.buah_gantung_last === undefined)
             && S.prevReport && S.prevReport.buah_gantung_this !== null && S.prevReport.buah_gantung_this !== undefined) {
             S.report.buah_gantung_last = S.prevReport.buah_gantung_this;
             S.report._needsSave = true;
@@ -65,21 +65,26 @@ function lastToDateDay(cols) {
     return last;
 }
 
-// After Submit, only admin can edit (manager can only Approve)
-function isLocked() {
-    if (roleAtLeast('admin')) return false;
-    return (S.report?.status || 'draft') !== 'draft';
+// Locked = this user cannot change this tab now:
+//   no "edit" right on the tab (view only), or month submitted/approved and no Unlock right
+function isLocked(cat) {
+    if (cat === undefined) cat = TAB_CATEGORY[activeTabId()] || 'rainfall';
+    if (!canEditCat(cat)) return true;
+    return (S.report?.status || 'draft') !== 'draft' && !can('can_unlock');
 }
+function isViewOnly(cat) { return !canEditCat(cat); }
+function monthLocked() { return (S.report?.status || 'draft') !== 'draft' && !can('can_unlock'); }
 
 function inputHtml(colId, d, dp = 2) {
     const v = cellVal(colId, S.month, d);
+    const cat = S.columns.find(c => c.id === colId)?.category;
     return `<input type="number" step="any" inputmode="decimal" class="cell-in" data-col="${colId}" data-day="${d}"
-        value="${v === undefined ? '' : v.toFixed(dp)}" ${isLocked() ? 'disabled' : ''}>`;
+        value="${v === undefined ? '' : v.toFixed(dp)}" ${isLocked(cat) ? 'disabled' : ''}>`;
 }
 
 function emptyColumnsMsg(category, colspan = 1) {
     if (!S.estate) return `<tbody><tr><td class="empty-msg">No estate is assigned to your account yet. Ask your admin to tick your estate in Settings → Users.</td></tr></tbody>`;
-    const adminHint = roleAtLeast('admin')
+    const adminHint = isSettingsUser()
         ? `Go to <b>⚙️ Settings → Column Setup</b> to add them.`
         : `Ask your admin to set them up in Settings.`;
     const optional = category === 'block' ? ' (optional — skip if this estate does not record FFB by phase/block)' : '';
@@ -233,7 +238,7 @@ function renderBelowGrid(category) {
     const r = S.report || {};
     const bgLast = num(r.buah_gantung_last), bgThis = num(r.buah_gantung_this);
     const pay = total - bgLast + bgThis;
-    const editable = category === 'mill' && !isLocked();
+    const editable = category === 'mill' && !isLocked('mill');
     const bgInput = (field, v) => editable
         ? `<input type="number" step="any" inputmode="decimal" class="bg-in" data-field="${field}" value="${v === null || v === undefined ? '' : v}">`
         : (v ? num(v).toFixed(2) + ' MT' : '');
@@ -363,8 +368,17 @@ async function saveReport() {
 async function saveToCloud(silent = false) {
     if (!S.estate || !S.month) { alert('Select Estate & Month.'); return false; }
     if (!supabaseClient || !S.tablesReady) { alert('Database is not ready. See the message at the top of the page.'); return false; }
-    if (isLocked()) { if (!silent) alert('🔒 This month is locked (submitted/approved). Only admin can unlock it.'); return false; }
+    if (!['rainfall', 'mill', 'block'].some(c => !isLocked(c))) {
+        if (!silent) alert(monthLocked() ? '🔒 This month is locked (submitted/approved). Ask someone with Unlock access.' : '👁 You have view-only access here.');
+        return false;
+    }
     if (!(await ensureSession())) return false;
+    // only send what this user is allowed to change
+    for (const k of [...S.dirty]) {
+        const cat = S.columns.find(c => c.id == k.split('|')[0])?.category;
+        if (isLocked(cat)) S.dirty.delete(k);
+    }
+    if (isLocked('mill')) { S.reportDirty = false; S.report._needsSave = false; }
 
     const user = currentUser?.username || 'SYSTEM';
     const now = new Date().toISOString();
@@ -401,20 +415,21 @@ async function setStatus(status, extra, action, message) {
 }
 
 async function submitForApproval() {
+    if (!can('can_submit')) return;
     if (!confirm(`Submit ${S.estate} — ${monthLabel(S.month)} for approval?\nUsers cannot edit after submitting.`)) return;
     if (!(await saveToCloud(true))) return;
     await setStatus('submitted', { submitted_by: displayName(currentUser), submitted_at: new Date().toISOString() },
         'SUBMIT_APPROVAL', '🔒 Submitted for approval');
 }
 async function approveReport() {
-    if (!roleAtLeast('manager')) return;
+    if (!can('can_approve')) return;
     if (S.dirty.size || S.reportDirty) { if (!(await saveToCloud(true))) return; }
     if (!confirm(`Approve ${S.estate} — ${monthLabel(S.month)}?`)) return;
     await setStatus('approved', { approved_by: displayName(currentUser), approved_at: new Date().toISOString() },
         'APPROVE', '✅ Approved');
 }
 async function reopenReport() {
-    if (!roleAtLeast('admin')) return;
+    if (!can('can_unlock')) return;
     if (!confirm(`Unlock ${S.estate} — ${monthLabel(S.month)}?\n\nIt goes back to DRAFT so it can be edited, and must be submitted and approved again.`)) return;
     await setStatus('draft', { approved_by: null, approved_at: null }, 'UNLOCK', '🔓 Unlocked — back to draft');
 }
@@ -427,14 +442,16 @@ function renderStatus() {
     let txt = `<span class="status-pill st-${st}">${st.toUpperCase()}</span>`;
     if (st !== 'draft' && r.submitted_by) txt += ` Submitted by <b>${esc(r.submitted_by)}</b> · ${formatDateTime(r.submitted_at)}`;
     if (st === 'approved' && r.approved_by) txt += ` &nbsp;|&nbsp; Approved by <b>${esc(r.approved_by)}</b> · ${formatDateTime(r.approved_at)}`;
-    if (isLocked()) txt += ` &nbsp;🔒 <i>Locked</i>`;
+    const cat = TAB_CATEGORY[activeTabId()];
+    if (cat && isViewOnly(cat)) txt += ` &nbsp;<span class="view-only-note">👁 View only</span>`;
+    else if (monthLocked()) txt += ` &nbsp;🔒 <i>Locked</i>`;
     info.innerHTML = txt;
 
     const show = (id, on) => { const b = document.getElementById(id); if (b) b.style.display = on ? '' : 'none'; };
-    show('btnSave', !isLocked());
-    show('btnSubmit', st === 'draft' && !!S.estate);
-    show('btnApprove', st === 'submitted' && roleAtLeast('manager'));
-    show('btnReopen', st !== 'draft' && roleAtLeast('admin'));
+    show('btnSave', !!S.estate && !isLocked(cat));
+    show('btnSubmit', st === 'draft' && !!S.estate && can('can_submit'));
+    show('btnApprove', st === 'submitted' && can('can_approve'));
+    show('btnReopen', st !== 'draft' && can('can_unlock'));
 }
 
 function toast(msg) {
