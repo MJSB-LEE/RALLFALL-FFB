@@ -84,7 +84,7 @@ function inputHtml(colId, d, dp = 2) {
 
 function emptyColumnsMsg(category, colspan = 1) {
     if (!S.estate) return `<tbody><tr><td class="empty-msg">No estate is assigned to your account yet. Ask your admin to tick your estate in Settings → Users.</td></tr></tbody>`;
-    const adminHint = isSettingsUser()
+    const adminHint = canColumnSetup()
         ? `Go to <b>⚙️ Settings → Column Setup</b> to add them.`
         : `Ask your admin to set them up in Settings.`;
     const optional = category === 'block' ? ' (optional — skip if this estate does not record FFB by phase/block)' : '';
