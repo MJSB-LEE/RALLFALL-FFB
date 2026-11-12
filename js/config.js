@@ -38,13 +38,22 @@ const CATEGORIES = {
     mill:     { label: 'Mills',             tab: 'tabMill',     example: 'e.g. Golden Elite, Sungai Ruku' },
     block:    { label: 'FFB Phase / Block', tab: 'tabBlock',    example: 'e.g. BLK 1/2/3, PH 09, Riparian' }
 };
-const ROLE_RANK = { user: 1, manager: 2, admin: 3 };
+// ---------- Access rights (from the user's group, see sql/05_user_groups.sql) ----------
+const TAB_PERM = { tabRainfall: 'tab_rainfall', tabMill: 'tab_mill', tabBlock: 'tab_block', tabSummary: 'tab_summary', tabMillSummary: 'tab_millsummary' };
+const TAB_CATEGORY = { tabRainfall: 'rainfall', tabMill: 'mill', tabBlock: 'block' };
+// Used only if sql/05 has not been run yet (old roles)
+const ROLE_DEFAULT_PERMS = {
+    admin:   { tab_rainfall: 'edit', tab_mill: 'edit', tab_block: 'edit', tab_summary: 'view', tab_millsummary: 'view', can_submit: true, can_approve: true, can_unlock: true, can_settings: true },
+    manager: { tab_rainfall: 'view', tab_mill: 'view', tab_block: 'view', tab_summary: 'view', tab_millsummary: 'view', can_submit: false, can_approve: true, can_unlock: false, can_settings: false },
+    user:    { tab_rainfall: 'edit', tab_mill: 'edit', tab_block: 'edit', tab_summary: 'view', tab_millsummary: 'view', can_submit: true, can_approve: false, can_unlock: false, can_settings: false }
+};
 
 // App state
 const S = {
     estates: [],          // [{ id, name, sort_order }]
     columns: [],          // estate_columns rows (all estates)
     users: [],            // user_profiles rows
+    groups: [],           // user_groups (admin only)
     estate: '',
     month: '',            // 'YYYY-MM'
     entries: {},          // `${columnId}|${YYYY-MM-DD}` -> number (current + previous month, current estate)
@@ -77,7 +86,11 @@ function formatDateTime(ts) {
     if (!ts) return '-';
     return new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kuala_Lumpur', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }).format(new Date(ts));
 }
-function roleAtLeast(role) { return (ROLE_RANK[currentUser?.role] || 0) >= ROLE_RANK[role]; }
+function can(key) { return currentUser?.perms?.[key] === true; }               // can_submit, can_approve, can_unlock, can_settings
+function tabAccess(key) { return currentUser?.perms?.[key] || 'none'; }         // 'none' | 'view' | 'edit'
+function canEditCat(cat) { return tabAccess('tab_' + cat) === 'edit'; }
+function isSettingsUser() { return can('can_settings'); }
+function activeTabId() { return document.querySelector('.tab-content.active')?.id; }
 function displayName(u) { return u?.full_name || u?.username || ''; }
 
 // Columns of one estate + category, in order. includeHidden for history/summary use.
