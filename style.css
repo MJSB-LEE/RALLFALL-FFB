@@ -360,6 +360,13 @@ select, input[type="month"], input[type="text"], input[type="password"], input[t
     .mini-table { min-width: 0 !important; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
+    .grid-table th, .grid-table td { min-width: 60px; height: 20px; font-size: 10px !important; padding: 1px 4px !important; }
+    .grid-table .date-col, .grid-table td.foot-label { min-width: 34px; }
+    .grid-table input { font-size: 10px !important; }
+    .ms-head { background: #fde047 !important; color: #000 !important; border-bottom: 1px solid #000; }
+    .ms-estate { border-color: #000; }
+    .ms-body { flex-wrap: nowrap; }
+
     .print-head { display: block !important; margin-bottom: 4px; }
     .ph-group, .ph-title { text-align: center; font-weight: 800; font-size: 11px; }
     .ph-meta { display: flex; justify-content: space-between; font-size: 10px; margin-top: 4px; }
@@ -370,6 +377,23 @@ select, input[type="month"], input[type="text"], input[type="password"], input[t
     .print-sign .sig-line { border-bottom: 1px solid #000; height: 24px; }
     .print-sign .sig-name { grid-column: 2; text-align: center; font-size: 9px; }
 }
+
+/* Key-in grids: fixed-size columns, centered (no stretching when an estate has 1 column) */
+.grid-table { width: auto !important; margin: 0 auto 8px auto !important; }
+.grid-table th, .grid-table td { min-width: 66px; }
+.grid-table .date-col, .grid-table td.foot-label { min-width: 36px; }
+.grid-table th.col-name { max-width: 110px; white-space: normal; }
+
+/* Tab 5: one section per estate */
+.ms-estate { border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 14px; page-break-inside: avoid; break-inside: avoid; }
+.ms-head { display: flex; justify-content: space-between; align-items: center; background: #1e3a8a; color: white; padding: 6px 10px; border-radius: 6px 6px 0 0; font-weight: 800; font-size: 13px; }
+.ms-total { font-size: 12px; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+.ms-body { display: flex; gap: 14px; padding: 10px; flex-wrap: wrap; align-items: flex-start; }
+.ms-body > * { flex: 1 1 340px; }
+.ms-table { width: 100%; margin: 0 !important; }
+.ms-table td { padding: 3px 6px; }
+.ms-empty { font-size: 12px; padding: 6px; }
+.ms-check { padding: 0 10px 8px; font-size: 12px; }
 
 /* Login popup after expiry */
 .relogin-note { background: #fef3c7; border: 1px solid #f59e0b; color: #78350f; font-size: 11px; padding: 6px; border-radius: 4px; margin-bottom: 10px; }
@@ -382,6 +406,27 @@ select, input[type="month"], input[type="text"], input[type="password"], input[t
 .quick-range { display: flex; gap: 4px; }
 .day-row td { background: #1e3a8a !important; color: white; font-weight: 800; text-align: left !important; padding: 4px 8px !important; }
 .day-row .day-count { font-weight: 600; opacity: .8; margin-left: 8px; }
+
+/* User groups */
+.groups-table td { padding: 3px 4px; }
+.groups-table select { font-size: 11px; padding: 2px; }
+.groups-table select.p-edit { background: #d1fae5; }
+.groups-table select.p-view { background: #dbeafe; }
+.groups-table select.p-none { background: #f1f5f9; color: #94a3b8; }
+.groups-table input[type=text] { width: 130px; font-weight: 700; text-align: left; }
+.groups-table input[type=checkbox] { width: 16px; height: 16px; }
+.groups-table tr.changed td { background: #fef9c3 !important; }
+.all-estates { margin: 4px 0 6px; }
+
+/* Location picker on Tabs 4-5 */
+.loc-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 10px; margin-bottom: 10px;
+    background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; }
+.loc-picker .loc-label { font-weight: 800; color: #1e3a8a; }
+.loc-picker label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+.loc-picker .btn-all { border: 1px solid #1e3a8a; background: #1e3a8a; color: white; border-radius: 4px; padding: 3px 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.loc-picker .btn-all.off { background: white; color: #1e3a8a; }
+
+.view-only-note { color: #1d4ed8; font-weight: 700; }
 
 /* Backup */
 .backup-info { font-size: 12px; margin: 8px 0 12px; }
