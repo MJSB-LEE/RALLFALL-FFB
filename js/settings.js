@@ -9,6 +9,7 @@ function switchSettings(id) {
     if (id === 'setUsers') renderUsersTable();
     if (id === 'setEstates') renderEstateSettings();
     if (id === 'setColumns') renderColumnSetup();
+    if (id === 'setGroups') fetchGroups().then(renderGroupsTable);
     if (id === 'setBackup') renderBackupInfo();
 }
 
@@ -21,7 +22,7 @@ function renderSettings() {
     }
     renderColumnSetup();
     renderEstateSettings();
-    if (roleAtLeast('admin')) fetchUserProfiles().then(renderUsersTable);
+    if (isSettingsUser()) fetchUserProfiles().then(() => { renderUsersTable(); renderGroupsTable(); });
 }
 
 // ---------------------------------------------------------------------
@@ -194,7 +195,8 @@ async function addNewEstate() {
 // Users
 // ---------------------------------------------------------------------
 async function fetchUserProfiles() {
-    if (!supabaseClient || !roleAtLeast('admin')) return;
+    if (!supabaseClient || !isSettingsUser()) return;
+    await fetchGroups();
     const { data, error } = await supabaseClient.rpc('app_list_users');
     if (error) { console.warn(error); return; }
     S.users = (data || []).sort((a, b) => (a.username || '').localeCompare(b.username || ''));
@@ -216,8 +218,8 @@ function renderUsersTable() {
         return `<tr class="${active ? '' : 'is-hidden'}">
             <td class="left"><b>${esc(u.username)}</b>${u.email && !u.email.endsWith('@ledger.local') ? `<div class="small muted">${esc(u.email)}</div>` : ''}</td>
             <td class="left">${esc(u.full_name || '')}</td>
-            <td><span class="role-pill role-${esc(u.role)}">${esc((u.role || 'user').toUpperCase())}</span></td>
-            <td class="left small">${u.role === 'admin' ? '<i>All</i>' : (ests.length ? ests.map(esc).join(', ') : '<span class="bad">None — cannot see anything</span>')}</td>
+            <td><span class="role-pill role-${esc(u.role)}">${esc(u.group_name || (u.role || 'user').toUpperCase())}</span></td>
+            <td class="left small">${u.all_estates ? '<b>All estates</b>' : (ests.length ? ests.map(esc).join(', ') : '<span class="bad">None — cannot see anything</span>')}</td>
             <td class="small nowrap">${lastLoginText(u.last_login_at)}</td>
             <td>${active ? 'Active' : '<b>Disabled</b>'}</td>
             <td class="nowrap">
@@ -226,6 +228,7 @@ function renderUsersTable() {
             </td></tr>`;
     }).join('') || '<tr><td colspan="7">No users yet.</td></tr>';
     if (!document.getElementById('ufEstates').children.length) resetUserForm();
+    else renderGroupOptions(document.getElementById('ufGroup').value || null);  // keep group list up to date
 }
 
 function lastLoginText(ts) {
@@ -245,7 +248,13 @@ function renderEstateChecks(selected = []) {
         <label class="check-line"><input type="checkbox" value="${esc(e.name)}" ${selected.includes(e.name) ? 'checked' : ''}> ${esc(e.name)}</label>`).join('');
 }
 function toggleEstateChecks() {
-    document.getElementById('ufEstatesWrap').style.display = document.getElementById('ufRole').value === 'admin' ? 'none' : '';
+    document.getElementById('ufEstatesWrap').style.display = document.getElementById('ufAllEstates').checked ? 'none' : '';
+}
+function renderGroupOptions(selectedId) {
+    const sel = document.getElementById('ufGroup');
+    sel.innerHTML = S.groups.map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join('');
+    const fallback = S.groups.find(g => g.name === 'Clerk Full') || S.groups[0];
+    sel.value = selectedId != null && S.groups.some(g => g.id == selectedId) ? selectedId : (fallback ? fallback.id : '');
 }
 
 function resetUserForm() {
@@ -257,7 +266,8 @@ function resetUserForm() {
     document.getElementById('ufEmail').value = '';
     document.getElementById('ufPassword').value = '';
     document.getElementById('ufPasswordLabel').textContent = 'Password';
-    document.getElementById('ufRole').value = 'user';
+    renderGroupOptions(null);
+    document.getElementById('ufAllEstates').checked = false;
     document.getElementById('ufActive').checked = true;
     renderEstateChecks([]);
     toggleEstateChecks();
@@ -274,16 +284,12 @@ function editUser(username) {
     document.getElementById('ufEmail').value = (u.email || '').endsWith('@ledger.local') ? '' : (u.email || '');
     document.getElementById('ufPassword').value = '';
     document.getElementById('ufPasswordLabel').textContent = 'New password (leave blank to keep)';
-    document.getElementById('ufRole').value = u.role || 'user';
+    renderGroupOptions(u.group_id);
+    document.getElementById('ufAllEstates').checked = !!u.all_estates;
     document.getElementById('ufActive').checked = u.active !== false;
     renderEstateChecks(userEstates(u));
     toggleEstateChecks();
     document.getElementById('userFormCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-function activeAdminsAfter(change) {
-    return S.users.map(u => u.username === change.username ? { ...u, ...change } : u)
-        .filter(u => u.role === 'admin' && u.active !== false).length;
 }
 
 async function saveUserForm() {
@@ -295,31 +301,33 @@ async function saveUserForm() {
     // Database requires an email; users without one get a placeholder based on the username
     const email = emailIn || `${(username || editing).toLowerCase().replace(/[^a-z0-9._-]/g, '')}@ledger.local`;
     const password = document.getElementById('ufPassword').value;
-    const role = document.getElementById('ufRole').value;
+    const groupId = parseInt(document.getElementById('ufGroup').value, 10);
+    const groupName = S.groups.find(g => g.id === groupId)?.name || '';
+    const allEstates = document.getElementById('ufAllEstates').checked;
     const active = document.getElementById('ufActive').checked;
-    const assigned_estates = role === 'admin' ? [] :
+    const assigned_estates = allEstates ? [] :
         [...document.querySelectorAll('#ufEstates input:checked')].map(i => i.value);
 
     if (!username || !full_name) return alert('Please fill in Username and Full Name.');
     if (!editing && !password) return alert('Please set a password for the new user.');
     if (password && password.length < 6) return alert('Password must be at least 6 characters.');
-    if (role !== 'admin' && !assigned_estates.length) return alert('Tick at least one estate for this user.');
+    if (!groupId) return alert('Choose a user group.');
+    if (!allEstates && !assigned_estates.length) return alert('Tick at least one estate, or All estates.');
 
     if (editing) {
-        if (activeAdminsAfter({ username: editing, role, active }) === 0) return alert('There must be at least one active Admin.');
         const { error } = await supabaseClient.rpc('app_save_user', {
             p_editing: editing, p_username: editing, p_full_name: full_name, p_email: email,
-            p_password: password || '', p_role: role, p_active: active, p_estates: assigned_estates });
+            p_password: password || '', p_group_id: groupId, p_all_estates: allEstates, p_active: active, p_estates: assigned_estates });
         if (error) return alert('❌ ' + dbErrorMessage(error));
-        await logActivity('EDIT_USER', `Edited ${editing} (${role}${active ? '' : ', disabled'}${password ? ', password reset' : ''})`);
+        await logActivity('EDIT_USER', `Edited ${editing} (${groupName}${allEstates ? ', all estates' : ''}${active ? '' : ', disabled'}${password ? ', password reset' : ''})`);
         toast(`✅ ${editing} updated`);
     } else {
         if (S.users.some(u => u.username.toLowerCase() === username.toLowerCase())) return alert('Username already exists.');
         const { error } = await supabaseClient.rpc('app_save_user', {
             p_editing: '', p_username: username, p_full_name: full_name, p_email: email,
-            p_password: password, p_role: role, p_active: active, p_estates: assigned_estates });
+            p_password: password, p_group_id: groupId, p_all_estates: allEstates, p_active: active, p_estates: assigned_estates });
         if (error) return alert('❌ ' + (/duplicate/.test(error.message) && /email/.test(error.message) ? 'That email is already used by another user.' : dbErrorMessage(error)));
-        await logActivity('CREATE_USER', `Created ${username} (${role})`);
+        await logActivity('CREATE_USER', `Created ${username} (${groupName})`);
         toast(`✅ ${username} created`);
     }
     await fetchUserProfiles();
@@ -329,7 +337,6 @@ async function saveUserForm() {
 
 async function deleteUser(username) {
     if (username === currentUser?.username) return alert('You cannot delete your own account.');
-    if (activeAdminsAfter({ username, active: false }) === 0) return alert('There must be at least one active Admin.');
     if (!confirm(`Delete user "${username}"?\n\nTip: you can untick "Active" instead to block login but keep the name in records.`)) return;
     const { error } = await supabaseClient.rpc('app_delete_user', { p_username: username });
     if (error) return alert('❌ ' + dbErrorMessage(error));
@@ -337,4 +344,93 @@ async function deleteUser(username) {
     await fetchUserProfiles();
     resetUserForm();
     renderUsersTable();
+}
+
+// ---------------------------------------------------------------------
+// User Groups: per tab None / View / Edit, and Submit / Approve / Unlock / Settings
+// ---------------------------------------------------------------------
+const GROUP_TABS = [
+    ['tab_rainfall', ['none', 'view', 'edit']], ['tab_mill', ['none', 'view', 'edit']], ['tab_block', ['none', 'view', 'edit']],
+    ['tab_summary', ['none', 'view']], ['tab_millsummary', ['none', 'view']]
+];
+const GROUP_ACTIONS = ['can_submit', 'can_approve', 'can_unlock', 'can_settings'];
+
+async function fetchGroups() {
+    if (!supabaseClient || !isSettingsUser()) return;
+    const { data, error } = await supabaseClient.rpc('app_list_groups');
+    if (error) { console.warn(error); S.groups = S.groups || []; return; }
+    S.groups = data || [];
+}
+
+function renderGroupsTable() {
+    const tb = document.getElementById('groupsTableBody');
+    if (!tb) return;
+    tb.innerHTML = (S.groups || []).map(g => {
+        const p = g.perms || {};
+        return `<tr data-gid="${g.id}">
+            <td><input type="text" class="g-name" value="${esc(g.name)}" oninput="markGroupChanged(this)"></td>
+            ${GROUP_TABS.map(([k, opts]) => {
+                const v = opts.includes(p[k]) ? p[k] : 'none';
+                return `<td><select data-k="${k}" class="p-${v}" onchange="this.className='p-'+this.value;markGroupChanged(this)">
+                    ${opts.map(o => `<option value="${o}" ${o === v ? 'selected' : ''}>${o === 'none' ? 'None' : o === 'view' ? 'View' : 'Edit'}</option>`).join('')}
+                </select></td>`;
+            }).join('')}
+            ${GROUP_ACTIONS.map(k => `<td><input type="checkbox" data-k="${k}" ${p[k] ? 'checked' : ''} onchange="markGroupChanged(this)"></td>`).join('')}
+            <td>${g.users || 0}</td>
+            <td class="nowrap">
+                <button class="btn-mini" onclick="saveGroupRow(${g.id})">💾 Save</button>
+                <button class="btn-mini del" onclick="deleteGroup(${g.id})" ${g.users ? 'disabled title="Move its users to another group first"' : ''}>✕</button>
+            </td></tr>`;
+    }).join('') || '<tr><td colspan="12">No groups yet. Run sql/05_user_groups.sql in Supabase.</td></tr>';
+}
+
+function markGroupChanged(el) { el.closest('tr').classList.add('changed'); }
+
+function readGroupRow(tr) {
+    const perms = {};
+    tr.querySelectorAll('select[data-k]').forEach(s => { perms[s.dataset.k] = s.value; });
+    tr.querySelectorAll('input[type=checkbox][data-k]').forEach(c => { perms[c.dataset.k] = c.checked; });
+    return { name: tr.querySelector('.g-name').value.trim(), perms };
+}
+
+async function afterGroupChange() {
+    await fetchGroups();
+    renderGroupsTable();
+    // my own rights may have changed
+    const me = await touchSession();
+    if (me && me.username) { currentUser = publicUser(me); await applyUserPermissions(); switchTab('tabSettings'); switchSettings('setGroups'); }
+}
+
+async function saveGroupRow(id) {
+    const tr = document.querySelector(`#groupsTableBody tr[data-gid="${id}"]`);
+    const { name, perms } = readGroupRow(tr);
+    if (!name) return alert('Group name is required.');
+    const { error } = await supabaseClient.rpc('app_save_group', { p_id: id, p_name: name, p_perms: perms });
+    if (error) return alert('❌ ' + dbErrorMessage(error));
+    await logActivity('SAVE_GROUP', `Saved group ${name}`);
+    toast(`✅ ${name} saved`);
+    await afterGroupChange();
+}
+
+async function addGroup() {
+    const input = document.getElementById('newGroupName');
+    const name = input.value.trim();
+    if (!name) return alert('Type a group name first.');
+    const perms = { tab_rainfall: 'view', tab_mill: 'view', tab_block: 'view', tab_summary: 'view', tab_millsummary: 'view',
+                    can_submit: false, can_approve: false, can_unlock: false, can_settings: false };
+    const { error } = await supabaseClient.rpc('app_save_group', { p_id: null, p_name: name, p_perms: perms });
+    if (error) return alert('❌ ' + dbErrorMessage(error));
+    await logActivity('SAVE_GROUP', `Added group ${name}`);
+    input.value = '';
+    toast(`✅ ${name} added — now choose its rights and click Save`);
+    await afterGroupChange();
+}
+
+async function deleteGroup(id) {
+    const g = (S.groups || []).find(x => x.id === id);
+    if (!g || !confirm(`Delete group "${g.name}"?`)) return;
+    const { error } = await supabaseClient.rpc('app_delete_group', { p_id: id });
+    if (error) return alert('❌ ' + dbErrorMessage(error));
+    await logActivity('DELETE_GROUP', `Deleted group ${g.name}`);
+    await afterGroupChange();
 }
