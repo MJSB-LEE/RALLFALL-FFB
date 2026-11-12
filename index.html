@@ -44,7 +44,7 @@
             <button class="tab-btn" id="btn-tabBlock" onclick="switchTab('tabBlock')" data-perm="tab_block">3. FFB BY PHASE / BLOCK</button>
             <button class="tab-btn" id="btn-tabSummary" onclick="switchTab('tabSummary')" data-perm="tab_summary">4. SUMMARY</button>
             <button class="tab-btn" id="btn-tabMillSummary" onclick="switchTab('tabMillSummary')" data-perm="tab_millsummary">5. MILL SUMMARY</button>
-            <button class="tab-btn" id="btn-tabSettings" onclick="switchTab('tabSettings')" data-perm="can_settings">⚙️ SETTINGS</button>
+            <button class="tab-btn" id="btn-tabSettings" onclick="switchTab('tabSettings')" data-perm="settings_or_columns">⚙️ SETTINGS</button>
         </div>
 
         <!-- Status + actions for the key-in tabs -->
@@ -111,11 +111,12 @@
         <div id="tabSettings" class="tab-content">
             <div class="settings-subtabs">
                 <button class="sub-btn active" data-sub="setColumns" onclick="switchSettings('setColumns')">📋 Column Setup</button>
-                <button class="sub-btn" data-sub="setEstates" onclick="switchSettings('setEstates')">🏢 Estates</button>
-                <button class="sub-btn" data-sub="setUsers" onclick="switchSettings('setUsers')">👤 Users</button>
-                <button class="sub-btn" data-sub="setGroups" onclick="switchSettings('setGroups')">👥 User Groups</button>
-                <button class="sub-btn" data-sub="setAudit" onclick="switchSettings('setAudit')">📜 Audit Log</button>
-                <button class="sub-btn" data-sub="setBackup" onclick="switchSettings('setBackup')">💾 Backup</button>
+                <button class="sub-btn" data-sub="setEstates" data-need="settings" onclick="switchSettings('setEstates')">🏢 Estates</button>
+                <button class="sub-btn" data-sub="setUsers" data-need="settings" onclick="switchSettings('setUsers')">👤 Users</button>
+                <button class="sub-btn" data-sub="setGroups" data-need="settings" onclick="switchSettings('setGroups')">👥 User Groups</button>
+                <button class="sub-btn" data-sub="setAudit" data-need="settings" onclick="switchSettings('setAudit')">📜 Audit Log</button>
+                <button class="sub-btn" data-sub="setBackup" data-need="settings" onclick="switchSettings('setBackup')">💾 Backup</button>
+                <button class="sub-btn" data-sub="setDeletePwd" data-need="settings" onclick="switchSettings('setDeletePwd')">🔑 Delete Password</button>
             </div>
 
             <div id="setColumns" class="settings-pane active">
@@ -176,13 +177,14 @@
                 <div class="settings-card">
                     <h3>👥 User Groups — what each group can do</h3>
                     <p class="hint" style="font-size:12px;margin-top:0;"><b>None</b> = tab hidden · <b>View</b> = can see, cannot change · <b>Edit</b> = can key in.
-                        Which estates a user sees is set per user in 👤 Users.</p>
+                        Which estates a user sees is set per user in 👤 Users.
+                        <b>Column Setup</b> = can set up column names for their own estates. <b>Settings</b> = everything in Settings.</p>
                     <div class="table-scroll">
                         <table class="data-table groups-table">
                             <thead>
-                                <tr><th rowspan="2">GROUP NAME</th><th colspan="5">TABS</th><th colspan="4">ACTIONS</th><th rowspan="2">USERS</th><th rowspan="2"></th></tr>
+                                <tr><th rowspan="2">GROUP NAME</th><th colspan="5">TABS</th><th colspan="5">ACTIONS</th><th rowspan="2">USERS</th><th rowspan="2"></th></tr>
                                 <tr><th>1. Rainfall</th><th>2. FFB by Mill</th><th>3. FFB by Phase/Block</th><th>4. Summary</th><th>5. Mill Summary</th>
-                                    <th>Submit</th><th>Approve</th><th>Unlock</th><th>Settings</th></tr>
+                                    <th>Submit</th><th>Approve</th><th>Unlock</th><th>Column<br>Setup</th><th>Settings</th></tr>
                             </thead>
                             <tbody id="groupsTableBody"></tbody>
                         </table>
@@ -191,6 +193,19 @@
                         <input type="text" id="newGroupName" placeholder="New group name, e.g. Clerk Styland">
                         <button class="btn btn-save" onclick="addGroup()">+ Add Group</button>
                     </div>
+                </div>
+            </div>
+
+            <div id="setDeletePwd" class="settings-pane">
+                <div class="settings-card narrow">
+                    <h3>🔑 Delete Password (IT)</h3>
+                    <p class="hint" style="font-size:12px;">Every ✕ Delete (columns, users, groups) asks for this password. Give it only to IT / the people allowed to delete.
+                        It is stored scrambled — nobody can read it back.</p>
+                    <div id="deletePwdStatus" class="backup-info"></div>
+                    <label class="field" id="dpCurrentWrap">Current delete password<input type="password" id="dpCurrent" autocomplete="off"></label>
+                    <label class="field">New delete password <span class="hint">(at least 6 characters)</span><input type="password" id="dpNew" autocomplete="new-password"></label>
+                    <label class="field">Type new password again<input type="password" id="dpNew2" autocomplete="new-password"></label>
+                    <button class="btn btn-save" onclick="saveDeletePassword()">💾 Save Delete Password</button>
                 </div>
             </div>
 
@@ -225,6 +240,20 @@
                         <tbody id="activityLogTableBody"></tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DELETE PASSWORD BOX -->
+    <div id="pwdOverlay" class="login-overlay" style="display:none;">
+        <div class="login-modal">
+            <h3>🔑 Delete Password</h3>
+            <p id="pwdMessage"></p>
+            <input type="password" id="pwdInput" placeholder="IT delete password" autocomplete="off"
+                   onkeydown="if(event.key==='Enter')closePwdBox(true);if(event.key==='Escape')closePwdBox(false);"><br>
+            <div class="add-row" style="justify-content:center;">
+                <button class="btn btn-logout" onclick="closePwdBox(true)">✕ Delete</button>
+                <button class="btn btn-grey" onclick="closePwdBox(false)">Cancel</button>
             </div>
         </div>
     </div>
