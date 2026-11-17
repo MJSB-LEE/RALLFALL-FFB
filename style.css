@@ -360,8 +360,14 @@ select, input[type="month"], input[type="text"], input[type="password"], input[t
     .mini-table { min-width: 0 !important; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-    .grid-table th, .grid-table td { min-width: 60px; height: 21px; font-size: 10px !important; padding: 1px 4px !important; }
+    .grid-table th, .grid-table td { min-width: 60px; height: 19px; font-size: 10px !important; padding: 1px 4px !important; }
     body.print-landscape .grid-table td { height: 15px; }
+    .grid-table.print-full { width: 100% !important; table-layout: fixed; }
+    .grid-table.print-full th, .grid-table.print-full td { min-width: 0 !important; overflow: hidden; word-wrap: break-word; }
+    .grid-table.print-full .date-col { width: 34px; }
+    .grid-table input.cell-in { width: 100% !important; min-width: 0 !important; box-sizing: border-box; }
+    .ms-body > * { min-width: 0; }
+    .tab-content.active { max-width: 100%; overflow: hidden; }
     #tabMill .grid-table td { height: 17px; }   /* Tab 2 has the extra mill % box below */
     #tabMill .mini-table td, #tabMill .mini-table th { padding: 1px 4px !important; }
     .below-grid { margin-top: 8px; }
