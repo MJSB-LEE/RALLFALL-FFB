@@ -471,3 +471,15 @@ select, input[type="month"], input[type="text"], input[type="password"], input[t
 /* Backup */
 .backup-info { font-size: 12px; margin: 8px 0 12px; }
 .banner-close { margin-left: 10px; font-size: 11px; color: #78350f; }
+
+/* ===== Column headings stay on top while scrolling ===== */
+@media screen {
+    .data-table { border-collapse: separate; border-spacing: 0; border-top: 1px solid #cbd5e1; border-left: 1px solid #cbd5e1; }
+    .data-table th, .data-table td { border-width: 0 1px 1px 0; }
+    .data-table > thead { position: sticky; top: 0; z-index: 5; }
+    .data-table > thead th { background-clip: border-box; }
+    .table-scroll { max-height: calc(100vh - 230px); overflow: auto; }
+}
+@media print {
+    .table-scroll { max-height: none !important; }
+}
