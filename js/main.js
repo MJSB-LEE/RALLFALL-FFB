@@ -193,6 +193,7 @@ async function ensureSession() {
 function showReloginMode(on) {
     document.getElementById('reloginNote').style.display = on ? 'block' : 'none';
     document.getElementById('reloginCancel').style.display = on ? 'inline-block' : 'none';
+    const home = document.getElementById('loginHome'); if (home) home.style.display = on ? 'none' : 'inline-block';
     const u = document.getElementById('loginUsername');
     if (on && currentUser) u.value = currentUser.username;
 }
