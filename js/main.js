@@ -237,7 +237,16 @@ function renderPrintParts() {
             </div>`;
     });
     const r = S.report || {};
-    document.querySelectorAll('.print-sign').forEach(el => {
+    // Summary page: three signature boxes + printed-on line
+    document.querySelectorAll('.print-sign.group-sign').forEach(el => {
+        el.innerHTML = ['Prepared By', 'Checked By', 'Approved By'].map((t, i) => `<div class="sig">
+            <div class="sig-title">${t}:</div><div class="sig-line"></div>
+            <div class="sig-name">${i === 0 ? esc(displayName(currentUser)) : 'Name:'}</div><div class="sig-date">Date:</div></div>`).join('');
+    });
+    document.querySelectorAll('.print-foot').forEach(el => {
+        el.innerHTML = `<span>Masih Jaya Group — Rainfall & FFB Ledger</span><span>Printed ${formatDateTime(new Date())} by ${esc(displayName(currentUser))}</span>`;
+    });
+    document.querySelectorAll('.print-sign:not(.group-sign)').forEach(el => {
         el.innerHTML = `<div class="sig"><span>Prepared By:</span><div class="sig-line"></div><div class="sig-name">${esc(r.submitted_by || displayName(currentUser))}</div></div>
             <div class="sig"><span>Approved By:</span><div class="sig-line"></div><div class="sig-name">${esc(r.approved_by || '') || '&nbsp;'}</div></div>`;
     });
@@ -252,7 +261,8 @@ async function printActiveTab() {
     renderPrintParts();
     // Wide tables print in landscape
     const ths = activeTab.querySelector('thead tr:last-child')?.children.length || 0;
-    const landscape = ['tabSummary', 'tabMillSummary'].includes(activeTab.id) ? ths > 9 : ths > 14;
+    const landscape = activeTab.id === 'tabSummary' ? false
+        : activeTab.id === 'tabMillSummary' ? ths > 9 : ths > 14;   // Summary page: always portrait, full A4
     document.getElementById('printPageStyle').textContent = `@page { size: A4 ${landscape ? 'landscape' : 'portrait'}; margin: 6mm; }`;
     setTimeout(() => window.print(), 100);
 }
