@@ -259,6 +259,11 @@ async function printActiveTab() {
         if (!(await saveToCloud(true))) return;
     }
     renderPrintParts();
+    // Tables with many columns share the page width (otherwise Chrome shrinks the whole page)
+    activeTab.querySelectorAll('.grid-table').forEach(t => {
+        const cols = t.querySelector('thead tr:last-child')?.children.length || 0;
+        t.classList.toggle('print-full', cols > 5);
+    });
     // Wide tables print in landscape
     const ths = activeTab.querySelector('thead tr:last-child')?.children.length || 0;
     const landscape = activeTab.id === 'tabSummary' ? false
