@@ -360,7 +360,11 @@ select, input[type="month"], input[type="text"], input[type="password"], input[t
     .mini-table { min-width: 0 !important; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-    .grid-table th, .grid-table td { min-width: 60px; height: 20px; font-size: 10px !important; padding: 1px 4px !important; }
+    .grid-table th, .grid-table td { min-width: 60px; height: 21px; font-size: 10px !important; padding: 1px 4px !important; }
+    body.print-landscape .grid-table td { height: 15px; }
+    #tabMill .grid-table td { height: 17px; }   /* Tab 2 has the extra mill % box below */
+    #tabMill .mini-table td, #tabMill .mini-table th { padding: 1px 4px !important; }
+    .below-grid { margin-top: 8px; }
     .grid-table .date-col, .grid-table td.foot-label { min-width: 34px; }
     .grid-table input { font-size: 10px !important; }
     .ms-head { background: #fde047 !important; color: #000 !important; border-bottom: 1px solid #000; }
@@ -370,13 +374,14 @@ select, input[type="month"], input[type="text"], input[type="password"], input[t
     .print-head { display: block !important; margin-bottom: 4px; }
 
     /* ---------- Tab 4 Summary: portrait, fills the whole A4 page ---------- */
-    #tabSummary.active { display: flex !important; flex-direction: column; min-height: 274mm; }
-    #tabSummary .print-head { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2.5px solid #1e3a8a; }
-    #tabSummary .ph-group { font-size: 17px; letter-spacing: 1.5px; color: #1e3a8a; }
-    #tabSummary .ph-title { font-size: 13px; margin-top: 2px; letter-spacing: .5px; }
-    #tabSummary .ph-meta { font-size: 11px; margin-top: 8px; gap: 20px; align-items: flex-start; }
-    #tabSummary .ph-meta > span:first-child { flex: 1; }
-    #tabSummary .ph-box { padding: 1px 8px; display: inline; line-height: 1.6; }
+    .tab-content.active { display: flex !important; flex-direction: column; min-height: 274mm; }
+    body.print-landscape .tab-content.active { min-height: 186mm; }
+    .tab-content.active .print-head { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2.5px solid #1e3a8a; }
+    .tab-content.active .ph-group { font-size: 17px; letter-spacing: 1.5px; color: #1e3a8a; }
+    .tab-content.active .ph-title { font-size: 13px; margin-top: 2px; letter-spacing: .5px; }
+    .tab-content.active .ph-meta { font-size: 11px; margin-top: 8px; gap: 20px; align-items: flex-start; }
+    .tab-content.active .ph-meta > span:first-child { flex: 1; }
+    .tab-content.active .ph-box { padding: 1px 8px; display: inline; line-height: 1.6; }
     #tabSummary .sum-title { font-size: 12.5px; margin: 12px 0 5px; padding: 4px 8px; background: #1e3a8a !important; color: #fff !important;
         border-radius: 3px; letter-spacing: .4px; }
     #tabSummary .sum-title:first-child { margin-top: 2px; }
@@ -388,21 +393,17 @@ select, input[type="month"], input[type="text"], input[type="password"], input[t
     #tabSummary .grand-row td, #tabSummary tfoot td { font-size: 11.5px !important; background: #dbeafe !important; border-top: 2px solid #1e3a8a !important; }
     #tabSummary .status-pill { font-size: 8.5px; padding: 1px 6px; }
     #tabSummary .muted { color: #94a3b8 !important; }
-    #tabSummary .print-sign.group-sign { display: flex !important; justify-content: space-between; gap: 18px; margin-top: auto; padding-top: 16px; page-break-inside: avoid; break-inside: avoid; }
-    #tabSummary .group-sign .sig { display: block; flex: 1; font-size: 10.5px; }
-    #tabSummary .group-sign .sig-title { font-weight: 700; }
-    #tabSummary .group-sign .sig-line { border-bottom: 1px solid #000; height: 34px; }
-    #tabSummary .group-sign .sig-name, #tabSummary .group-sign .sig-date { text-align: left; font-size: 10px; margin-top: 3px; }
-    #tabSummary .print-foot { display: flex !important; justify-content: space-between; margin-top: 12px; padding-top: 4px;
+    .tab-content.active .print-sign.group-sign { display: flex !important; justify-content: space-between; gap: 18px; margin-top: auto; padding-top: 16px; page-break-inside: avoid; break-inside: avoid; }
+    .tab-content.active .group-sign .sig { display: block; flex: 1; font-size: 10.5px; }
+    .tab-content.active .group-sign .sig-title { font-weight: 700; }
+    .tab-content.active .group-sign .sig-line { border-bottom: 1px solid #000; height: 34px; }
+    .tab-content.active .group-sign .sig-name, .tab-content.active .group-sign .sig-date { text-align: left; font-size: 10px; margin-top: 3px; }
+    .tab-content.active .print-foot { display: flex !important; justify-content: space-between; margin-top: 12px; padding-top: 4px;
         border-top: 1px solid #cbd5e1; font-size: 8.5px; color: #64748b; }
     .ph-group, .ph-title { text-align: center; font-weight: 800; font-size: 11px; }
     .ph-meta { display: flex; justify-content: space-between; font-size: 10px; margin-top: 4px; }
     .ph-box { background: #fde047; padding: 0 20px; }
 
-    .print-sign { display: flex !important; justify-content: space-around; margin-top: 18px; page-break-inside: avoid; font-size: 10px; }
-    .print-sign .sig { display: grid; grid-template-columns: auto 160px; column-gap: 6px; align-items: end; }
-    .print-sign .sig-line { border-bottom: 1px solid #000; height: 24px; }
-    .print-sign .sig-name { grid-column: 2; text-align: center; font-size: 9px; }
 }
 
 /* Key-in grids: fixed-size columns, centered (no stretching when an estate has 1 column) */
