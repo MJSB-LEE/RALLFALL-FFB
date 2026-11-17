@@ -30,6 +30,7 @@
             <div class="control-group">
                 <span id="userBadge" class="role-badge">GROUP</span>
                 <span id="userInfoLabel" class="user-label"></span>
+                <a class="btn btn-home" href="../">🏠 Main Menu</a>
                 <button class="btn btn-print" onclick="printActiveTab()">🖨️ Print</button>
                 <button class="btn btn-logout" onclick="handleLogout()">🚪 Logout</button>
             </div>
@@ -278,6 +279,7 @@
                    onkeydown="if(event.key==='Enter')handleLogin()"><br>
             <button class="btn btn-save login-btn" onclick="handleLogin()">Login</button>
             <div id="loginError" class="login-error"></div>
+            <a href="../" id="loginHome" class="login-home">← Back to Main Menu</a>
             <a href="#" id="reloginCancel" class="relogin-cancel" style="display:none;" onclick="cancelRelogin();return false;">Cancel</a>
         </div>
     </div>
