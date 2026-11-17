@@ -292,3 +292,4 @@ window.onload = async function () {
     if (currentUser) await loadReferenceData();
     await applyUserPermissions();
 };
+
