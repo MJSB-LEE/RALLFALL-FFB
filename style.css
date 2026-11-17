@@ -360,7 +360,8 @@ select, input[type="month"], input[type="text"], input[type="password"], input[t
     .mini-table { min-width: 0 !important; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-    .grid-table th, .grid-table td { min-width: 60px; height: 19px; font-size: 10px !important; padding: 1px 4px !important; }
+    .grid-table { max-width: 100% !important; }
+    .grid-table th, .grid-table td { min-width: 0 !important; height: 19px; font-size: 10px !important; padding: 1px 4px !important; }
     body.print-landscape .grid-table td { height: 15px; }
     .grid-table.print-full { width: 100% !important; table-layout: fixed; }
     .grid-table.print-full th, .grid-table.print-full td { min-width: 0 !important; overflow: hidden; word-wrap: break-word; }
@@ -371,7 +372,8 @@ select, input[type="month"], input[type="text"], input[type="password"], input[t
     #tabMill .grid-table td { height: 17px; }   /* Tab 2 has the extra mill % box below */
     #tabMill .mini-table td, #tabMill .mini-table th { padding: 1px 4px !important; }
     .below-grid { margin-top: 8px; }
-    .grid-table .date-col, .grid-table td.foot-label { min-width: 34px; }
+    .grid-table .date-col, .grid-table td.foot-label { min-width: 30px !important; }
+    .grid-table td:not(.date-col):not(.foot-label) { min-width: 0; }
     .grid-table input { font-size: 10px !important; }
     .ms-head { background: #fde047 !important; color: #000 !important; border-bottom: 1px solid #000; }
     .ms-estate { border-color: #000; }
